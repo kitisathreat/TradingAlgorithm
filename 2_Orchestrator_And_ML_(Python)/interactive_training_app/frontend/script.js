@@ -53,25 +53,44 @@ document.addEventListener('DOMContentLoaded', () => {
     async function logDecision(action) {
         if (!currentScenario) return;
 
+        // Capture a single image from the primary webcam
         canvasEl.width = webcamEl.videoWidth;
         canvasEl.height = webcamEl.videoHeight;
         canvasEl.getContext('2d').drawImage(webcamEl, 0, 0, canvasEl.width, canvasEl.height);
 
         canvasEl.toBlob(async (blob) => {
+            // --- KEY CHANGE: Use FormData to send multiple files ---
             const formData = new FormData();
-            formData.append('image', blob, 'capture.jpg');
+
+            // Append the same image twice under different keys to simulate two cameras
+            formData.append('image_left', blob, 'capture_left.jpg');
+            formData.append('image_right', blob, 'capture_right.jpg');
+
+            // In the future, you could add the Kinect depth map here:
+            // formData.append('depth_map', depthBlob, 'depth.bin');
+
+            // Append all other scenario data as form fields
             formData.append('Investor_Action', action);
             for (const key in currentScenario) {
                 formData.append(key, currentScenario[key]);
             }
 
+            // Send data to the new backend endpoint on the Pi
             statusMessageEl.textContent = `Logging decision: ${action}...`;
             try {
-                await fetch(`${API_BASE_URL}/log_decision`, { method: 'POST', body: formData });
-                fetchNextScenario();
+                // Note: The Pi server endpoint that receives this needs to be updated
+                // to call the new /analyze_vision endpoint on the PC service.
+                await fetch(`${API_BASE_URL}/log_decision`, { // Assuming you update pi_server.py
+                    method: 'POST',
+                    body: formData,
+                });
+
+                fetchNextScenario(); // Load next scenario on success
             } catch (error) {
+                console.error('Error logging decision:', error);
                 statusMessageEl.textContent = 'Failed to log decision.';
             }
+
         }, 'image/jpeg');
     }
 
@@ -83,3 +102,4 @@ document.addEventListener('DOMContentLoaded', () => {
     setupWebcam();
     fetchNextScenario();
 });
+

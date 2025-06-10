@@ -1,35 +1,118 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 import cv2
 import numpy as np
-from deepface import DeepFace
+import onnxruntime as ort
+import os
 
-# This script runs on a powerful PC, not the Raspberry Pi.
-# Command to run: uvicorn vision_service:app --host 0.0.0.0 --port 8001
+# --- Initialize FastAPI App ---
+app = FastAPI(title="Advanced Facial Analysis Service")
 
-app = FastAPI(title="Facial Sentiment Analysis Service")
+# --- Model and Configuration Loading ---
+# This code runs once when the server starts up.
 
-@app.post("/analyze_face")
-async def analyze_face(image: UploadFile = File(...)):
+# 1. Load OpenCV's Caffe-based Face Detector
+proto_path = os.path.join(cv2.dnn.readNetFromCaffe.__loader__.path, "..", "model", "deploy.prototxt")
+model_path = os.path.join(cv2.dnn.readNetFromCaffe.__loader__.path, "..", "model", "res10_300x300_ssd_iter_140000.caffemodel")
+face_detector = cv2.dnn.readNetFromCaffe(proto_path, model_path)
+
+# 2. Load the ONNX Emotion Recognition Model
+emotion_model_path = "emotion-ferplus-8.onnx"
+if not os.path.exists(emotion_model_path):
+    raise FileNotFoundError(f"Emotion model not found at {emotion_model_path}. Please download it.")
+
+emotion_classifier = ort.InferenceSession(emotion_model_path)
+EMOTION_LIST = ['neutral', 'happy', 'surprise', 'sad', 'anger', 'disgust', 'fear', 'contempt']
+
+print("Face detector and emotion classifier loaded successfully.")
+
+# --- Helper Function for Single Image Analysis ---
+def analyze_single_image(image: np.ndarray):
+    """Analyzes one image to find a face and its emotion."""
+    (h, w) = image.shape[:2]
+    # Create a blob from the image for the face detector
+    blob = cv2.dnn.blobFromImage(cv2.resize(image, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
+
+    face_detector.setInput(blob)
+    detections = face_detector.forward()
+
+    # Find the detection with the highest confidence
+    best_detection_index = np.argmax(detections[0, 0, :, 2])
+    confidence = detections[0, 0, best_detection_index, 2]
+
+    if confidence < 0.5: # Confidence threshold
+        return None # No face found
+
+    # Extract bounding box and face ROI
+    box = detections[0, 0, best_detection_index, 3:7] * np.array([w, h, w, h])
+    (startX, startY, endX, endY) = box.astype("int")
+    
+    face_roi = image[startY:endY, startX:endX]
+    gray_face = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
+    resized_face = cv2.resize(gray_face, (64, 64))
+    
+    # Prepare image for the ONNX model
+    processed_input = resized_face.astype(np.float32).reshape(1, 1, 64, 64)
+    
+    # Run inference
+    input_name = emotion_classifier.get_inputs()[0].name
+    output_name = emotion_classifier.get_outputs()[0].name
+    result = emotion_classifier.run([output_name], {input_name: processed_input})[0]
+    
+    emotion_index = np.argmax(result)
+    dominant_emotion = EMOTION_LIST[emotion_index]
+    
+    return {
+        "dominant_emotion": dominant_emotion,
+        "confidence": float(confidence),
+        "box_size": (endX - startX) * (endY - startY) # Area of the face box
+    }
+
+# --- API Endpoint ---
+@app.post("/analyze_vision")
+async def analyze_vision(
+    image_left: UploadFile = File(...),
+    image_right: UploadFile = File(...),
+    depth_map: UploadFile = File(None) # Future-proofed for Kinect input
+):
     """
-    Receives an image, analyzes it for the dominant emotion, and returns the result.
+    Receives dual camera images, analyzes both, and returns the best result.
+    Optionally accepts a depth map for future use.
     """
-    dominant_emotion = "error"
-    try:
-        contents = await image.read()
-        nparr = np.frombuffer(contents, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    # Decode images
+    contents_left = await image_left.read()
+    nparr_left = np.frombuffer(contents_left, np.uint8)
+    img_left = cv2.imdecode(nparr_left, cv2.IMREAD_COLOR)
 
-        analysis = DeepFace.analyze(
-            img_path=img,
-            actions=['emotion'],
-            enforce_detection=False # Don't fail if a face isn't perfectly detected
-        )
-        
-        dominant_emotion = analysis[0]['dominant_emotion']
-        print(f"[Vision Service] Analysis successful. Emotion: {dominant_emotion}")
+    contents_right = await image_right.read()
+    nparr_right = np.frombuffer(contents_right, np.uint8)
+    img_right = cv2.imdecode(nparr_right, cv2.IMREAD_COLOR)
 
-    except Exception as e:
-        print(f"[Vision Service] Error during analysis: {e}")
-        dominant_emotion = "error"
+    # Analyze both images
+    result_left = analyze_single_image(img_left)
+    result_right = analyze_single_image(img_right)
 
-    return {"dominant_emotion": dominant_emotion}
+    # --- Fusion Logic: Choose the best detection ---
+    # We prefer the detection with the larger face bounding box, as it's likely higher quality.
+    best_result = None
+    if result_left and result_right:
+        best_result = result_left if result_left['box_size'] >= result_right['box_size'] else result_right
+    elif result_left:
+        best_result = result_left
+    elif result_right:
+        best_result = result_right
+    else:
+        # No face detected in either image
+        return {"dominant_emotion": "not_found", "confidence": 0.0}
+
+    # --- Placeholder for future Kinect Depth Data Fusion ---
+    if depth_map:
+        depth_data = await depth_map.read()
+        print(f"[Vision Service] Received depth map of size {len(depth_data)} bytes. Processing logic can be added here.")
+        # Example: You could use depth data to calculate head pose, distance to camera,
+        # or verify that the detected face is a real person and not a photo.
+        best_result['depth_processed'] = True # Add a flag indicating depth was used
+
+    return {
+        "dominant_emotion": best_result['dominant_emotion'],
+        "confidence": best_result['confidence']
+    }
