@@ -1,8 +1,15 @@
+# Core trading bot and data handling
 alpaca-trade-api-python
 requests
-vaderSentiment
 python-dotenv
+pandas
+
+# Machine Learning and model handling
 scikit-learn
 joblib
-pandas
 matplotlib
+
+# Sentiment and Vision analysis
+vaderSentiment
+opencv-python
+onnxruntime
