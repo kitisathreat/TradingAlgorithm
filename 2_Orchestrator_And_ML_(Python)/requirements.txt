@@ -1,0 +1,8 @@
+alpaca-trade-api-python
+requests
+vaderSentiment
+python-dotenv
+scikit-learn
+joblib
+pandas
+matplotlib

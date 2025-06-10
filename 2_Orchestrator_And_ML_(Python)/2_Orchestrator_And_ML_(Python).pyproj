@@ -40,13 +40,20 @@
     <Compile Include="train_model.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="deployment_services\vision_service.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="interactive_training_app\" />
     <Folder Include="interactive_training_app\backend\" />
     <Folder Include="interactive_training_app\frontend\" />
+    <Folder Include="deployment_services\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include=".env">
+      <SubType>Code</SubType>
+    </Content>
     <Content Include="interactive_training_app\frontend\index.html" />
     <Content Include="interactive_training_app\frontend\script.js" />
     <Content Include="interactive_training_app\frontend\style.css" />
