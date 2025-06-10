@@ -43,3 +43,4 @@ investor_decisions_with_vision.csv
 .idea/
 .vscode/
 .DS_Store
+/2_Orchestrator_And_ML_(Python)/.env
