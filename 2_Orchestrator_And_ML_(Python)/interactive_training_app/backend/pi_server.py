@@ -4,17 +4,17 @@ import pandas as pd
 import os
 import requests
 
-# This script is to be deployed on the Raspberry Pi.
+# Pi code. Need ot check if this could work?
 
-# --- Initialize FastAPI App ---
+# fastAPI
 app = FastAPI(title="Investor Training Orchestrator")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# --- CONFIGURATION ---
+# I hate this IP stuff, so I will probably need to find a solution for a good static connection? Idk how I could operate that connection, because wifi I have access to typically has credentials, idk if trying to manage 5ghz is a good idea.
 VISION_SERVICE_URL = "http://YOUR_DESKTOP_PC_IP:8001/analyze_face" 
 DECISION_LOG_FILE = 'investor_decisions_with_vision.csv'
 
-# --- Data Loading ---
+# load data
 try:
     historical_df = pd.read_csv('historical_data.csv')
     class AppState:
@@ -24,7 +24,7 @@ except FileNotFoundError:
     print("FATAL ERROR: historical_data.csv not found.")
     exit()
 
-# --- API Endpoints ---
+# API endpoints
 @app.get("/get_next_scenario")
 def get_next_scenario():
     if app_state.scenario_index >= len(historical_df):
