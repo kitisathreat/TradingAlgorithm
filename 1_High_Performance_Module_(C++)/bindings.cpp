@@ -3,9 +3,7 @@
 
 namespace py = pybind11;
 
-// This macro creates the Python module.
-// The first argument ("decision_engine") is the name Python will use to import it.
-// The second argument ("m") is a variable representing the module.
+
 PYBIND11_MODULE(decision_engine, m) {
     m.doc() = "A high-performance C++ decision engine for trading.";
 
