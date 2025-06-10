@@ -9,9 +9,10 @@ import os
 
 class LiveTrader:
     def __init__(self):
+        #yes I know this is scuffed, but it's only me reading this, so fuck it
         self.api = tradeapi.REST(config.APCA_API_KEY_ID, config.APCA_API_SECRET_KEY, config.APCA_BASE_URL)
         self.stream = Stream(config.APCA_API_KEY_ID, config.APCA_API_SECRET_KEY, config.APCA_BASE_URL)
-        
+        #look, this is the most creative I could be
         self.fmp_fetcher = FMPFetcher()
         self.news_fetcher = NewsFetcher(self.api)
         self.sentiment_analyzer = SentimentAnalyzer()
@@ -35,9 +36,8 @@ class LiveTrader:
         headline = self.news_fetcher.get_latest_headline(symbol)
         sentiment = self.sentiment_analyzer.get_sentiment_score(headline)
         
-        # For live trading, we don't have facial sentiment. We can use a neutral value (e.g., 0)
-        # or another default. This is an important modeling decision.
-        facial_sentiment_code = 0 
+        # For live trading, we don't have pog facial data. Just assume it's like that one Speed clip
+        facial_sentiment_code = 0 #yeah, 0 is default, fuck with it if we need optimism or some kind of bias ig? 
         
         live_features = np.array([[
             price,
