@@ -5,7 +5,7 @@ import alpaca_trade_api as tradeapi
 
 # In-memory cache to limit API calls
 cache = {}
-CACHE_TTL_SECONDS = 900 # 15 minutes
+CACHE_TTL_SECONDS = 900 # 15 minutes, need to avoid rate limit issues
 
 class FMPFetcher:
     def __init__(self):
