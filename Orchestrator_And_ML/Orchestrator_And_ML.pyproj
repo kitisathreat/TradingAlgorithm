@@ -21,7 +21,23 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="config.py" />
+    <Compile Include="data_fetcher.py" />
+    <Compile Include="interactive_training_app\backend\pi_server.py" />
+    <Compile Include="live_trader.py" />
     <Compile Include="Orchestrator_And_ML.py" />
+    <Compile Include="sentiment_analyzer.py" />
+    <Compile Include="train_model.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="interactive_training_app\" />
+    <Folder Include="interactive_training_app\frontend\" />
+    <Folder Include="interactive_training_app\backend\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="interactive_training_app\frontend\index.html" />
+    <Content Include="interactive_training_app\frontend\script.js" />
+    <Content Include="interactive_training_app\frontend\style.css" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
