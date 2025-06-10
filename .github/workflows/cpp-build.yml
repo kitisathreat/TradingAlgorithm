@@ -1,0 +1,54 @@
+name: C++ Multi-Platform Build
+
+# --- Triggers ---
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# --- Jobs ---
+jobs:
+  build:
+    # Use a strategy matrix to run the same job on different operating systems
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }} # Run on the OS specified in the matrix
+
+    steps:
+      # Step 1: Check out the code
+      - name: Check out code
+        uses: actions/checkout@v4
+        # pybind11 is a submodule of this repo, so we need to check it out too
+        with:
+          submodules: recursive
+
+      # Step 2: Set up Python for pybind11
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      # Step 3: Configure the C++ build with CMake
+      # CMake is a cross-platform tool that generates build files (e.g., Makefiles, VS Solutions)
+      - name: Configure CMake
+        run: cmake -S 1_High_Performance_Module_(C++) -B build
+
+      # Step 4: Build the C++ module
+      - name: Build with CMake
+        run: cmake --build build --config Release
+
+      # Step 5: Upload the compiled artifact
+      # The compiled file will have a different name on each OS
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: decision-engine-${{ matrix.os }}
+          # The path to the compiled file varies slightly by platform
+          path: |
+            build/Release/decision_engine.pyd
+            build/decision_engine.so
+            build/decision_engine.dylib
+          if-no-files-found: ignore # Don't fail if one of the paths doesn't exist
