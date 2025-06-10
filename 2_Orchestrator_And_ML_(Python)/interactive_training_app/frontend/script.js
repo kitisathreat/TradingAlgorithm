@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- CONFIGURATION ---
-    const API_BASE_URL = 'http://YOUR_RASPBERRY_PI_IP:8000'; // Replace with your Pi's IP
+    // config
+    const API_BASE_URL = 'http://YOUR_RASPBERRY_PI_IP:8000'; // placeholder, need to replace with pi's id
 
-    // --- DOM ELEMENTS ---
+    // hehe "dom". I'm such a child
     const titleEl = document.getElementById('scenario-title');
     const priceEl = document.getElementById('price');
     const analystRatioEl = document.getElementById('analyst-ratio');
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentScenario = null;
 
-    // --- WEBCAM INITIALIZATION ---
+    // cam init
     async function setupWebcam() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- CORE FUNCTIONS ---
+    // handler function
     async function fetchNextScenario() {
         statusMessageEl.textContent = 'Loading next scenario...';
         try {
@@ -53,20 +53,20 @@ document.addEventListener('DOMContentLoaded', () => {
     async function logDecision(action) {
         if (!currentScenario) return;
 
-        // Capture a single image from the primary webcam
+        // single image
         canvasEl.width = webcamEl.videoWidth;
         canvasEl.height = webcamEl.videoHeight;
         canvasEl.getContext('2d').drawImage(webcamEl, 0, 0, canvasEl.width, canvasEl.height);
 
         canvasEl.toBlob(async (blob) => {
-            // --- KEY CHANGE: Use FormData to send multiple files ---
+            // -use formData to send multiple images
             const formData = new FormData();
 
-            // Append the same image twice under different keys to simulate two cameras
+            // temp workaround to simulate dual camera setup from single image
             formData.append('image_left', blob, 'capture_left.jpg');
             formData.append('image_right', blob, 'capture_right.jpg');
 
-            // In the future, you could add the Kinect depth map here:
+            // Kinect additions when needed
             // formData.append('depth_map', depthBlob, 'depth.bin');
 
             // Append all other scenario data as form fields
@@ -78,14 +78,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Send data to the new backend endpoint on the Pi
             statusMessageEl.textContent = `Logging decision: ${action}...`;
             try {
-                // Note: The Pi server endpoint that receives this needs to be updated
-                // to call the new /analyze_vision endpoint on the PC service.
-                await fetch(`${API_BASE_URL}/log_decision`, { // Assuming you update pi_server.py
+                // Pi endpoint that receives this needs to be updatedn to call the new /analyze_vision endpoint on the workhorse assuming I update pi_server.py
+                await fetch(`${API_BASE_URL}/log_decision`, { 
                     method: 'POST',
                     body: formData,
                 });
 
-                fetchNextScenario(); // Load next scenario on success
+                fetchNextScenario(); // Load next scenario
             } catch (error) {
                 console.error('Error logging decision:', error);
                 statusMessageEl.textContent = 'Failed to log decision.';
@@ -94,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 'image/jpeg');
     }
 
-    // --- EVENT LISTENERS & INITIALIZATION ---
+    // listeners and init
     buyBtn.addEventListener('click', () => logDecision('BUY'));
     holdBtn.addEventListener('click', () => logDecision('HOLD'));
     sellBtn.addEventListener('click', () => logDecision('SELL'));
