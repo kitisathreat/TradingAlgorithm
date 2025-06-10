@@ -7,7 +7,7 @@ TradeSignal TradingModel::get_trading_decision(
     double sentiment_score,
     double analyst_buy_ratio)
 {
-    // --- Example Rule-Based Trading Logic ---
+    // Haha, Jonathan, I vant to kill myself
     std::cout << "[C++ Engine] Analyzing " << symbol
         << ": Price=" << current_price
         << ", Sentiment=" << sentiment_score
@@ -27,5 +27,6 @@ TradeSignal TradingModel::get_trading_decision(
     }
 
     std::cout << "[C++ Engine] Decision: HOLD" << std::endl;
-    return TradeSignal::HOLD;
+    return TradeSignal::HOLD; 
+    // probably need more nuance on the hold, could potentially add different categorizations for movements? I.e. - liquidate whole position, buy options, whatever. Test if it works first before making it more complicated.
 }
