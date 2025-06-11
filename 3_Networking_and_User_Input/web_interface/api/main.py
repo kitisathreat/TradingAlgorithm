@@ -17,6 +17,14 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Get the absolute path to the web_interface directory
+WEB_INTERFACE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATIC_DIR = os.path.join(WEB_INTERFACE_DIR, "static")
+TEMPLATES_DIR = os.path.join(WEB_INTERFACE_DIR, "templates")
+
+# Create static directory if it doesn't exist
+os.makedirs(STATIC_DIR, exist_ok=True)
+
 # Initialize FastAPI app
 app = FastAPI(title="Trading Algorithm Control Center")
 
@@ -29,18 +37,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount static files with absolute path
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Templates
-templates = Jinja2Templates(directory="templates")
+# Templates with absolute path
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Global state
-trading_bot = None  # TODO: Replace with LiveTrader when available
-active_connections = []  # TODO: Replace with List[WebSocket] when available
-market_analyzer = None  # TODO: Replace with MarketPatternAnalyzer when available
+# Global state with placeholder implementations
+class PlaceholderTrader:
+    def __init__(self):
+        self.active_symbols = []
+        self._positions = {}
+    
+    async def initialize(self):
+        pass
+    
+    async def start(self):
+        pass
+    
+    async def stop(self):
+        pass
+    
+    def get_current_positions(self):
+        return self._positions
+    
+    async def get_performance_metrics(self):
+        return {
+            "total_return": 0.0,
+            "sharpe_ratio": 0.0,
+            "max_drawdown": 0.0,
+            "win_rate": 0.0,
+            "performance_history": []
+        }
 
-MODEL_PATH = Path("trained_model/model.h5")
+trading_bot = None  # Will be replaced with LiveTrader when available
+active_connections = []
+market_analyzer = None  # Will be replaced with MarketPatternAnalyzer when available
+
+MODEL_PATH = Path(os.path.join(WEB_INTERFACE_DIR, "trained_model/model.h5"))
 training_in_progress = False
 training_progress = 0
 training_status_msg = "Not started"
@@ -69,17 +103,31 @@ manager = ConnectionManager()
 # Routes
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    try:
+        return templates.TemplateResponse("index.html", {"request": request})
+    except Exception as e:
+        logger.error(f"Error rendering template: {e}")
+        return HTMLResponse(content=f"""
+            <html>
+                <head><title>Trading Algorithm Control Center</title></head>
+                <body>
+                    <h1>Trading Algorithm Control Center</h1>
+                    <p>Error loading interface: {str(e)}</p>
+                    <p>Please check the server logs for more information.</p>
+                </body>
+            </html>
+        """)
 
 @app.post("/api/start_trading")
 async def start_trading():
     global trading_bot
     try:
         if trading_bot is None:
-            trading_bot = LiveTrader()
+            # Use placeholder trader for now
+            trading_bot = PlaceholderTrader()
             await trading_bot.initialize()
             await trading_bot.start()
-            return {"status": "success", "message": "Trading bot started successfully"}
+            return {"status": "success", "message": "Trading bot started successfully (Placeholder Mode)"}
         else:
             return {"status": "error", "message": "Trading bot is already running"}
     except Exception as e:
@@ -107,7 +155,8 @@ async def get_trading_status():
         "is_running": trading_bot is not None,
         "last_update": datetime.now().isoformat(),
         "active_symbols": trading_bot.active_symbols if trading_bot else [],
-        "current_positions": trading_bot.get_current_positions() if trading_bot else {}
+        "current_positions": trading_bot.get_current_positions() if trading_bot else {},
+        "is_placeholder": isinstance(trading_bot, PlaceholderTrader) if trading_bot else False
     }
 
 @app.get("/api/performance_metrics")

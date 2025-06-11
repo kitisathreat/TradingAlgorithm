@@ -1,2 +1,11 @@
 uvicorn
-fastapi 
+fastapi
+jinja2
+python-multipart
+websockets
+psutil
+tqdm
+aiofiles
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv 
