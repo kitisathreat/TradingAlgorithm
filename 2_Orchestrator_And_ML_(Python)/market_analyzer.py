@@ -5,21 +5,31 @@ import seaborn as sns
 from datetime import datetime, timedelta
 import glob
 import os
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class MarketAnalyzer:
     def __init__(self):
-        # Find the most recent data file
+        # Find all data files and get the newest one
         data_files = glob.glob('sp500_historical_data_*.csv')
         if not data_files:
             raise FileNotFoundError("No historical data files found. Please run data_fetcher.py first.")
         
-        # Get the most recent file
-        latest_file = max(data_files, key=os.path.getctime)
-        print(f"Loading data from {latest_file}")
+        # Sort files by modification time (newest first) and get the most recent
+        data_files.sort(key=os.path.getmtime, reverse=True)
+        latest_file = data_files[0]
+        
+        # Log the file being used and its modification time
+        file_time = datetime.fromtimestamp(os.path.getmtime(latest_file))
+        logging.info(f"Using data file: {latest_file}")
+        logging.info(f"File last modified: {file_time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         # Load the data
         self.df = pd.read_csv(latest_file)
-        self.df['date'] = pd.to_datetime(self.df['date'])
+        # Fix the datetime parsing warning by using utc=True
+        self.df['date'] = pd.to_datetime(self.df['date'], utc=True)
         
         # Calculate daily returns for each stock
         self.df['daily_return'] = self.df.groupby('Symbol')['close_price'].pct_change()
@@ -27,13 +37,21 @@ class MarketAnalyzer:
         # Get S&P 500 data for market returns
         self.sp500 = self._get_sp500_data()
         
+        # Set the style for all plots
+        plt.style.use('seaborn-v0_8')  # Using a specific seaborn style version
+        
+        # Log data summary
+        logging.info(f"Data range: {self.df['date'].min().date()} to {self.df['date'].max().date()}")
+        logging.info(f"Number of companies: {len(self.df['Symbol'].unique())}")
+        
     def _get_sp500_data(self):
         """Get S&P 500 data for market returns calculation"""
         try:
             import yfinance as yf
             sp500 = yf.download('^GSPC', 
                               start=self.df['date'].min(),
-                              end=self.df['date'].max())
+                              end=self.df['date'].max(),
+                              auto_adjust=True)  # Explicitly set auto_adjust
             sp500['market_return'] = sp500['Close'].pct_change()
             return sp500
         except Exception as e:
@@ -69,7 +87,8 @@ class MarketAnalyzer:
 
     def analyze_market_trends(self):
         """Create visualizations for market trends"""
-        plt.style.use('seaborn')
+        # Set the style for this specific plot
+        plt.style.use('seaborn-v0_8')
         
         # 1. Overall Market Trend
         plt.figure(figsize=(15, 10))
@@ -93,6 +112,9 @@ class MarketAnalyzer:
 
     def analyze_beta_distribution(self):
         """Analyze and visualize beta distribution across different time horizons"""
+        # Set the style for this specific plot
+        plt.style.use('seaborn-v0_8')
+        
         time_horizons = [1, 3, 5, 10]  # years
         symbols = self.df['Symbol'].unique()
         
@@ -129,6 +151,9 @@ class MarketAnalyzer:
 
     def analyze_volatility(self):
         """Analyze and visualize price volatility"""
+        # Set the style for this specific plot
+        plt.style.use('seaborn-v0_8')
+        
         # Calculate rolling standard deviation for each stock
         volatility = self.df.groupby('Symbol')['close_price'].agg([
             ('volatility_1y', lambda x: x.pct_change().rolling(252).std().iloc[-1]),

@@ -38,6 +38,7 @@ venv/
 # Ignore large generated model files and collected data
 *.joblib
 investor_decisions_with_vision.csv
+sp500_historical_data_*.csv
 
 # --- Common Editor/OS Files ---
 .idea/
