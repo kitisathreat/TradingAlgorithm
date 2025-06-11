@@ -1,14 +1,17 @@
+# Standard library imports
 import time
-import yfinance as yf
-import pandas as pd
-from datetime import datetime, timedelta
-from typing import List, Dict
-import logging
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import glob
 import os
+from datetime import datetime, timedelta
+from typing import List, Dict
+import logging
+
+# Third-party imports
+import yfinance as yf
+import pandas as pd
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
