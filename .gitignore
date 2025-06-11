@@ -47,3 +47,6 @@ sp500_historical_data_*.csv
 .vscode/
 .DS_Store
 /2_Orchestrator_And_ML_(Python)/.env
+
+# Large data files
+2_Orchestrator_And_ML_(Python)/sp500_historical_data_*.csv
