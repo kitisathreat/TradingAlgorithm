@@ -88,6 +88,14 @@ struct SentimentData {
     double overall_sentiment;
 };
 
+// Structure to hold neural network insights
+struct NeuralNetworkInsights {
+    double predicted_price_change;
+    double trend_strength;
+    MarketRegime predicted_regime;
+    double confidence;
+};
+
 // Structure to hold the final trading decision
 struct TradingDecision {
     TradeSignal signal;
@@ -173,13 +181,15 @@ public:
         const std::vector<double>& sector_data,
         double vix,
         double account_value,
-        double current_position_size
+        double current_position_size,
+        const NeuralNetworkInsights& nn_insights = NeuralNetworkInsights{}  // Optional parameter
     );
 
     // Configuration methods
     void set_risk_parameters(double max_position_size, double max_drawdown);
     void set_technical_parameters(int sma_period, int ema_period, int rsi_period);
     void set_sentiment_weights(double social_weight, double analyst_weight, double news_weight);
+    void set_neural_network_weight(double weight);  // New method to set NN weight
 
 private:
     std::unique_ptr<TechnicalAnalyzer> technical_analyzer_;
@@ -187,24 +197,28 @@ private:
     std::unique_ptr<RiskManager> risk_manager_;
     
     // Weights for different components
-    double technical_weight_ = 0.4;
-    double sentiment_weight_ = 0.3;
-    double market_context_weight_ = 0.2;
-    double risk_weight_ = 0.1;
+    double technical_weight_ = 0.35;  // Adjusted to make room for NN
+    double sentiment_weight_ = 0.25;  // Adjusted
+    double market_context_weight_ = 0.20;
+    double risk_weight_ = 0.10;
+    double neural_network_weight_ = 0.10;  // New weight for NN insights
 
     // Helper methods
     double calculate_decision_confidence(const TechnicalIndicators& indicators,
                                        const SentimentData& sentiment,
                                        const MarketContext& context,
-                                       const RiskMetrics& risk);
+                                       const RiskMetrics& risk,
+                                       const NeuralNetworkInsights& nn_insights);  // Updated
     
     TradeSignal determine_signal(double confidence,
                                const TechnicalIndicators& indicators,
-                               const MarketContext& context);
+                               const MarketContext& context,
+                               const NeuralNetworkInsights& nn_insights);  // Updated
     
     std::string generate_reasoning(const TradeSignal& signal,
                                  const TechnicalIndicators& indicators,
                                  const SentimentData& sentiment,
                                  const MarketContext& context,
-                                 const RiskMetrics& risk);
+                                 const RiskMetrics& risk,
+                                 const NeuralNetworkInsights& nn_insights);  // Updated
 }; 
