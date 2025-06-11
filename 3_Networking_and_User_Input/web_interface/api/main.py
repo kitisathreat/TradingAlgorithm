@@ -13,11 +13,6 @@ import sys
 import os
 from pathlib import Path
 
-# Add parent directories to path to import from other modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from live_trader import LiveTrader
-from train_model import MarketPatternAnalyzer
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,9 +36,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Global state
-trading_bot: Optional[LiveTrader] = None
-active_connections: List[WebSocket] = []
-market_analyzer = MarketPatternAnalyzer()
+trading_bot = None  # TODO: Replace with LiveTrader when available
+active_connections = []  # TODO: Replace with List[WebSocket] when available
+market_analyzer = None  # TODO: Replace with MarketPatternAnalyzer when available
 
 MODEL_PATH = Path("trained_model/model.h5")
 training_in_progress = False
