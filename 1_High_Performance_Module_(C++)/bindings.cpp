@@ -5,31 +5,86 @@
 
 namespace py = pybind11;
 
-// Helper function to convert Python list to vector of PriceData
+// Custom exception class for trading engine errors
+class TradingEngineError : public std::runtime_error {
+public:
+    explicit TradingEngineError(const std::string& msg) : std::runtime_error(msg) {}
+};
+
+// Type-safe conversion functions with error handling
 std::vector<PriceData> list_to_price_data(const py::list& data) {
-    std::vector<PriceData> result;
-    for (const auto& item : data) {
-        py::dict price_dict = item.cast<py::dict>();
-        PriceData price;
-        price.price = price_dict["price"].cast<double>();
-        price.volume = price_dict["volume"].cast<double>();
-        price.timestamp = price_dict["timestamp"].cast<double>();
-        result.push_back(price);
+    try {
+        std::vector<PriceData> result;
+        result.reserve(data.size());  // Pre-allocate for better performance
+        
+        for (const auto& item : data) {
+            if (!py::isinstance<py::dict>(item)) {
+                throw TradingEngineError("Price data must be a list of dictionaries");
+            }
+            
+            py::dict price_dict = item.cast<py::dict>();
+            
+            // Validate required keys
+            if (!price_dict.contains("price") || !price_dict.contains("volume") || !price_dict.contains("timestamp")) {
+                throw TradingEngineError("Price data dictionary must contain 'price', 'volume', and 'timestamp'");
+            }
+            
+            // Type-safe conversion with validation
+            PriceData price;
+            try {
+                price.price = price_dict["price"].cast<double>();
+                price.volume = price_dict["volume"].cast<double>();
+                price.timestamp = price_dict["timestamp"].cast<double>();
+                
+                // Validate values
+                if (price.price <= 0) throw TradingEngineError("Price must be positive");
+                if (price.volume < 0) throw TradingEngineError("Volume cannot be negative");
+                if (price.timestamp < 0) throw TradingEngineError("Timestamp must be positive");
+                
+            } catch (const py::cast_error&) {
+                throw TradingEngineError("Invalid data types in price dictionary");
+            }
+            
+            result.push_back(std::move(price));
+        }
+        return result;
+    } catch (const TradingEngineError& e) {
+        throw;  // Re-throw our custom exceptions
+    } catch (const std::exception& e) {
+        throw TradingEngineError(std::string("Error converting price data: ") + e.what());
     }
-    return result;
 }
 
-// Helper function to convert Python list to vector of doubles
+// Type-safe conversion for doubles with validation
 std::vector<double> list_to_doubles(const py::list& data) {
-    std::vector<double> result;
-    for (const auto& item : data) {
-        result.push_back(item.cast<double>());
+    try {
+        std::vector<double> result;
+        result.reserve(data.size());
+        
+        for (const auto& item : data) {
+            try {
+                double value = item.cast<double>();
+                if (std::isnan(value) || std::isinf(value)) {
+                    throw TradingEngineError("Invalid numeric value in data");
+                }
+                result.push_back(value);
+            } catch (const py::cast_error&) {
+                throw TradingEngineError("All values must be numeric");
+            }
+        }
+        return result;
+    } catch (const TradingEngineError& e) {
+        throw;
+    } catch (const std::exception& e) {
+        throw TradingEngineError(std::string("Error converting numeric data: ") + e.what());
     }
-    return result;
 }
 
 PYBIND11_MODULE(decision_engine, m) {
     m.doc() = "A high-performance C++ decision engine for trading with advanced technical analysis, market context, and risk management.";
+
+    // Register custom exception
+    py::register_exception<TradingEngineError>(m, "TradingEngineError");
 
     // Enums
     py::enum_<MarketRegime>(m, "MarketRegime")
@@ -63,9 +118,21 @@ PYBIND11_MODULE(decision_engine, m) {
     // Structs
     py::class_<PriceData>(m, "PriceData")
         .def(py::init<>())
+        .def(py::init([](double price, double volume, double timestamp) {
+            if (price <= 0) throw TradingEngineError("Price must be positive");
+            if (volume < 0) throw TradingEngineError("Volume cannot be negative");
+            if (timestamp < 0) throw TradingEngineError("Timestamp must be positive");
+            return PriceData{price, volume, timestamp};
+        }), py::arg("price"), py::arg("volume"), py::arg("timestamp"),
+            "Initialize PriceData with validation")
         .def_readwrite("price", &PriceData::price)
         .def_readwrite("volume", &PriceData::volume)
-        .def_readwrite("timestamp", &PriceData::timestamp);
+        .def_readwrite("timestamp", &PriceData::timestamp)
+        .def("__repr__", [](const PriceData& p) {
+            return "PriceData(price=" + std::to_string(p.price) + 
+                   ", volume=" + std::to_string(p.volume) + 
+                   ", timestamp=" + std::to_string(p.timestamp) + ")";
+        });
 
     py::class_<TechnicalIndicators>(m, "TechnicalIndicators")
         .def(py::init<>())
@@ -133,16 +200,34 @@ PYBIND11_MODULE(decision_engine, m) {
                                       double account_value,
                                       double current_position_size,
                                       const NeuralNetworkInsights& nn_insights = NeuralNetworkInsights{}) {
-            return self.get_trading_decision(
-                symbol,
-                list_to_price_data(price_data),
-                sentiment,
-                list_to_doubles(sector_data),
-                vix,
-                account_value,
-                current_position_size,
-                nn_insights
-            );
+            try {
+                // Validate inputs
+                if (symbol.empty()) throw TradingEngineError("Symbol cannot be empty");
+                if (price_data.empty()) throw TradingEngineError("Price data cannot be empty");
+                if (account_value <= 0) throw TradingEngineError("Account value must be positive");
+                if (current_position_size < 0) throw TradingEngineError("Current position size cannot be negative");
+                if (vix < 0) throw TradingEngineError("VIX cannot be negative");
+
+                // Convert and validate data
+                auto price_data_vec = list_to_price_data(price_data);
+                auto sector_data_vec = list_to_doubles(sector_data);
+
+                // Make the trading decision
+                return self.get_trading_decision(
+                    symbol,
+                    std::move(price_data_vec),
+                    sentiment,
+                    std::move(sector_data_vec),
+                    vix,
+                    account_value,
+                    current_position_size,
+                    nn_insights
+                );
+            } catch (const TradingEngineError& e) {
+                throw;  // Re-throw our custom exceptions
+            } catch (const std::exception& e) {
+                throw TradingEngineError(std::string("Error in get_trading_decision: ") + e.what());
+            }
         }, "Makes a trading decision based on comprehensive market analysis and neural network insights",
            py::arg("symbol"),
            py::arg("price_data"),
@@ -152,14 +237,37 @@ PYBIND11_MODULE(decision_engine, m) {
            py::arg("account_value"),
            py::arg("current_position_size"),
            py::arg("nn_insights") = NeuralNetworkInsights{})
-        .def("set_risk_parameters", &TradingModel::set_risk_parameters,
-             "Set risk management parameters")
-        .def("set_technical_parameters", &TradingModel::set_technical_parameters,
-             "Set technical analysis parameters")
-        .def("set_sentiment_weights", &TradingModel::set_sentiment_weights,
-             "Set weights for different sentiment sources")
-        .def("set_neural_network_weight", &TradingModel::set_neural_network_weight,
-             "Set the weight for neural network insights in decision making");
+        .def("set_risk_parameters", [](TradingModel& self, double max_position_size, double max_drawdown) {
+            if (max_position_size <= 0 || max_position_size > 1.0) {
+                throw TradingEngineError("Max position size must be between 0 and 1");
+            }
+            if (max_drawdown <= 0 || max_drawdown > 1.0) {
+                throw TradingEngineError("Max drawdown must be between 0 and 1");
+            }
+            self.set_risk_parameters(max_position_size, max_drawdown);
+        }, "Set risk management parameters")
+        .def("set_technical_parameters", [](TradingModel& self, int sma_period, int ema_period, int rsi_period) {
+            if (sma_period <= 0 || ema_period <= 0 || rsi_period <= 0) {
+                throw TradingEngineError("Technical indicator periods must be positive");
+            }
+            self.set_technical_parameters(sma_period, ema_period, rsi_period);
+        }, "Set technical analysis parameters")
+        .def("set_sentiment_weights", [](TradingModel& self, double social_weight, double analyst_weight, double news_weight) {
+            if (social_weight < 0 || analyst_weight < 0 || news_weight < 0) {
+                throw TradingEngineError("Sentiment weights cannot be negative");
+            }
+            double total = social_weight + analyst_weight + news_weight;
+            if (std::abs(total - 1.0) > 1e-6) {
+                throw TradingEngineError("Sentiment weights must sum to 1.0");
+            }
+            self.set_sentiment_weights(social_weight, analyst_weight, news_weight);
+        }, "Set weights for different sentiment sources")
+        .def("set_neural_network_weight", [](TradingModel& self, double weight) {
+            if (weight < 0 || weight > 1.0) {
+                throw TradingEngineError("Neural network weight must be between 0 and 1");
+            }
+            self.set_neural_network_weight(weight);
+        }, "Set the weight for neural network insights in decision making");
 
     // TechnicalAnalyzer class
     py::class_<TechnicalAnalyzer>(m, "TechnicalAnalyzer")
