@@ -1,8 +1,8 @@
-2025-06-11 17:04:35,199 - INFO - === Server Startup Script Started ===
-2025-06-11 17:04:35,202 - INFO - Script directory: C:\Users\KitKumar\Documents\repos\TradingAlgorithm\3_Networking_and_User_Input\web_interface
-2025-06-11 17:04:35,205 - INFO - Python executable: C:\Users\KitKumar\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe
-2025-06-11 17:04:35,206 - INFO - Current working directory: C:\Users\KitKumar\Documents\repos\TradingAlgorithm\3_Networking_and_User_Input\web_interface
-2025-06-11 17:04:35,206 - INFO - === Starting main script ===
-2025-06-11 17:04:36,005 - INFO - Starting server launch process...
-2025-06-11 17:04:36,019 - INFO - [!] Port 8000 is already in use. Please close any existing server processes.
-2025-06-11 17:04:36,045 - INFO - Error trying to free port 8000: invalid attr name 'connections'
+2025-06-11 17:07:02,009 - INFO - === Server Startup Script Started ===
+2025-06-11 17:07:02,010 - INFO - Script directory: C:\Users\KitKumar\Documents\repos\TradingAlgorithm\3_Networking_and_User_Input\web_interface
+2025-06-11 17:07:02,010 - INFO - Python executable: C:\Users\KitKumar\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe
+2025-06-11 17:07:02,011 - INFO - Current working directory: C:\Users\KitKumar\Documents\repos\TradingAlgorithm\3_Networking_and_User_Input\web_interface
+2025-06-11 17:07:02,011 - INFO - === Starting main script ===
+2025-06-11 17:07:02,648 - INFO - Starting server launch process...
+2025-06-11 17:07:02,674 - INFO - [!] Port 8000 is already in use. Please close any existing server processes.
+2025-06-11 17:07:06,865 - INFO - [!] Could not free port 8000. Please restart your computer and try again.
