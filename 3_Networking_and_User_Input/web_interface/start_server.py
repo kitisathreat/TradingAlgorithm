@@ -184,10 +184,11 @@ def launch_server_and_browser(popup):
             popup.update_status("[!] Port 8000 is already in use. Please close any existing server processes.")
             # Try to find and kill any process using port 8000
             try:
-                for proc in psutil.process_iter(['pid', 'name', 'connections']):
+                for proc in psutil.process_iter(['pid', 'name']):
                     try:
-                        for conn in proc.connections():
-                            if conn.laddr.port == 8000:
+                        conns = proc.connections()
+                        for conn in conns:
+                            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == 8000:
                                 popup.log_message(f"Found process using port 8000: {proc.name()} (PID: {proc.pid})")
                                 proc.kill()
                                 popup.log_message(f"Killed process {proc.pid}")
@@ -195,8 +196,9 @@ def launch_server_and_browser(popup):
                                 if not check_port_in_use(8000):
                                     popup.log_message("Port 8000 is now free")
                                     break
-                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                        pass
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
+                        popup.log_message(f"Error accessing process: {e}")
+                        continue
             except Exception as e:
                 popup.log_message(f"Error trying to free port 8000: {str(e)}")
                 return
