@@ -113,6 +113,14 @@ PYBIND11_MODULE(decision_engine, m) {
         .def_readwrite("take_profit", &TradingDecision::take_profit)
         .def_readwrite("reasoning", &TradingDecision::reasoning);
 
+    // Add NeuralNetworkInsights struct
+    py::class_<NeuralNetworkInsights>(m, "NeuralNetworkInsights")
+        .def(py::init<>())
+        .def_readwrite("predicted_price_change", &NeuralNetworkInsights::predicted_price_change)
+        .def_readwrite("trend_strength", &NeuralNetworkInsights::trend_strength)
+        .def_readwrite("predicted_regime", &NeuralNetworkInsights::predicted_regime)
+        .def_readwrite("confidence", &NeuralNetworkInsights::confidence);
+
     // Main TradingModel class
     py::class_<TradingModel>(m, "TradingModel")
         .def(py::init<>())
@@ -123,7 +131,8 @@ PYBIND11_MODULE(decision_engine, m) {
                                       const py::list& sector_data,
                                       double vix,
                                       double account_value,
-                                      double current_position_size) {
+                                      double current_position_size,
+                                      const NeuralNetworkInsights& nn_insights = NeuralNetworkInsights{}) {
             return self.get_trading_decision(
                 symbol,
                 list_to_price_data(price_data),
@@ -131,15 +140,26 @@ PYBIND11_MODULE(decision_engine, m) {
                 list_to_doubles(sector_data),
                 vix,
                 account_value,
-                current_position_size
+                current_position_size,
+                nn_insights
             );
-        }, "Makes a trading decision based on comprehensive market analysis")
+        }, "Makes a trading decision based on comprehensive market analysis and neural network insights",
+           py::arg("symbol"),
+           py::arg("price_data"),
+           py::arg("sentiment"),
+           py::arg("sector_data"),
+           py::arg("vix"),
+           py::arg("account_value"),
+           py::arg("current_position_size"),
+           py::arg("nn_insights") = NeuralNetworkInsights{})
         .def("set_risk_parameters", &TradingModel::set_risk_parameters,
              "Set risk management parameters")
         .def("set_technical_parameters", &TradingModel::set_technical_parameters,
              "Set technical analysis parameters")
         .def("set_sentiment_weights", &TradingModel::set_sentiment_weights,
-             "Set weights for different sentiment sources");
+             "Set weights for different sentiment sources")
+        .def("set_neural_network_weight", &TradingModel::set_neural_network_weight,
+             "Set the weight for neural network insights in decision making");
 
     // TechnicalAnalyzer class
     py::class_<TechnicalAnalyzer>(m, "TechnicalAnalyzer")
