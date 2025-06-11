@@ -1,7 +1,4 @@
-import requests
-import config
 import time
-import alpaca_trade_api as tradeapi
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta

@@ -39,6 +39,7 @@ venv/
 *.joblib
 investor_decisions_with_vision.csv
 sp500_historical_data_*.csv
+*.csv  # Ignore all CSV files
 
 # --- Common Editor/OS Files ---
 .idea/
