@@ -1,11 +1,14 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from datetime import datetime, timedelta
+# Standard library imports
 import glob
 import os
 import logging
+from datetime import datetime, timedelta
+
+# Third-party imports
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -47,7 +50,6 @@ class MarketAnalyzer:
     def _get_sp500_data(self):
         """Get S&P 500 data for market returns calculation"""
         try:
-            import yfinance as yf
             sp500 = yf.download('^GSPC', 
                               start=self.df['date'].min(),
                               end=self.df['date'].max(),
