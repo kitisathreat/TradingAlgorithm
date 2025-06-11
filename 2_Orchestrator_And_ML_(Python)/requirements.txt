@@ -1,15 +1,24 @@
 # Core trading bot and data handling
-alpaca-trade-api-python
+alpaca-trade-api
 requests
 python-dotenv
 pandas
+numpy
+yfinance
+tqdm
 
 # Machine Learning and model handling
 scikit-learn
 joblib
 matplotlib
+tensorflow
+seaborn
 
 # Sentiment and Vision analysis
 vaderSentiment
 opencv-python
 onnxruntime
+
+# API and Testing
+fastapi
+pytest
