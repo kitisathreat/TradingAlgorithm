@@ -45,7 +45,7 @@ class ProgressPopup:
         self.root = root
         self.root.title("Server & Browser Startup Progress")
         self.root.geometry("600x300")
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)  # Always allow closing
         self.server_process = None  # Store server process reference
         self.stopped = False  # Track if force stop was used
@@ -120,15 +120,17 @@ class ProgressPopup:
         try:
             self.update_status("Launching browser...")
             for i in range(101):
-                time.sleep(0.02)
+                time.sleep(0.01)
                 self.update_browser_bar(i)
                 self.root.update_idletasks()
-            webbrowser.open('http://localhost:8000')
+            webbrowser.open('http://localhost:8001')
+            time.sleep(0.5)  # short delay
+            webbrowser.open('http://localhost:8001')  # force a new window (in case the first call did not open a window)
             self.update_browser_bar(100)
             self.update_status("[✓] Browser launched successfully")
         except Exception as e:
             self.log_message(f"Error launching browser: {str(e)}")
-            self.update_status("[!] Failed to launch browser. Please open http://localhost:8000 manually.")
+            self.update_status("[!] Failed to launch browser. Please open http://localhost:8001 manually.")
 
     def schedule_updates(self):
         self.root.update()
@@ -179,32 +181,32 @@ def launch_server_and_browser(popup):
     try:
         popup.log_message("Starting server launch process...")
         
-        # Check if port 8000 is already in use using a more reliable method
-        if check_port_in_use(8000):
-            popup.update_status("[!] Port 8000 is already in use. Please close any existing server processes.")
-            # Try to find and kill any process using port 8000
+        # Check if port 8001 is already in use using a more reliable method
+        if check_port_in_use(8001):
+            popup.update_status("[!] Port 8001 is already in use. Please close any existing server processes.")
+            # Try to find and kill any process using port 8001
             try:
                 for proc in psutil.process_iter(['pid', 'name']):
                     try:
                         conns = proc.connections()
                         for conn in conns:
-                            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == 8000:
-                                popup.log_message(f"Found process using port 8000: {proc.name()} (PID: {proc.pid})")
+                            if conn.status == psutil.CONN_LISTEN and conn.laddr.port == 8001:
+                                popup.log_message(f"Found process using port 8001: {proc.name()} (PID: {proc.pid})")
                                 proc.kill()
                                 popup.log_message(f"Killed process {proc.pid}")
                                 time.sleep(1)  # Wait a bit for the port to be released
-                                if not check_port_in_use(8000):
-                                    popup.log_message("Port 8000 is now free")
+                                if not check_port_in_use(8001):
+                                    popup.log_message("Port 8001 is now free")
                                     break
                     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
                         popup.log_message(f"Error accessing process: {e}")
                         continue
             except Exception as e:
-                popup.log_message(f"Error trying to free port 8000: {str(e)}")
+                popup.log_message(f"Error trying to free port 8001: {str(e)}")
                 return
             else:
-                if check_port_in_use(8000):
-                    popup.update_status("[!] Could not free port 8000. Please restart your computer and try again.")
+                if check_port_in_use(8001):
+                    popup.update_status("[!] Could not free port 8001. Please restart your computer and try again.")
                     return
 
         # Change to the API directory using absolute path
@@ -244,7 +246,7 @@ def launch_server_and_browser(popup):
         try:
             # Start server using a different approach - direct uvicorn command without FastAPI's dev server
             server = subprocess.Popen(
-                [python_exe, '-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8000', '--reload-dir', api_dir],
+                [python_exe, '-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8001', '--reload-dir', api_dir],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -270,8 +272,10 @@ def launch_server_and_browser(popup):
             popup.update_status(f"[X] Failed to start server process: {str(e)}")
             return
 
-        # Start a separate thread for reading server output
+        # Start a separate thread for reading server output (Windows-friendly, no select)
         def read_server_output():
+            import queue
+            import threading
             server_started = False
             start_time = time.time()
             startup_timeout = 60  # 60 second timeout
@@ -283,41 +287,36 @@ def launch_server_and_browser(popup):
                 "Application startup complete",
                 "Started server process",
                 "Waiting for application startup",
-                "Application startup complete",
                 "INFO:     Uvicorn running",
                 "INFO:     Application startup complete",
                 "INFO:     Started server process",
                 "INFO:     Started reloader process",
-                "INFO:     Started server process",
-                "INFO:     Waiting for application startup",
-                "INFO:     Application startup complete"
+                "INFO:     Waiting for application startup"
             ]
+
+            # Use queues to read stdout and stderr in background threads
+            q = queue.Queue()
+            def enqueue_output(pipe, name):
+                for line in iter(pipe.readline, ''):
+                    q.put((name, line))
+                pipe.close()
+            threading.Thread(target=enqueue_output, args=(server.stdout, 'stdout'), daemon=True).start()
+            threading.Thread(target=enqueue_output, args=(server.stderr, 'stderr'), daemon=True).start()
 
             while True:
                 if server.poll() is not None:
-                    stdout, stderr = server.communicate()
+                    # Process exited
+                    while not q.empty():
+                        name, line = q.get()
+                        popup.log_message(f"Server {name}: {line.strip()}")
                     popup.log_message(f"Server process exited with code {server.returncode}")
-                    if stdout:
-                        popup.log_message(f"Server stdout: {stdout}")
-                    if stderr:
-                        popup.log_message(f"Server stderr: {stderr}")
-                    if not stdout and not stderr:
-                        popup.log_message("Server process exited without any output")
-                    popup.update_status(f"[X] Server failed to start.\nError: {stderr if stderr else stdout or 'No output received'}")
+                    popup.update_status(f"[X] Server failed to start. See log for details.")
                     return
 
                 # Update progress and spinner
                 elapsed_time = time.time() - start_time
-                if elapsed_time >= startup_timeout:
-                    if error_buffer:
-                        popup.update_status(f"[!] Server startup timeout.\nLast errors:\n" + "\n".join(error_buffer[-5:]))
-                    else:
-                        popup.update_status("[!] Server startup timeout. No error messages received.")
-                    return
-
                 progress = min((elapsed_time / startup_timeout) * 100, 99)
                 popup.update_server_bar(progress)
-                
                 spinner = spinner_states[spinner_index % len(spinner_states)]
                 spinner_index += 1
                 if error_buffer:
@@ -325,32 +324,22 @@ def launch_server_and_browser(popup):
                 else:
                     popup.update_status(f"Waiting for server to start{spinner} ({int(progress)}%)")
 
-                # Read server output with timeout
-                for pipe in [server.stdout, server.stderr]:
-                    if pipe:
-                        try:
-                            # Use select to implement a timeout for reading
-                            import select
-                            if select.select([pipe], [], [], 0.1)[0]:  # 0.1 second timeout
-                                line = pipe.readline()
-                                if line:
-                                    line = line.strip()
-                                    popup.log_message(f"Server: {line}")
-                                    # Check for any error-like messages
-                                    if any(err in line.lower() for err in ["error", "exception", "failed", "traceback", "not found", "cannot", "invalid", "address already in use"]):
-                                        error_buffer.append(line)
-                                    # Check for startup patterns
-                                    if any(pattern.lower() in line.lower() for pattern in startup_patterns):
-                                        server_started = True
-                                        popup.log_message("Server startup detected!")
-                                        popup.update_server_bar(100)
-                                        popup.update_status("[✓] Server started successfully!")
-                                        popup.launch_browser_button.config(state=tk.NORMAL)  # Enable browser launch button
-                                        return
-                        except Exception as e:
-                            popup.log_message(f"Error reading server output: {str(e)}")
-                            error_buffer.append(f"Error reading output: {str(e)}")
-
+                # Read from queue
+                while not q.empty():
+                    name, line = q.get()
+                    line = line.strip()
+                    popup.log_message(f"Server {name}: {line}")
+                    if any(err in line.lower() for err in ["error", "exception", "failed", "traceback", "not found", "cannot", "invalid", "address already in use"]):
+                        error_buffer.append(line)
+                    if any(pattern.lower() in line.lower() for pattern in startup_patterns):
+                        if not server_started:
+                            server_started = True
+                            popup.log_message("Server startup detected!")
+                            popup.update_server_bar(100)
+                            popup.update_status("[✓] Server started successfully!")
+                            popup.launch_browser_button.config(state=tk.NORMAL)
+                            popup.launch_browser()  # Automatically launch browser
+                            return
                 time.sleep(0.1)
 
         # Start the output reading thread

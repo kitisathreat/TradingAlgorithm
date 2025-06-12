@@ -12,6 +12,25 @@ from datetime import datetime
 import sys
 import os
 from pathlib import Path
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+
+# Add project root to Python path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+if PROJECT_ROOT not in sys.path:
+    sys.path.append(PROJECT_ROOT)
+
+# Import our trading components
+try:
+    from _2_Orchestrator_And_ML_Python.live_trader import LiveTrader
+    from _2_Orchestrator_And_ML_Python.market_analyzer import MarketAnalyzer
+    logger.info("Successfully imported trading components")
+except ImportError as e:
+    logger.error(f"Error importing trading components: {e}")
+    logger.error(f"Python path: {sys.path}")
+    logger.error(f"Project root: {PROJECT_ROOT}")
+    raise
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,36 +62,10 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Templates with absolute path
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-# Global state with placeholder implementations
-class PlaceholderTrader:
-    def __init__(self):
-        self.active_symbols = []
-        self._positions = {}
-    
-    async def initialize(self):
-        pass
-    
-    async def start(self):
-        pass
-    
-    async def stop(self):
-        pass
-    
-    def get_current_positions(self):
-        return self._positions
-    
-    async def get_performance_metrics(self):
-        return {
-            "total_return": 0.0,
-            "sharpe_ratio": 0.0,
-            "max_drawdown": 0.0,
-            "win_rate": 0.0,
-            "performance_history": []
-        }
-
-trading_bot = None  # Will be replaced with LiveTrader when available
+# Global state
+trading_bot = None
+market_analyzer = None
 active_connections = []
-market_analyzer = None  # Will be replaced with MarketPatternAnalyzer when available
 
 MODEL_PATH = Path(os.path.join(WEB_INTERFACE_DIR, "trained_model/model.h5"))
 training_in_progress = False
@@ -123,11 +116,10 @@ async def start_trading():
     global trading_bot
     try:
         if trading_bot is None:
-            # Use placeholder trader for now
-            trading_bot = PlaceholderTrader()
+            trading_bot = LiveTrader()  # Initialize the actual LiveTrader
             await trading_bot.initialize()
             await trading_bot.start()
-            return {"status": "success", "message": "Trading bot started successfully (Placeholder Mode)"}
+            return {"status": "success", "message": "Trading bot started successfully"}
         else:
             return {"status": "error", "message": "Trading bot is already running"}
     except Exception as e:
@@ -151,23 +143,77 @@ async def stop_trading():
 @app.get("/api/trading_status")
 async def get_trading_status():
     global trading_bot
-    return {
-        "is_running": trading_bot is not None,
-        "last_update": datetime.now().isoformat(),
-        "active_symbols": trading_bot.active_symbols if trading_bot else [],
-        "current_positions": trading_bot.get_current_positions() if trading_bot else {},
-        "is_placeholder": isinstance(trading_bot, PlaceholderTrader) if trading_bot else False
-    }
+    if not trading_bot:
+        return {
+            "is_running": False,
+            "last_update": datetime.now().isoformat(),
+            "active_symbols": [],
+            "current_positions": {},
+            "is_placeholder": False
+        }
+    
+    try:
+        positions = trading_bot.trading_states
+        return {
+            "is_running": True,
+            "last_update": datetime.now().isoformat(),
+            "active_symbols": list(positions.keys()),
+            "current_positions": {
+                symbol: {
+                    "current_position": state.current_position,
+                    "last_update": state.last_update.isoformat(),
+                    "last_decision": state.last_decision.__dict__ if state.last_decision else None
+                }
+                for symbol, state in positions.items()
+            },
+            "is_placeholder": False
+        }
+    except Exception as e:
+        logger.error(f"Error getting trading status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/performance_metrics")
 async def get_performance_metrics():
     if trading_bot is None:
         raise HTTPException(status_code=400, detail="Trading bot is not running")
     try:
-        metrics = await trading_bot.get_performance_metrics()
+        # Get performance metrics from the trading bot
+        metrics = {}
+        for symbol, state in trading_bot.trading_states.items():
+            if state.last_decision:
+                metrics[symbol] = {
+                    "total_return": state.last_decision.total_return if hasattr(state.last_decision, 'total_return') else 0.0,
+                    "sharpe_ratio": state.last_decision.sharpe_ratio if hasattr(state.last_decision, 'sharpe_ratio') else 0.0,
+                    "max_drawdown": state.last_decision.max_drawdown if hasattr(state.last_decision, 'max_drawdown') else 0.0,
+                    "win_rate": state.last_decision.win_rate if hasattr(state.last_decision, 'win_rate') else 0.0
+                }
         return metrics
     except Exception as e:
         logger.error(f"Error getting performance metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/market_analysis")
+async def get_market_analysis():
+    global market_analyzer
+    try:
+        if market_analyzer is None:
+            market_analyzer = MarketAnalyzer()
+        
+        # Generate market analysis
+        high_beta = market_analyzer.analyze_beta_distribution()
+        volatility = market_analyzer.analyze_volatility()
+        
+        return {
+            "high_beta_companies": high_beta,
+            "volatile_companies": volatility,
+            "charts": {
+                "market_trend": "/static/market_trend.png",
+                "beta_distribution": "/static/beta_distribution.png",
+                "volatility_distribution": "/static/volatility_distribution.png"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error performing market analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.websocket("/ws")
@@ -236,4 +282,27 @@ async def training_status():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+st.title("Trading Algorithm Control Center")
+
+# Sidebar controls
+st.sidebar.title("Controls")
+if st.sidebar.button("Start Trading"):
+    # Start trading logic
+    pass
+
+# Main dashboard
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("Performance Metrics")
+    # Display metrics
+
+with col2:
+    st.subheader("Active Positions")
+    # Display positions
+
+# Charts
+st.subheader("Market Analysis")
+# Display interactive charts 
