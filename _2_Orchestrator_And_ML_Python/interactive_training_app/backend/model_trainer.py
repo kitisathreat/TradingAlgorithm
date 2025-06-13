@@ -432,48 +432,114 @@ class ModelTrainer:
             return 2  # Hold
     
     def add_training_example(self, feature_vector: np.ndarray, decision: int) -> None:
-        """Add a new training example"""
+        """Add a new training example and update model state"""
         self.training_data.append(feature_vector)
         self.training_labels.append(decision)
-    
+        
+        # Update model state
+        from streamlit_app import update_model_state
+        update_model_state(
+            is_trained=False,  # Not trained until train_model is called
+            training_examples=len(self.training_data),
+            model_accuracy=0.0
+        )
+
     def train_model(self) -> Dict[str, float]:
-        """Train the model on collected examples"""
+        """Train the model on collected examples and update state"""
         if len(self.training_data) < 5:
-            return {
+            result = {
                 'error': 'Need at least 5 training examples',
                 'loss': 0.0,
                 'accuracy': 0.0,
                 'val_loss': 0.0,
                 'val_accuracy': 0.0
             }
+            # Update state even for failed training
+            from streamlit_app import update_model_state
+            update_model_state(
+                is_trained=False,
+                training_examples=len(self.training_data),
+                model_accuracy=0.0
+            )
+            return result
         
-        # Prepare data
-        X = np.array(self.training_data)
-        y = np.array(self.training_labels)
-        
-        # Reshape for LSTM [samples, time steps, features]
-        X = X.reshape((X.shape[0], 1, X.shape[1]))
-        
-        # Scale features
-        X_reshaped = X.reshape(-1, X.shape[-1])
-        X_scaled = self.scaler.fit_transform(X_reshaped)
-        X = X_scaled.reshape(X.shape)
-        
-        # Train the model
-        history = self.model.fit(
-            X, y,
-            epochs=50,
-            batch_size=min(32, len(X)),
-            validation_split=0.2,
-            verbose=0
-        )
-        
-        return {
-            'loss': history.history['loss'][-1],
-            'accuracy': history.history['accuracy'][-1],
-            'val_loss': history.history['val_loss'][-1] if 'val_loss' in history.history else None,
-            'val_accuracy': history.history['val_accuracy'][-1] if 'val_accuracy' in history.history else None
-        }
+        try:
+            # Prepare data
+            X = np.array(self.training_data)
+            y = np.array(self.training_labels)
+            
+            # Reshape for LSTM [samples, time steps, features]
+            X = X.reshape((X.shape[0], 1, X.shape[1]))
+            
+            # Train the model
+            history = self.model.fit(
+                X, y,
+                epochs=50,
+                batch_size=32,
+                validation_split=0.2,
+                verbose=0
+            )
+            
+            # Get final metrics
+            final_accuracy = history.history['accuracy'][-1]
+            final_val_accuracy = history.history['val_accuracy'][-1]
+            
+            # Update model state
+            from streamlit_app import update_model_state
+            update_model_state(
+                is_trained=True,
+                training_examples=len(self.training_data),
+                model_accuracy=final_accuracy
+            )
+            
+            return {
+                'loss': history.history['loss'][-1],
+                'accuracy': final_accuracy,
+                'val_loss': history.history['val_loss'][-1],
+                'val_accuracy': final_val_accuracy
+            }
+            
+        except Exception as e:
+            logging.error(f"Error training model: {e}")
+            result = {
+                'error': str(e),
+                'loss': 0.0,
+                'accuracy': 0.0,
+                'val_loss': 0.0,
+                'val_accuracy': 0.0
+            }
+            # Update state for failed training
+            from streamlit_app import update_model_state
+            update_model_state(
+                is_trained=False,
+                training_examples=len(self.training_data),
+                model_accuracy=0.0
+            )
+            return result
+
+    def predict(self, feature_vector: np.ndarray) -> Tuple[int, float]:
+        """Make a prediction and handle model availability"""
+        try:
+            # Check if model is trained
+            from streamlit_app import get_model_state
+            model_state = get_model_state()
+            
+            if not model_state['is_trained']:
+                raise ValueError("Model needs to be trained before making predictions")
+            
+            # Reshape input for LSTM
+            X = feature_vector.reshape((1, 1, feature_vector.shape[0]))
+            
+            # Get prediction
+            prediction = self.model.predict(X, verbose=0)
+            decision = np.argmax(prediction[0])
+            confidence = float(prediction[0][decision])
+            
+            return decision, confidence
+            
+        except Exception as e:
+            logging.error(f"Error making prediction: {e}")
+            raise ValueError(f"Failed to make prediction: {str(e)}")
     
     def save_model(self, path: str) -> None:
         """Save the trained model and scaler"""
