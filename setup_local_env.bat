@@ -1,25 +1,32 @@
 @echo off
 echo Setting up local Python environment for Trading Algorithm...
 
-:: Check if Python is installed
-python --version >nul 2>&1
+:: Set Python 3.9 path
+set PYTHON_PATH=C:\Users\KitKumar\AppData\Local\Programs\Python\Python39
+set PATH=%PYTHON_PATH%;%PYTHON_PATH%\Scripts;%PATH%
+
+:: Check if Python 3.9 is available
+%PYTHON_PATH%\python.exe --version >nul 2>&1
 if errorlevel 1 (
-    echo Python is not installed or not in PATH
+    echo Python 3.9 is not found at %PYTHON_PATH%
+    echo Please install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
     exit /b 1
 )
 
 :: Check Python version
-for /f "tokens=2" %%I in ('python --version 2^>^&1') do set PYTHON_VERSION=%%I
+for /f "tokens=2" %%I in ('%PYTHON_PATH%\python.exe --version 2^>^&1') do set PYTHON_VERSION=%%I
 echo Detected Python version: %PYTHON_VERSION%
 
-:: Verify Python version is <= 3.11 for TensorFlow compatibility
+:: Verify Python version is exactly 3.9.x
 for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
-    if %%a GTR 3 (
-        echo Python version must be <= 3.11 for TensorFlow compatibility
+    if not "%%a"=="3" (
+        echo Error: Python 3.9.x is required, but found version %PYTHON_VERSION%
+        echo Please install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
         exit /b 1
     )
-    if %%a EQU 3 if %%b GTR 11 (
-        echo Python version must be <= 3.11 for TensorFlow compatibility
+    if not "%%b"=="9" (
+        echo Error: Python 3.9.x is required, but found version %PYTHON_VERSION%
+        echo Please install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
         exit /b 1
     )
 )
@@ -27,7 +34,7 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
 :: Create and activate virtual environment
 if not exist venv (
     echo Creating virtual environment...
-    python -m venv venv
+    %PYTHON_PATH%\python.exe -m venv venv
 )
 
 :: Activate virtual environment

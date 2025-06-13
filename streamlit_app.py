@@ -36,12 +36,21 @@ sys.path.append(str(NETWORKING_PATH))
 
 # Check Python version
 python_version = platform.python_version_tuple()
-if int(python_version[0]) > 3 or (int(python_version[0]) == 3 and int(python_version[1]) > 9):
+if python_version[0] != '3' or python_version[1] != '9':
     st.error(f"""
     ❌ Incompatible Python version: {platform.python_version()}
     
-    This app requires Python 3.9.x for TensorFlow compatibility.
-    Please update your Streamlit Cloud settings to use Python 3.9.
+    This app requires Python 3.9.x for compatibility with TensorFlow and other dependencies.
+    Please update your environment to use Python 3.9.x:
+    
+    For local development:
+    1. Install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
+    2. Run setup_local_env.bat to create a new virtual environment
+    
+    For Streamlit Cloud:
+    1. Go to your app settings
+    2. Under 'Python version', select Python 3.9
+    3. Redeploy your app
     """)
     st.stop()
 
