@@ -1,0 +1,48 @@
+# Streamlit Cloud specific requirements
+# This file is specifically for Streamlit Cloud deployment
+# Based on root_requirements.txt but with Streamlit Cloud specific adjustments
+
+# Core ML and Data Processing
+tensorflow==2.13.0  # Specific version for Python 3.9 compatibility
+numpy==1.24.3
+pandas==2.0.3
+scikit-learn==1.3.0
+joblib==1.3.0
+
+# Web Framework and API
+streamlit==1.31.0
+fastapi==0.100.0
+python-dotenv==1.0.0
+requests==2.31.0
+httpx==0.24.0
+aiohttp==3.8.1
+
+# Trading and Market Data
+alpaca-trade-api==3.0.0
+yfinance==0.2.36
+lxml==4.9.1  # Pinned version for stability
+tqdm==4.65.0
+
+# Visualization
+plotly==5.18.0
+matplotlib==3.7.0
+seaborn==0.12.0
+
+# ML Model Serving
+onnxruntime==1.15.0
+opencv-python-headless==4.7.0.72  # Using headless version for cloud deployment
+
+# Sentiment Analysis
+vaderSentiment==3.3.2
+textblob==0.17.1
+
+# System and Performance
+psutil==5.9.0
+tenacity==8.2.2
+
+# Streamlit Extras
+streamlit-plotly-events==0.0.6
+streamlit-option-menu==0.3.12
+streamlit-extras==0.3.5
+
+# Note: Development dependencies (pytest, pybind11) are excluded as they're not needed in production 
