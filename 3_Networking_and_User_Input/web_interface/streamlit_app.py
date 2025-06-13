@@ -108,7 +108,7 @@ except ImportError as e:
     ❌ Missing required dependencies: {str(e)}
     
     Please ensure all dependencies are installed:
-    1. Check that streamlit_requirements.txt is properly configured
+    1. Check that web_requirements.txt is properly configured
     2. Try restarting the app
     3. If the issue persists, contact support
     """)

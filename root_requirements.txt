@@ -14,12 +14,12 @@ fastapi==0.100.0         # Compatible with Python 3.9
 python-dotenv==1.0.0     # Environment variable management
 requests==2.31.0         # HTTP client
 httpx==0.24.0           # Async HTTP client
-aiohttp==3.8.0          # Async HTTP server/client
+aiohttp==3.8.1          # Async HTTP server/client (updated for alpaca-trade-api compatibility)
 
 # Trading and Market Data
 alpaca-trade-api==3.0.0  # Trading API integration
 yfinance==0.2.36         # Market data
-lxml>=4.9.1             # Required by yfinance
+lxml>=4.9.1            # Required by yfinance (updated version)
 tqdm==4.65.0            # Progress bars
 
 # Visualization
