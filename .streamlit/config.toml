@@ -1,6 +1,3 @@
-[deploy]
-requirementsFile = "streamlitcloud_requirements.txt"
-
 [server]
 maxUploadSize = 200
 enableXsrfProtection = true
