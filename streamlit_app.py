@@ -8,6 +8,15 @@ import sys
 from pathlib import Path
 import streamlit as st
 import platform
+import logging
+
+# Configure logging: clear log file and restart logging on app start
+logging.basicConfig(
+    filename="streamlit_app.log",
+    filemode="w",  # Overwrite log file on each app start
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # Set page config - must be the first Streamlit command
 st.set_page_config(
