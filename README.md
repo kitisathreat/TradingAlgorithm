@@ -1,149 +1,157 @@
-# TradingAlgorithm: High-Performance Hybrid Trading System
+# TradingAlgorithm: Hybrid Trading System with ML Integration
 
 ## Overview
 
-**TradingAlgorithm** is a hybrid algorithmic trading platform that combines the speed and efficiency of C++ with the flexibility and intelligence of Python. The system is designed for both research and live trading, leveraging advanced technical analysis, machine learning, and real-time data processing. The architecture enables rapid decision-making for live markets while supporting robust model training and interactive human-in-the-loop workflows.
+**TradingAlgorithm** is a sophisticated trading platform that combines high-performance C++ for core trading logic with Python for machine learning and orchestration. The system is designed to be both powerful for experienced developers and accessible for those new to algorithmic trading.
 
----
+### Key Features
+- High-speed trading engine in C++ for real-time market analysis
+- Machine learning integration for pattern recognition and prediction
+- Interactive web interface for monitoring and control
+- Comprehensive logging and error handling
+- Modular design for easy extension and customization
 
-## Repository Structure
+## Project Structure
 
 ```
 TradingAlgorithm/
-├── 1_High_Performance_Module_(C++)/         # C++ core: high-speed trading engine, pybind11 bindings
-├── 2_Orchestrator_And_ML_(Python)/          # Python orchestration, ML, deployment, and UI
-│   ├── deployment_services/                 # FastAPI and related deployment services
-│   ├── interactive_training_app/            # Interactive training app (backend/frontend)
-│   ├── tests/                               # Integration and unit tests
-├── 3_Networking_and_User_Input/             # (Reserved for networking/user input modules)
-├── README.md                                # Project documentation
-├── TradingAlgo.sln                          # Solution file for C++ build
+├── 0_Launchers/                        # Quick-start scripts and launchers
+├── 1_High_Performance_Module_(C++)/    # Core trading engine (C++)
+│   ├── src/                           # Source code
+│   └── tests/                         # C++ unit tests
+├── 2_Orchestrator_And_ML_Python/       # Python orchestration and ML
+│   ├── logs/                          # Trading and system logs
+│   ├── tests/                         # Python tests
+│   ├── main.py                        # Main entry point
+│   └── requirements.txt               # Python dependencies
+├── 3_Networking_and_User_Input/        # Web interface and API
+│   └── web_interface/                 # Streamlit-based UI
+├── docs/                              # Documentation
+└── .github/                           # CI/CD workflows
 ```
 
----
+## Getting Started
 
-## Main Components
+### For Beginners
+
+1. **Setup Environment**
+   - Install Python 3.9 (required for compatibility)
+   - Run the setup script in `0_Launchers/setup_environment.bat`
+   - This will create a virtual environment and install all dependencies
+
+2. **Quick Start**
+   - Run `0_Launchers/start_trading.bat` to launch the system
+   - Access the web interface at `http://localhost:8501`
+   - Monitor trading activity in the logs directory
+
+3. **Key Files to Understand**
+   - `2_Orchestrator_And_ML_Python/main.py`: Main trading logic
+   - `3_Networking_and_User_Input/web_interface/`: Web dashboard
+   - `docs/project_structure.txt`: Detailed component documentation
+
+### For Developers
+
+1. **Development Setup**
+   ```powershell
+   # Create and activate virtual environment
+   python -m venv venv
+   .\venv\Scripts\activate
+
+   # Install dependencies
+   pip install -r 2_Orchestrator_And_ML_Python/requirements.txt
+   ```
+
+2. **Building C++ Module**
+   ```powershell
+   cd 1_High_Performance_Module_(C++)
+   mkdir build
+   cd build
+   cmake ..
+   cmake --build . --config Release
+   ```
+
+3. **Running Tests**
+   ```powershell
+   # Python tests
+   cd 2_Orchestrator_And_ML_Python
+   python -m pytest tests/
+
+   # C++ tests
+   cd 1_High_Performance_Module_(C++)
+   cd build
+   ctest
+   ```
+
+## Component Details
 
 ### 1. High-Performance Module (C++)
-- **Purpose:** Implements the core trading decision engine for ultra-fast, low-latency calculations.
-- **Key Features:**
-  - Technical analysis (SMA, EMA, RSI, etc.)
+- **Purpose**: Ultra-fast market analysis and trading decisions
+- **Key Components**:
+  - Technical analysis indicators (SMA, EMA, RSI)
   - Market regime detection
-  - Risk management logic
-  - Exposed to Python via `pybind11` bindings
-- **Implementation:**
-  - `engine.cpp`/`engine.h`: Core trading logic, data structures, and algorithms
-  - `bindings.cpp`: Exposes C++ classes and functions to Python, with robust type safety and error handling
-  - `CMakeLists.txt`: Build configuration for compiling the C++ module as a Python extension
+  - Risk management algorithms
+- **Integration**: Exposed to Python via pybind11 bindings
 
-### 2. Orchestrator and Machine Learning (Python)
-- **Purpose:** Coordinates data flow, model training, live trading, and user interaction.
-- **Key Features:**
-  - Loads and preprocesses historical and live market data
-  - Trains neural networks for pattern recognition and signal generation
-  - Integrates with the C++ engine for real-time trading decisions
-  - Manages risk, order execution, and logging
-- **Implementation:**
-  - `live_trader.py`: Main trading bot, integrates C++ engine, handles trading loop, error handling, and logging
-  - `train_model.py`: Model training pipeline for ML components
-  - `market_analyzer.py`: Market data analysis and feature extraction
-  - `tests/`: Comprehensive integration/unit tests for C++/Python boundary and trading logic
+### 2. Python Orchestrator
+- **Purpose**: Coordinates trading operations and ML integration
+- **Key Features**:
+  - Market data processing
+  - ML model training and inference
+  - Trading strategy execution
+  - Comprehensive logging
+- **Main Files**:
+  - `main.py`: Core trading logic
+  - `market_analyzer.py`: Market data analysis
+  - `model_trainer.py`: ML model training
 
-### 3. Deployment Services & Interactive Training
-- **Purpose:** Provides APIs and user interfaces for monitoring, training, and human-in-the-loop workflows.
-- **Key Features:**
-  - FastAPI server for facial sentiment analysis and logging
-  - Interactive web app for training and feedback
-- **Implementation:**
-  - `deployment_services/`: FastAPI and related deployment scripts
-  - `interactive_training_app/`: Full-stack app (backend: Python, frontend: JS/React or similar)
+### 3. Web Interface
+- **Purpose**: User-friendly monitoring and control
+- **Features**:
+  - Real-time trading dashboard
+  - Performance metrics
+  - Strategy configuration
+  - Log viewer
 
----
+## Development Guidelines
 
-## Setup & Installation
+### Adding New Features
+1. **Technical Indicators**
+   - Add C++ implementation in `1_High_Performance_Module_(C++)/src/`
+   - Create Python bindings in `bindings.cpp`
+   - Add tests in respective test directories
 
-### Prerequisites
-- Python 3.9+
-- C++17 compiler (GCC, Clang, or MSVC)
-- [pybind11](https://github.com/pybind/pybind11)
-- Required Python packages (see below)
+2. **ML Models**
+   - Implement in `2_Orchestrator_And_ML_Python/`
+   - Follow existing model architecture
+   - Add validation tests
 
-### Building the C++ Module
-1. Install `pybind11` and a compatible compiler.
-2. From the `1_High_Performance_Module_(C++)` directory, build the Python extension:
-   ```sh
-   mkdir build && cd build
-   cmake ..
-   make
-   ```
-3. Ensure the resulting module (e.g., `decision_engine.*.pyd`/`.so`) is accessible to the Python code (copy or symlink as needed).
+3. **UI Components**
+   - Add to `3_Networking_and_User_Input/web_interface/`
+   - Follow Streamlit best practices
+   - Include error handling
 
-### Python Dependencies
-Install required packages:
-```sh
-pip install -r 2_Orchestrator_And_ML_(Python)/requirements.txt
-```
+### Best Practices
+- Use type hints in Python code
+- Follow C++17 standards
+- Write tests for new features
+- Update documentation
+- Use environment variables for secrets
+- Follow existing logging patterns
 
-### Running the System
-1. **Prepare Data:** Download and preprocess historical market data as needed.
-2. **Start Deployment Services:**
-   ```sh
-   cd 2_Orchestrator_And_ML_(Python)/deployment_services
-   uvicorn pi_server:app --reload
-   ```
-3. **Interactive Training (optional):**
-   ```sh
-   cd 2_Orchestrator_And_ML_(Python)/interactive_training_app
-   # Start backend and frontend as per app instructions
-   ```
-4. **Train Model:**
-   ```sh
-   python 2_Orchestrator_And_ML_(Python)/train_model.py
-   ```
-5. **Run Live Trading Bot:**
-   ```sh
-   python 2_Orchestrator_And_ML_(Python)/live_trader.py
-   ```
+## Troubleshooting
 
----
-
-## Key Implementation Details
-
-- **C++/Python Integration:**
-  - The C++ engine is exposed to Python using `pybind11`, with custom exception handling and type-safe data conversion.
-  - Python code calls the C++ engine for every trading decision, passing validated data structures.
-- **Error Handling:**
-  - Both C++ and Python layers include robust error handling and logging.
-  - Custom exceptions are raised for invalid input, and all errors are logged for traceability.
-- **Testing:**
-  - Integration and unit tests are provided in `2_Orchestrator_And_ML_(Python)/tests/`.
-  - Tests cover C++/Python boundary, trading logic, and error scenarios.
-- **Extensibility:**
-  - Modular design allows for easy extension of technical indicators, ML models, and deployment services.
-
----
-
-## Need-to-Know Topics
-
-- **API Keys & Secrets:**
-  - Store sensitive credentials in environment variables or a `.env` file (never commit secrets to version control).
-- **Performance:**
-  - The C++ module is designed for low-latency, high-throughput environments. Ensure it is compiled with optimizations enabled.
-- **Customization:**
-  - You can add new technical indicators, ML models, or data sources by extending the relevant modules.
-- **Error Logs:**
-  - All trading and system errors are logged to `trading_bot.log` for debugging and audit purposes.
-- **Testing:**
-  - Run `pytest` in the `tests/` directory to verify integration and logic before deploying to production.
-
----
+Common issues and solutions are documented in:
+- `docs/streamlit_cloud_troubleshooting.md`
+- `docs/setup_guide.md`
 
 ## Contributing
 
-Contributions are welcome! Please open issues or submit pull requests for bug fixes, improvements, or new features.
-
----
+1. Fork the repository
+2. Create a feature branch
+3. Make changes
+4. Run tests
+5. Submit pull request
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License - See LICENSE file for details

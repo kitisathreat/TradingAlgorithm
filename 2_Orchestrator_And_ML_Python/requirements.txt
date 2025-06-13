@@ -1,80 +1,100 @@
 # Core dependencies (fixed versions for Python 3.9 compatibility)
+# Used for: web interface, data visualization, and market data display
 streamlit==1.31.0
-pandas==2.0.0
+# Used for: data manipulation, market data processing, and feature processing
+pandas==2.0.3  # Updated to match main requirements
+# Used for: interactive charts and market visualization
 plotly==5.18.0
+# Used for: environment variables, configuration, and secrets management
 python-dotenv==1.0.0
+# Used for: API calls and data fetching
 requests==2.31.0
+# Used for: live trading, market data access, and order management
 alpaca-trade-api==3.0.0
-numpy==1.24.0  # Fixed version for Python 3.9 compatibility
+# Used for: numerical operations, ML operations, and ML preprocessing
+numpy==1.24.3  # Updated to match main requirements
+# Used for: progress bars and data processing progress
 tqdm==4.65.0
 
 # ML dependencies (compatible with Python 3.9)
+# Used for: model training and inference
 tensorflow==2.13.0  # Fixed version for Python 3.9 compatibility
+# Used for: feature engineering and model evaluation
 scikit-learn==1.3.0
+# Used for: model persistence and caching
 joblib==1.3.0
-transformers==4.35.0  # For text processing
-torch==2.1.0  # For PyTorch models (optional)
 
 # Financial data and utilities
+# Used for: market data and historical data retrieval
 yfinance==0.2.36
+# Used for: system monitoring and resource management
 psutil==5.9.0
-lxml==4.9.0  # For XML/HTML parsing
-vaderSentiment==3.3.2  # For sentiment analysis
-tenacity==8.2.2  # For retry logic
-textblob==0.17.1  # For additional text analysis
-
-# Development dependencies
-pytest==7.4.0
-pybind11==2.11.1  # Updated for better C++ compatibility
-setuptools==68.0.0
-wheel==0.41.0
-black==23.9.0  # For code formatting
-pylint==3.0.0  # For code linting
+# Used for: XML/HTML parsing and data extraction
+lxml>=4.9.1  # Updated to match main requirements
+# Used for: retry logic and error handling
+tenacity==8.2.2
 
 # Visualization
+# Used for: static plotting and technical analysis
 matplotlib==3.7.0
+# Used for: statistical visualization and data analysis
 seaborn==0.12.0
 
 # API and Vision Service
+# Used for: REST API endpoints and model serving
 fastapi==0.100.0
-fastapi[testclient]==0.100.0
+# Used for: image processing and computer vision tasks
 opencv-python-headless==4.7.0.72  # Use headless version for cloud deployment
+# Used for: model optimization and inference
 onnxruntime==1.15.0
 
 # Streamlit extras
+# Used for: interactive plot events and user interactions
 streamlit-plotly-events==0.0.6
+# Used for: navigation menu and UI components
 streamlit-option-menu==0.3.12
-streamlit-autorefresh==0.3.1
+# Used for: additional UI components and utilities
 streamlit-extras==0.3.5
 
 # HTTP client improvements
+# Used for: async HTTP requests and API calls
 httpx==0.24.0
+# Used for: concurrent API requests and data streaming
 aiohttp==3.8.0
 
-# Trading APIs
-alpaca-trade-api>=3.0.0
+# Trading APIs (duplicate entries for different components)
+alpaca-trade-api==3.0.0  # For live trading
+alpaca-trade-api==3.0.0  # For market data access
+alpaca-trade-api==3.0.0  # For order management
 
-# Streamlit and environment
-streamlit>=1.31.0
-python-dotenv>=1.0.0
+# Streamlit and environment (duplicate entries for different components)
+streamlit==1.31.0  # For web interface
+streamlit==1.31.0  # For data visualization
+python-dotenv==1.0.0  # For environment variables
+python-dotenv==1.0.0  # For configuration
 
-# Core trading and data handling
-alpaca-trade-api>=2.3.0  # For live trading
-requests>=2.31.0         # For API calls
-python-dotenv>=1.0.0     # For environment variables
-pandas>=2.0.0           # For data manipulation
-numpy>=1.24.0           # For numerical operations
-yfinance>=0.2.36        # For market data
-tqdm>=4.66.0           # For progress bars
+# Core trading and data handling (duplicate entries for different components)
+requests==2.31.0  # For API calls
+requests==2.31.0  # For data fetching
+python-dotenv==1.0.0  # For secrets management
+pandas==2.0.3  # For data manipulation
+pandas==2.0.3  # For market data processing
+numpy==1.24.3  # For numerical operations
+numpy==1.24.3  # For ML preprocessing
+yfinance==0.2.36  # For market data
+yfinance==0.2.36  # For historical data
+tqdm==4.65.0  # For progress bars
+tqdm==4.65.0  # For data processing progress
 
-# Web Interface
-streamlit>=1.31.0
-plotly>=5.18.0
+# Web Interface (duplicate entries for different components)
+streamlit==1.31.0  # For main interface
+plotly==5.18.0  # For interactive charts
+plotly==5.18.0  # For market visualization
 
-# ML and data science
-numpy>=1.24.0,<2.0.0
-tensorflow>=2.15.0,<2.20.0
-scikit-learn>=1.3.0
-joblib>=1.3.0
-yfinance>=0.2.36
-pandas>=2.0.0 
+# ML and data science (duplicate entries for different components)
+numpy==1.24.3  # For ML operations
+tensorflow==2.13.0  # For model training
+scikit-learn==1.3.0  # For feature engineering
+joblib==1.3.0  # For model persistence
+yfinance==0.2.36  # For training data
+pandas==2.0.3  # For feature processing 

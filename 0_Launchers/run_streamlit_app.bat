@@ -43,7 +43,7 @@ if errorlevel 1 (
 
 :: Run the Streamlit app
 echo Starting Streamlit app...
-streamlit run streamlit_app.py
+streamlit run "..\3_Networking_and_User_Input\web_interface\streamlit_app.py"
 if errorlevel 1 (
     echo Error: Failed to start Streamlit app
     pause

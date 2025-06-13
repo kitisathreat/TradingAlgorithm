@@ -34,9 +34,9 @@ aiohttp==3.8.0
 # Streamlit extras
 streamlit-plotly-events==0.0.6
 streamlit-option-menu==0.3.12
-streamlit-autorefresh==0.3.1
+streamlit-autorefresh==1.0.1  # Updated to latest stable version
 streamlit-extras==0.3.5
 
 # Additional packages for cloud compatibility
-lxml==4.9.0
+lxml>=4.9.1  # Updated for yfinance compatibility
 psutil==5.9.0 

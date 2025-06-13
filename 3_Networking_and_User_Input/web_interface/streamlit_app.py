@@ -1,6 +1,7 @@
 """
 Trading Algorithm Training Interface
 Main entry point for Streamlit Cloud deployment.
+For troubleshooting, see docs/streamlit_cloud_troubleshooting.md
 """
 
 import os
@@ -29,11 +30,11 @@ st.set_page_config(
 )
 
 # Add the orchestrator directory to Python path
-REPO_ROOT = Path(__file__).parent
-ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+REPO_ROOT = Path(__file__).parent.parent.parent
+ORCHESTRATOR_PATH = REPO_ROOT / "2_Orchestrator_And_ML_Python"
 sys.path.append(str(ORCHESTRATOR_PATH))
 # Add the networking directory to Python path
-NETWORKING_PATH = REPO_ROOT / "networking_and_user_input"
+NETWORKING_PATH = REPO_ROOT / "3_Networking_and_User_Input"
 sys.path.append(str(NETWORKING_PATH))
 
 # Constants for model state
@@ -182,6 +183,7 @@ def check_model_availability():
         
         This is required for model training and predictions.
         Please ensure you're using Python 3.9 in Streamlit Cloud settings.
+        See docs/streamlit_cloud_troubleshooting.md for more information.
         """)
         return False
         
