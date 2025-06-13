@@ -10,24 +10,23 @@ numpy>=1.24.0,<2.0.0
 # ML dependencies - Compatible with Python 3.9-3.11
 # Note: TensorFlow >=2.15.0 requires Python <=3.11
 tensorflow>=2.15.0,<2.20.0
-scikit-learn>=1.3.0
-joblib>=1.3.0
 
-# Financial data
+# Financial data and utilities
 yfinance>=0.2.36
 psutil
 tqdm>=4.65.0
+lxml>=4.9.0  # For XML/HTML parsing
+vaderSentiment>=3.3.2  # For sentiment analysis
+tenacity>=8.2.2  # For retry logic
 
-# C++ module dependencies
+# Development dependencies (optional, for local development)
+pytest>=7.4.0
 pybind11>=2.6.0
 setuptools>=65.0.0
 wheel>=0.40.0
 
 # System dependencies for Streamlit Cloud
-# These are automatically handled by the packages.txt file 
-
-# Sentiment analysis
-vaderSentiment>=3.3.2
+# These are automatically handled by the packages.txt file
 
 # Visualization
 matplotlib>=3.7.0
@@ -39,29 +38,12 @@ fastapi[testclient]>=0.100.0
 opencv-python>=4.7.0.72
 onnxruntime>=1.15.0
 
-# Retry logic
-tenacity>=8.2.2
-
-# Testing (optional, for local development)
-pytest>=7.4.0
-
-# Data handling and requests
-tqdm
-
 # Trading APIs
 alpaca-trade-api>=3.0.0
 
 # Streamlit and environment
 streamlit>=1.31.0
 python-dotenv>=1.0.0
-
-# ML and data science
-numpy>=1.24.0,<2.0.0
-tensorflow>=2.15.0,<2.20.0
-scikit-learn>=1.3.0
-joblib>=1.3.0
-yfinance>=0.2.36
-pandas>=2.0.0
 
 # Core trading and data handling
 alpaca-trade-api>=2.3.0  # For live trading
@@ -71,7 +53,6 @@ pandas>=2.0.0           # For data manipulation
 numpy>=1.24.0           # For numerical operations
 yfinance>=0.2.36        # For market data
 tqdm>=4.66.0           # For progress bars
-lxml>=4.9.0             # For XML/HTML parsing (required by some data sources)
 
 # Web Interface
 streamlit>=1.31.0
