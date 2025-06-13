@@ -35,4 +35,10 @@ tenacity==8.2.2
 
 # Testing (optional, for local development)
 pytest==7.4.0
-fastapi[testclient]==0.100.0 
+fastapi[testclient]==0.100.0
+
+# Added from the code block
+alpaca-trade-api==3.0.0
+pybind11==2.6.0
+setuptools==65.0.0
+wheel==0.40.0 
