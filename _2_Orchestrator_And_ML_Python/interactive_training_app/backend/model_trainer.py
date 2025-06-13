@@ -36,7 +36,8 @@ class ModelTrainer:
         self.sp100_symbols = self._load_sp100_symbols()
         
         # Initialize technical analysis parameters
-        self.lookback_days = 365
+        self.lookback_days = 100  # Reduced from 365 to 100 for better compatibility
+        self.min_required_days = 60  # Minimum days required for analysis
         self.feature_columns = [
             'SMA_20', 'SMA_50', 'RSI', 'MACD', 'MACD_Signal',
             'BB_Upper', 'BB_Lower', 'VIX', 'Market_Return',
@@ -46,28 +47,50 @@ class ModelTrainer:
         # Initialize fallback data cache
         self.data_cache = {}
         self.cache_timeout = 3600  # 1 hour cache timeout
+        
+        # Initialize synthetic data generator
+        self.synthetic_data_enabled = True
+        self.synthetic_data_quality = 0.8  # Quality factor for synthetic data
     
     def _load_sp100_symbols(self) -> List[str]:
         """Load S&P 100 symbols from file or fetch if not available"""
-        symbols_file = "sp100_symbols.json"
-        if os.path.exists(symbols_file):
-            with open(symbols_file, 'r') as f:
-                return json.load(f)
+        # Hardcoded list of major stocks as fallback
+        FALLBACK_SYMBOLS = [
+            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'BRK-B', 'JPM', 'JNJ',
+            'V', 'WMT', 'PG', 'MA', 'HD', 'BAC', 'CVX', 'KO', 'PFE', 'MRK',
+            'ABBV', 'PEP', 'TMO', 'COST', 'MCD', 'CSCO', 'VZ', 'ADBE', 'CRM', 'NFLX',
+            'DIS', 'INTC', 'NKE', 'PYPL', 'QCOM', 'T', 'UNH', 'UPS', 'WFC', 'XOM'
+        ]
         
-        # If file doesn't exist, use a subset of S&P 500
         try:
-            tables = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
-            df = tables[0]
-            symbols = df['Symbol'].tolist()[:100]  # Take first 100 for faster training
+            symbols_file = "sp100_symbols.json"
+            if os.path.exists(symbols_file):
+                with open(symbols_file, 'r') as f:
+                    symbols = json.load(f)
+                    if len(symbols) >= 20:  # Ensure we have enough symbols
+                        return symbols
             
-            # Save for future use
-            with open(symbols_file, 'w') as f:
-                json.dump(symbols, f)
-            
-            return symbols
+            # If file doesn't exist or has insufficient symbols, try fetching
+            try:
+                tables = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+                df = tables[0]
+                symbols = df['Symbol'].tolist()[:100]  # Take first 100 for faster training
+                
+                # Save for future use if possible
+                try:
+                    with open(symbols_file, 'w') as f:
+                        json.dump(symbols, f)
+                except Exception as e:
+                    logging.warning(f"Could not save symbols file: {e}")
+                
+                return symbols
+            except Exception as e:
+                logging.warning(f"Error fetching S&P symbols: {e}")
+                return FALLBACK_SYMBOLS
+                
         except Exception as e:
             logging.error(f"Error loading S&P 100 symbols: {e}")
-            return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META']  # Fallback to major tech stocks
+            return FALLBACK_SYMBOLS
     
     def _build_model(self) -> keras.Model:
         """Build the enhanced neural network model"""
@@ -100,7 +123,7 @@ class ModelTrainer:
         
         return model
     
-    def _fetch_with_fallback(self, symbol: str, start_date: datetime, end_date: datetime, max_retries: int = 3) -> pd.DataFrame:
+    def _fetch_with_fallback(self, symbol: str, start_date: datetime, end_date: datetime, max_retries: int = 5) -> pd.DataFrame:
         """Fetch stock data with multiple fallback methods"""
         
         # Method 1: Try yfinance with retry logic
@@ -108,72 +131,120 @@ class ModelTrainer:
             try:
                 logging.info(f"Attempt {attempt + 1}: Fetching {symbol} data with yfinance")
                 
-                # Add small random delay to avoid rate limiting
-                time.sleep(random.uniform(0.1, 0.5))
+                # More conservative delay for Streamlit Cloud
+                time.sleep(random.uniform(1.5, 3.0))  # Increased delay
+                
+                # Check cache first
+                cache_key = f"{symbol}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}"
+                cached_data = get_cached_data(cache_key)
+                if cached_data is not None:
+                    logging.info(f"Using cached data for {symbol}")
+                    return pd.DataFrame(cached_data)
                 
                 ticker = yf.Ticker(symbol)
                 hist = ticker.history(start=start_date, end=end_date, interval='1d')
                 
-                if not hist.empty and len(hist) >= 20:
+                if not hist.empty and len(hist) >= self.min_required_days:
                     logging.info(f"Successfully fetched {symbol} data with yfinance")
+                    # Cache the successful result
+                    with cache_lock:
+                        cache[cache_key] = {
+                            'data': hist.to_dict(),
+                            'timestamp': time.time()
+                        }
                     return hist
+                elif not hist.empty:
+                    logging.warning(f"Insufficient data for {symbol}: {len(hist)} days")
+                    if self.synthetic_data_enabled:
+                        logging.info(f"Generating synthetic data for {symbol}")
+                        return self._generate_synthetic_data(symbol, hist)
                     
             except Exception as e:
                 logging.warning(f"yfinance attempt {attempt + 1} failed for {symbol}: {str(e)}")
                 if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)  # Exponential backoff
+                    # More conservative exponential backoff
+                    time.sleep(3 * (2 ** attempt))  # Increased base delay
         
-        # Method 2: Try using cached/synthetic data as fallback
-        logging.warning(f"All yfinance attempts failed for {symbol}, using fallback data")
-        return self._generate_fallback_data(symbol, start_date, end_date)
+        # Method 2: Generate synthetic data if enabled
+        if self.synthetic_data_enabled:
+            logging.warning(f"All yfinance attempts failed for {symbol}, using synthetic data")
+            return self._generate_synthetic_data(symbol)
+        
+        logging.error(f"Failed to fetch or generate data for {symbol}")
+        return pd.DataFrame()
 
-    def _generate_fallback_data(self, symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
-        """Generate synthetic but realistic stock data for demo purposes"""
-        days = (end_date - start_date).days
-        dates = pd.date_range(start=start_date, end=end_date, freq='D')
-        
-        # Generate realistic price movements
-        np.random.seed(hash(symbol) % 2147483647)  # Consistent seed per symbol
-        
-        # Base price for the symbol (simulate different price levels)
-        base_prices = {
-            'AAPL': 180, 'MSFT': 400, 'GOOGL': 140, 'AMZN': 150, 'META': 300,
-            'NVDA': 800, 'TSLA': 250, 'BRK-B': 350, 'JPM': 150, 'JNJ': 160
-        }
-        base_price = base_prices.get(symbol, 100)
-        
-        # Generate price series with realistic volatility
-        returns = np.random.normal(0.001, 0.02, len(dates))  # ~0.1% daily return, 2% volatility
-        prices = [base_price]
-        
-        for ret in returns[1:]:
-            prices.append(prices[-1] * (1 + ret))
-        
-        # Generate volume (realistic range)
-        volumes = np.random.lognormal(15, 0.5, len(dates))  # Log-normal distribution for volume
-        
-        # Create realistic OHLC data
-        data = []
-        for i, (date, close, volume) in enumerate(zip(dates, prices, volumes)):
-            # Generate realistic OHLC based on close price
-            daily_range = close * random.uniform(0.01, 0.05)  # 1-5% daily range
-            high = close + random.uniform(0, daily_range)
-            low = close - random.uniform(0, daily_range)
-            open_price = low + random.uniform(0, high - low)
+    def _generate_synthetic_data(self, symbol: str, real_data: pd.DataFrame = None) -> pd.DataFrame:
+        """Generate synthetic data based on real data or market averages"""
+        try:
+            if real_data is not None and not real_data.empty:
+                # Use real data as base and extend it
+                base_price = real_data['Close'].iloc[-1]
+                base_volume = real_data['Volume'].iloc[-1]
+                volatility = real_data['Close'].pct_change().std()
+                days_missing = self.lookback_days - len(real_data)
+            else:
+                # Use market averages
+                base_price = 100.0  # Default base price
+                base_volume = 1000000  # Default base volume
+                volatility = 0.02  # Default volatility
+                days_missing = self.lookback_days
+
+            # Generate synthetic data
+            dates = pd.date_range(end=datetime.now(), periods=days_missing, freq='B')
+            synthetic_data = pd.DataFrame(index=dates)
             
-            data.append({
-                'Open': open_price,
-                'High': high,
-                'Low': low,
-                'Close': close,
-                'Volume': int(volume),
-                'Dividends': 0,
-                'Stock Splits': 0
-            })
-        
-        df = pd.DataFrame(data, index=dates)
-        logging.info(f"Generated fallback data for {symbol} with {len(df)} days")
-        return df
+            # Generate price series with realistic patterns
+            returns = np.random.normal(0, volatility * self.synthetic_data_quality, days_missing)
+            prices = base_price * (1 + returns).cumprod()
+            synthetic_data['Close'] = prices
+            synthetic_data['Open'] = prices * (1 + np.random.normal(0, 0.002, days_missing))
+            synthetic_data['High'] = synthetic_data[['Open', 'Close']].max(axis=1) * (1 + abs(np.random.normal(0, 0.003, days_missing)))
+            synthetic_data['Low'] = synthetic_data[['Open', 'Close']].min(axis=1) * (1 - abs(np.random.normal(0, 0.003, days_missing)))
+            synthetic_data['Volume'] = base_volume * (1 + np.random.normal(0, 0.5, days_missing))
+            
+            # Combine real and synthetic data if available
+            if real_data is not None and not real_data.empty:
+                final_data = pd.concat([real_data, synthetic_data])
+            else:
+                final_data = synthetic_data
+            
+            # Add technical indicators
+            final_data['SMA_20'] = final_data['Close'].rolling(window=20).mean()
+            final_data['SMA_50'] = final_data['Close'].rolling(window=50).mean()
+            final_data['RSI'] = self._calculate_rsi(final_data['Close'])
+            final_data['MACD'], final_data['MACD_Signal'] = self._calculate_macd(final_data['Close'])
+            final_data['BB_Upper'], final_data['BB_Lower'] = self._calculate_bollinger_bands(final_data['Close'])
+            
+            logging.info(f"Generated {len(final_data)} days of synthetic data for {symbol}")
+            return final_data
+            
+        except Exception as e:
+            logging.error(f"Error generating synthetic data for {symbol}: {str(e)}")
+            return pd.DataFrame()
+
+    def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
+        """Calculate RSI technical indicator"""
+        delta = prices.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        rs = gain / loss
+        return 100 - (100 / (1 + rs))
+
+    def _calculate_macd(self, prices: pd.Series) -> Tuple[pd.Series, pd.Series]:
+        """Calculate MACD technical indicator"""
+        exp1 = prices.ewm(span=12, adjust=False).mean()
+        exp2 = prices.ewm(span=26, adjust=False).mean()
+        macd = exp1 - exp2
+        signal = macd.ewm(span=9, adjust=False).mean()
+        return macd, signal
+
+    def _calculate_bollinger_bands(self, prices: pd.Series, period: int = 20) -> Tuple[pd.Series, pd.Series]:
+        """Calculate Bollinger Bands"""
+        sma = prices.rolling(window=period).mean()
+        std = prices.rolling(window=period).std()
+        upper_band = sma + (std * 2)
+        lower_band = sma - (std * 2)
+        return upper_band, lower_band
     
     def _calculate_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate technical indicators for the price data"""
@@ -250,7 +321,8 @@ class ModelTrainer:
                 start_date = end_date - timedelta(days=self.lookback_days)
                 random_date = start_date + timedelta(days=random.randint(0, self.lookback_days - 30))
                 
-                logging.info(f"Fetching data for {symbol} (attempt {attempt + 1})")
+                logging.info(f"[Streamlit Cloud] Fetching data for {symbol} (attempt {attempt + 1}/{max_attempts})")
+                logging.info(f"[Streamlit Cloud] Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 
                 # Fetch stock data with fallback
                 hist = self._fetch_with_fallback(
@@ -260,17 +332,21 @@ class ModelTrainer:
                 )
                 
                 if len(hist) < 50:  # Need enough data for indicators
-                    logging.warning(f"Insufficient data for {symbol}: {len(hist)} days")
+                    logging.warning(f"[Streamlit Cloud] Insufficient data for {symbol}: {len(hist)} days")
                     continue
+                
+                logging.info(f"[Streamlit Cloud] Successfully fetched {len(hist)} days of data for {symbol}")
                 
                 # Calculate technical indicators
                 hist = self._calculate_technical_indicators(hist)
+                logging.info(f"[Streamlit Cloud] Calculated technical indicators for {symbol}")
                 
                 # Get market context
                 vix, market_returns = self._get_market_context(
                     random_date - timedelta(days=60),
                     random_date + timedelta(days=1)
                 )
+                logging.info(f"[Streamlit Cloud] Retrieved market context for {symbol}")
                 
                 # Align market context with stock data
                 hist = hist.reindex(hist.index.intersection(vix.index))
@@ -288,8 +364,10 @@ class ModelTrainer:
                 hist = hist.dropna()
                 
                 if len(hist) < 20:  # Need enough clean data
-                    logging.warning(f"Insufficient clean data for {symbol}: {len(hist)} days")
+                    logging.warning(f"[Streamlit Cloud] Insufficient clean data for {symbol}: {len(hist)} days after processing")
                     continue
+                
+                logging.info(f"[Streamlit Cloud] Successfully processed data for {symbol} with {len(hist)} clean days")
                 
                 # Get the last row for features
                 last_row = hist.iloc[-2]  # Use -2 to avoid lookahead bias

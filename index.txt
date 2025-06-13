@@ -1,38 +1,43 @@
+# Trading Algorithm Repository Structure
+# Version: 1.0.0
+# Last Updated: 2024
+
 TradingAlgorithm/
-├── 1_High_Performance_Module_(C++)/
-│   ├── engine.cpp
-│   ├── engine.h
-│   ├── bindings.cpp
-│   ├── setup.py
-│   ├── CMakeLists.txt
-│   ├── requirements.txt
+├── 1_High_Performance_Module_(C++)/     # Core trading engine (C++)
+│   ├── engine.cpp                      # Main trading engine implementation
+│   ├── engine.h                        # Engine interface definitions
+│   ├── bindings.cpp                    # Python bindings
+│   ├── setup.py                        # Package setup
+│   ├── CMakeLists.txt                  # Build config
+│   ├── requirements.txt                # Dependencies
 │   └── [Visual Studio project files]
 │
-├── _2_Orchestrator_And_ML_Python/
-│   ├── data_fetcher.py
-│   ├── live_trader.py
-│   ├── market_analyzer.py
-│   ├── train_model.py
-│   ├── sentiment_analyzer.py
-│   ├── config.py
-│   ├── requirements.txt
-│   ├── interactive_training_app/
-│   ├── deployment_services/
-│   └── tests/
+├── 2_Orchestrator_And_ML_Python/       # ML and Trading Logic (Python)
+│   ├── data_fetcher.py                 # Market data handling
+│   ├── live_trader.py                  # Trading execution
+│   ├── market_analyzer.py              # Market analysis
+│   ├── train_model.py                  # ML training
+│   ├── sentiment_analyzer.py           # Sentiment analysis
+│   ├── config.py                       # Configuration
+│   ├── requirements.txt                # Dependencies
+│   ├── interactive_training_app/       # Training interface
+│   ├── deployment_services/            # Model deployment
+│   └── tests/                          # Test suite
 │
-├── 3_Networking_and_User_Input/
-│   └── web_interface/
+├── 3_Networking_and_User_Input/        # UI and API Layer
+│   └── web_interface/                  # Web interface
 │
-├── .streamlit/
-├── .github/
-├── .vscode/
+├── .streamlit/                         # Streamlit config
+├── .github/                            # GitHub workflows
+├── .vscode/                            # VS Code settings
 │
-├── main.py
-├── streamlit_app.py
-├── setup.sh
-├── requirements.txt
-├── streamlit_requirements.txt
-├── README.md
-└── TradingAlgo.sln
+├── main.py                            # Entry point
+├── streamlit_app.py                   # Dashboard
+├── setup.sh                           # Setup script
+├── requirements.txt                   # Main deps
+├── streamlit_requirements.txt         # Streamlit deps
+├── README.md                          # Documentation
+└── TradingAlgo.sln                    # VS solution
 
-Note: This structure excludes common directories like __pycache__ and .git 
+# Environment: Python 3.9.x, TensorFlow 2.13.0, C++17+
+# Excluded: __pycache__/, .git/, venv/, .env, logs, data files 

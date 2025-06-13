@@ -19,13 +19,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # In-memory cache to limit API calls
 cache = {}
-CACHE_TTL_SECONDS = 900  # 15 minutes
+CACHE_TTL_SECONDS = 3600  # Increased to 1 hour
 cache_lock = threading.Lock()
 
 # Rate limiting and parallel processing settings
-RATE_LIMIT_DELAY = 0.1  # Reduced from previous value
-MAX_WORKERS = 10  # Number of parallel threads
-BATCH_SIZE = 5  # Number of companies to process in each batch
+RATE_LIMIT_DELAY = 0.5  # Increased from 0.1 to 0.5 seconds
+MAX_WORKERS = 5  # Reduced from 10 to 5 to avoid rate limits
+BATCH_SIZE = 3  # Reduced from 5 to 3 to avoid rate limits
 
 class RateLimiter:
     def __init__(self, calls_per_second):
@@ -55,7 +55,7 @@ def set_cached_data(key: str, data: dict):
     with cache_lock:
         cache[key] = {'timestamp': time.time(), 'data': data}
 
-def fetch_historical_data(symbol: str, years_back: int) -> pd.DataFrame:
+def fetch_historical_data(symbol: str, years_back: int = 2) -> pd.DataFrame:
     """
     Fetch historical data for a given symbol with rate limiting
     """
@@ -64,8 +64,15 @@ def fetch_historical_data(symbol: str, years_back: int) -> pd.DataFrame:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=years_back * 365)
         
+        # Check cache first
+        cache_key = f"{symbol}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}"
+        cached_data = get_cached_data(cache_key)
+        if cached_data is not None:
+            logging.info(f"Using cached data for {symbol}")
+            return pd.DataFrame(cached_data)
+        
         ticker = yf.Ticker(symbol)
-        df = ticker.history(start=start_date, end=end_date)
+        df = ticker.history(start=start_date, end=end_date, interval='1d')
         
         if not df.empty:
             # Add symbol column
@@ -85,6 +92,13 @@ def fetch_historical_data(symbol: str, years_back: int) -> pd.DataFrame:
                 'Dividends': 'dividends',
                 'Stock Splits': 'stock_splits'
             })
+            
+            # Cache the successful result
+            with cache_lock:
+                cache[cache_key] = {
+                    'data': df.to_dict(),
+                    'timestamp': time.time()
+                }
             
             return df
     

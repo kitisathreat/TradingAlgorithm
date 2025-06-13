@@ -1,49 +1,42 @@
-# Streamlit app dependencies
+# Streamlit app dependencies (fixed versions for Python 3.9 compatibility)
 streamlit==1.31.0
 pandas==2.0.0
 plotly==5.18.0
 python-dotenv==1.0.0
 requests==2.31.0
 yfinance==0.2.36
-numpy==1.24.0
+numpy==1.24.0  # Fixed version for Python 3.9 compatibility
 tqdm==4.65.0
 
 # ML dependencies (compatible with Python 3.9)
-# Fixed TensorFlow version for Python 3.9 compatibility
-tensorflow==2.13.0
+tensorflow==2.13.0  # Fixed version for Python 3.9 compatibility
 scikit-learn==1.3.0
 joblib==1.3.0
 
 # Sentiment analysis
 vaderSentiment==3.3.2
+textblob==0.17.1
 
 # Visualization
 matplotlib==3.7.0
 seaborn==0.12.0
 
-# API and Vision Service (optional, for deployment_services/vision_service.py)
+# API and Vision Service (headless version for cloud)
 fastapi==0.100.0
 opencv-python-headless==4.7.0.72  # Use headless version for cloud deployment
 onnxruntime==1.15.0
 
-# Retry logic
+# Retry logic and HTTP improvements
 tenacity==8.2.2
-
-# Testing (optional, for local development)
-pytest==7.4.0
-
-# Trading APIs
-alpaca-trade-api==3.0.0
-
-# Core dependencies
-pybind11==2.6.0
-setuptools==65.0.0
-wheel==0.40.0
-
-# Additional packages for better cloud compatibility
-lxml==4.9.0
-psutil==5.9.0
-
-# HTTP client improvements for better API reliability
 httpx==0.24.0
-aiohttp==3.8.0 
+aiohttp==3.8.0
+
+# Streamlit extras
+streamlit-plotly-events==0.0.6
+streamlit-option-menu==0.3.12
+streamlit-autorefresh==0.3.1
+streamlit-extras==0.3.5
+
+# Additional packages for cloud compatibility
+lxml==4.9.0
+psutil==5.9.0 

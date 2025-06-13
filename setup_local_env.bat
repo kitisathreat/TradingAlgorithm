@@ -52,23 +52,24 @@ python -m pip install pip-tools
 :: Create a temporary requirements file with direct URLs for large packages
 echo Creating optimized requirements file...
 (
-    echo tensorflow-cpu>=2.15.0,^<2.20.0
-    echo numpy>=1.24.0,^<2.0.0
-    echo pandas>=2.0.0
-    echo streamlit>=1.31.0
-    echo plotly>=5.18.0
-    echo python-dotenv>=1.0.0
-    echo requests>=2.31.0
-    echo alpaca-trade-api>=3.0.0
-    echo yfinance>=0.2.36
-    echo psutil
-    echo tqdm>=4.65.0
-    echo lxml>=4.9.0
-    echo vaderSentiment>=3.3.2
-    echo tenacity>=8.2.2
-    echo pytest>=7.4.0
-    echo pybind11>=2.6.0
-    echo setuptools>=65.0.0
+    echo tensorflow-cpu==2.13.0  # Fixed version for Python 3.9 compatibility
+    echo numpy==1.24.0  # Fixed version for Python 3.9 compatibility
+    echo pandas==2.0.0
+    echo streamlit==1.31.0
+    echo plotly==5.18.0
+    echo python-dotenv==1.0.0
+    echo requests==2.31.0
+    echo alpaca-trade-api==3.0.0
+    echo yfinance==0.2.36
+    echo psutil==5.9.0
+    echo tqdm==4.65.0
+    echo lxml==4.9.0
+    echo vaderSentiment==3.3.2
+    echo tenacity==8.2.2
+    echo pytest==7.4.0
+    echo pybind11==2.11.1
+    echo setuptools==68.0.0
+    echo wheel==0.41.0
 ) > requirements.tmp
 
 :: Install packages using pip-tools with parallel processing

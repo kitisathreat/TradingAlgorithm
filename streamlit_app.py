@@ -9,6 +9,8 @@ from pathlib import Path
 import streamlit as st
 import platform
 import logging
+import json
+from datetime import datetime
 
 # Configure logging: clear log file and restart logging on app start
 logging.basicConfig(
@@ -33,6 +35,45 @@ sys.path.append(str(ORCHESTRATOR_PATH))
 # Add the networking directory to Python path
 NETWORKING_PATH = REPO_ROOT / "networking_and_user_input"
 sys.path.append(str(NETWORKING_PATH))
+
+# Constants for model state
+MODEL_STATE_FILE = "model_state.json"
+TRAINING_THRESHOLD = 5  # Minimum examples needed for training
+
+def get_model_state():
+    """Get the current state of the model"""
+    try:
+        if os.path.exists(MODEL_STATE_FILE):
+            with open(MODEL_STATE_FILE, 'r') as f:
+                state = json.load(f)
+                return {
+                    'is_trained': state.get('is_trained', False),
+                    'training_examples': state.get('training_examples', 0),
+                    'last_training_date': state.get('last_training_date', None),
+                    'model_accuracy': state.get('model_accuracy', 0.0)
+                }
+    except Exception as e:
+        logging.error(f"Error reading model state: {e}")
+    return {
+        'is_trained': False,
+        'training_examples': 0,
+        'last_training_date': None,
+        'model_accuracy': 0.0
+    }
+
+def update_model_state(is_trained=False, training_examples=0, model_accuracy=0.0):
+    """Update the model state file"""
+    try:
+        state = {
+            'is_trained': is_trained,
+            'training_examples': training_examples,
+            'last_training_date': datetime.now().isoformat(),
+            'model_accuracy': model_accuracy
+        }
+        with open(MODEL_STATE_FILE, 'w') as f:
+            json.dump(state, f)
+    except Exception as e:
+        logging.error(f"Error updating model state: {e}")
 
 # Check Python version
 python_version = platform.python_version_tuple()
@@ -131,6 +172,58 @@ def check_environment():
         return False
     return True
 
+def check_model_availability():
+    """Check if a trained model is available and provide appropriate messaging"""
+    model_state = get_model_state()
+    
+    if not ML_AVAILABLE:
+        st.error("""
+        ❌ TensorFlow is not available.
+        
+        This is required for model training and predictions.
+        Please ensure you're using Python 3.9 in Streamlit Cloud settings.
+        """)
+        return False
+        
+    if not TRAINING_AVAILABLE:
+        st.error("""
+        ❌ Training interface is not available.
+        
+        This is required for model training and predictions.
+        Please check that all required modules are properly installed.
+        """)
+        return False
+    
+    if not model_state['is_trained']:
+        if model_state['training_examples'] > 0:
+            st.warning(f"""
+            ⚠️ Model needs training
+            
+            You have {model_state['training_examples']} training examples.
+            Need at least {TRAINING_THRESHOLD} examples to train the model.
+            
+            Please continue training to enable predictions.
+            """)
+        else:
+            st.info("""
+            ℹ️ No trained model available
+            
+            To get started:
+            1. Use the training interface to provide examples
+            2. Train the model with at least 5 examples
+            3. Once trained, you can use the model for predictions
+            """)
+        return False
+    
+    st.success(f"""
+    ✅ Model is trained and ready
+    
+    - Last trained: {model_state['last_training_date']}
+    - Training examples: {model_state['training_examples']}
+    - Model accuracy: {model_state['model_accuracy']:.2%}
+    """)
+    return True
+
 if __name__ == "__main__":
     # Check environment first
     if not check_environment():
@@ -138,7 +231,20 @@ if __name__ == "__main__":
     
     # Run the main Streamlit app
     if TRAINING_AVAILABLE and ML_AVAILABLE:
-        main()
+        # Check model availability before running main interface
+        model_ready = check_model_availability()
+        if model_ready:
+            main()
+        else:
+            # Show training interface even if model isn't ready
+            st.title("Trading Algorithm Training Interface")
+            st.write("Please train the model to enable predictions.")
+            # Import and show training interface
+            from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
+            trainer = ModelTrainer()
+            # Show training interface components
+            st.subheader("Training Interface")
+            # Add your training interface components here
     else:
         # Basic mode without ML
         st.title("Trading Algorithm Training Interface")

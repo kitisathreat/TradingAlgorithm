@@ -1,0 +1,90 @@
+2025-06-13 14:10:05,632 - WARNING - Decision engine module not found. Using fallback implementation.
+2025-06-13 14:10:12,033 - WARNING - From C:\Users\KitKumar\Documents\repos\TradingAlgorithm\venv\lib\site-packages\keras\src\backend\common\global_state.py:82: The name tf.reset_default_graph is deprecated. Please use tf.compat.v1.reset_default_graph instead.
+
+2025-06-13 14:10:36,546 - INFO - Fetching data for ADI (attempt 1)
+2025-06-13 14:10:36,546 - INFO - Attempt 1: Fetching ADI data with yfinance
+2025-06-13 14:10:38,736 - INFO - Successfully fetched ADI data with yfinance
+2025-06-13 14:10:38,737 - WARNING - Insufficient data for ADI: 40 days
+2025-06-13 14:10:38,737 - INFO - Fetching data for CDW (attempt 2)
+2025-06-13 14:10:38,737 - INFO - Attempt 1: Fetching CDW data with yfinance
+2025-06-13 14:10:39,836 - INFO - Successfully fetched CDW data with yfinance
+2025-06-13 14:10:39,837 - WARNING - Insufficient data for CDW: 43 days
+2025-06-13 14:10:39,837 - INFO - Fetching data for COF (attempt 3)
+2025-06-13 14:10:39,837 - INFO - Attempt 1: Fetching COF data with yfinance
+2025-06-13 14:10:41,408 - INFO - Successfully fetched COF data with yfinance
+2025-06-13 14:10:41,409 - WARNING - Insufficient data for COF: 44 days
+2025-06-13 14:10:41,409 - INFO - Fetching data for CZR (attempt 4)
+2025-06-13 14:10:41,410 - INFO - Attempt 1: Fetching CZR data with yfinance
+2025-06-13 14:10:42,047 - INFO - Successfully fetched CZR data with yfinance
+2025-06-13 14:10:42,048 - WARNING - Insufficient data for CZR: 43 days
+2025-06-13 14:10:42,048 - INFO - Fetching data for BRO (attempt 5)
+2025-06-13 14:10:42,048 - INFO - Attempt 1: Fetching BRO data with yfinance
+2025-06-13 14:10:42,696 - INFO - Successfully fetched BRO data with yfinance
+2025-06-13 14:10:42,697 - WARNING - Insufficient data for BRO: 42 days
+2025-06-13 14:10:42,697 - ERROR - Failed to fetch data after all attempts
+2025-06-13 14:10:59,570 - WARNING - Decision engine module not found. Using fallback implementation.
+2025-06-13 14:10:59,802 - INFO - Fetching data for CVX (attempt 1)
+2025-06-13 14:10:59,818 - INFO - Attempt 1: Fetching CVX data with yfinance
+2025-06-13 14:11:00,838 - INFO - Successfully fetched CVX data with yfinance
+2025-06-13 14:11:00,840 - WARNING - Insufficient data for CVX: 40 days
+2025-06-13 14:11:00,840 - INFO - Fetching data for T (attempt 2)
+2025-06-13 14:11:00,840 - INFO - Attempt 1: Fetching T data with yfinance
+2025-06-13 14:11:01,691 - INFO - Successfully fetched T data with yfinance
+2025-06-13 14:11:01,696 - WARNING - Insufficient data for T: 43 days
+2025-06-13 14:11:01,698 - INFO - Fetching data for ACGL (attempt 3)
+2025-06-13 14:11:01,700 - INFO - Attempt 1: Fetching ACGL data with yfinance
+2025-06-13 14:11:02,132 - WARNING - Decision engine module not found. Using fallback implementation.
+2025-06-13 14:11:02,298 - INFO - Successfully fetched ACGL data with yfinance
+2025-06-13 14:11:02,299 - WARNING - Insufficient data for ACGL: 42 days
+2025-06-13 14:11:02,299 - INFO - Fetching data for CZR (attempt 4)
+2025-06-13 14:11:02,299 - INFO - Attempt 1: Fetching CZR data with yfinance
+2025-06-13 14:11:02,489 - INFO - Fetching data for ADM (attempt 1)
+2025-06-13 14:11:02,490 - INFO - Attempt 1: Fetching ADM data with yfinance
+2025-06-13 14:11:02,967 - INFO - Successfully fetched CZR data with yfinance
+2025-06-13 14:11:02,968 - WARNING - Insufficient data for CZR: 41 days
+2025-06-13 14:11:02,968 - INFO - Fetching data for CNP (attempt 5)
+2025-06-13 14:11:02,968 - INFO - Attempt 1: Fetching CNP data with yfinance
+2025-06-13 14:11:03,582 - INFO - Successfully fetched ADM data with yfinance
+2025-06-13 14:11:03,582 - WARNING - Insufficient data for ADM: 44 days
+2025-06-13 14:11:03,583 - INFO - Fetching data for COF (attempt 2)
+2025-06-13 14:11:03,583 - INFO - Attempt 1: Fetching COF data with yfinance
+2025-06-13 14:11:03,627 - INFO - Successfully fetched CNP data with yfinance
+2025-06-13 14:11:03,628 - WARNING - Insufficient data for CNP: 44 days
+2025-06-13 14:11:03,628 - ERROR - Failed to fetch data after all attempts
+2025-06-13 14:11:04,766 - INFO - Successfully fetched COF data with yfinance
+2025-06-13 14:11:04,766 - WARNING - Insufficient data for COF: 41 days
+2025-06-13 14:11:04,767 - INFO - Fetching data for AME (attempt 3)
+2025-06-13 14:11:04,767 - INFO - Attempt 1: Fetching AME data with yfinance
+2025-06-13 14:11:05,390 - INFO - Successfully fetched AME data with yfinance
+2025-06-13 14:11:05,396 - WARNING - Insufficient data for AME: 43 days
+2025-06-13 14:11:05,397 - INFO - Fetching data for AMCR (attempt 4)
+2025-06-13 14:11:05,399 - INFO - Attempt 1: Fetching AMCR data with yfinance
+2025-06-13 14:11:06,138 - INFO - Successfully fetched AMCR data with yfinance
+2025-06-13 14:11:06,139 - WARNING - Insufficient data for AMCR: 41 days
+2025-06-13 14:11:06,139 - INFO - Fetching data for COF (attempt 5)
+2025-06-13 14:11:06,139 - INFO - Attempt 1: Fetching COF data with yfinance
+2025-06-13 14:11:06,533 - INFO - Successfully fetched COF data with yfinance
+2025-06-13 14:11:06,533 - WARNING - Insufficient data for COF: 43 days
+2025-06-13 14:11:06,534 - ERROR - Failed to fetch data after all attempts
+2025-06-13 14:11:24,346 - WARNING - Decision engine module not found. Using fallback implementation.
+2025-06-13 14:11:31,216 - INFO - Fetching data for BA (attempt 1)
+2025-06-13 14:11:31,216 - INFO - Attempt 1: Fetching BA data with yfinance
+2025-06-13 14:11:31,991 - INFO - Successfully fetched BA data with yfinance
+2025-06-13 14:11:31,991 - WARNING - Insufficient data for BA: 43 days
+2025-06-13 14:11:31,992 - INFO - Fetching data for BSX (attempt 2)
+2025-06-13 14:11:31,992 - INFO - Attempt 1: Fetching BSX data with yfinance
+2025-06-13 14:11:32,550 - INFO - Successfully fetched BSX data with yfinance
+2025-06-13 14:11:32,550 - WARNING - Insufficient data for BSX: 43 days
+2025-06-13 14:11:32,551 - INFO - Fetching data for ADP (attempt 3)
+2025-06-13 14:11:32,551 - INFO - Attempt 1: Fetching ADP data with yfinance
+2025-06-13 14:11:33,163 - INFO - Successfully fetched ADP data with yfinance
+2025-06-13 14:11:33,163 - WARNING - Insufficient data for ADP: 43 days
+2025-06-13 14:11:33,164 - INFO - Fetching data for BLDR (attempt 4)
+2025-06-13 14:11:33,164 - INFO - Attempt 1: Fetching BLDR data with yfinance
+2025-06-13 14:11:33,539 - INFO - Successfully fetched BLDR data with yfinance
+2025-06-13 14:11:33,539 - WARNING - Insufficient data for BLDR: 43 days
+2025-06-13 14:11:33,539 - INFO - Fetching data for BRO (attempt 5)
+2025-06-13 14:11:33,540 - INFO - Attempt 1: Fetching BRO data with yfinance
+2025-06-13 14:11:33,832 - INFO - Successfully fetched BRO data with yfinance
+2025-06-13 14:11:33,833 - WARNING - Insufficient data for BRO: 39 days
+2025-06-13 14:11:33,833 - ERROR - Failed to fetch data after all attempts
