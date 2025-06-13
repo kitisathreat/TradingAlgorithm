@@ -15,6 +15,7 @@ from pathlib import Path
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import numpy as np
 
 # Add project root to Python path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -31,6 +32,17 @@ except ImportError as e:
     logger.error(f"Python path: {sys.path}")
     logger.error(f"Project root: {PROJECT_ROOT}")
     raise
+
+# Import the new ModelTrainer
+REPO_ROOT = Path(__file__).parent.parent.parent
+ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+sys.path.append(str(ORCHESTRATOR_PATH))
+
+try:
+    from interactive_training_app.backend.model_trainer import ModelTrainer
+except ImportError as e:
+    logging.error(f"Failed to import ModelTrainer: {e}")
+    ModelTrainer = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -71,6 +83,9 @@ MODEL_PATH = Path(os.path.join(WEB_INTERFACE_DIR, "trained_model/model.h5"))
 training_in_progress = False
 training_progress = 0
 training_status_msg = "Not started"
+
+# Initialize model trainer
+model_trainer = ModelTrainer() if ModelTrainer else None
 
 # WebSocket connection manager
 class ConnectionManager:
@@ -249,36 +264,104 @@ async def model_status():
 
 @app.post("/api/start_training")
 async def start_training():
+    """Start the model training process"""
     global training_in_progress, training_progress, training_status_msg
+    
     if training_in_progress:
         return {"status": "error", "message": "Training already in progress"}
+    
+    if not model_trainer:
+        return {"status": "error", "message": "Model trainer not initialized"}
+    
     training_in_progress = True
     training_progress = 0
     training_status_msg = "Training started"
-    # Here you will implement the actual training logic
-    # For now, simulate progress
-    import threading, time
+    
     def train():
         global training_progress, training_status_msg, training_in_progress
-        for i in range(1, 11):
-            time.sleep(1)
-            training_progress = i * 10
-            training_status_msg = f"Training... {training_progress}%"
-        training_status_msg = "Training complete"
-        training_in_progress = False
-        # Simulate model file creation
-        MODEL_PATH.parent.mkdir(exist_ok=True)
-        MODEL_PATH.touch()
+        try:
+            # Train the model
+            results = model_trainer.train_model()
+            
+            if 'error' in results:
+                training_status_msg = f"Error: {results['error']}"
+                training_progress = 0
+            else:
+                # Save the model
+                model_path = MODEL_PATH
+                model_path.parent.mkdir(exist_ok=True)
+                model_trainer.save_model(str(model_path))
+                
+                training_status_msg = (
+                    f"Training complete! "
+                    f"Accuracy: {results['accuracy']:.2%}, "
+                    f"Validation Accuracy: {results['val_accuracy']:.2% if results['val_accuracy'] else 'N/A'}"
+                )
+                training_progress = 100
+        except Exception as e:
+            training_status_msg = f"Error during training: {str(e)}"
+            training_progress = 0
+        finally:
+            training_in_progress = False
+    
+    # Start training in a background thread
+    import threading
     threading.Thread(target=train, daemon=True).start()
+    
     return {"status": "success", "message": "Training started"}
 
 @app.get("/api/training_status")
 async def training_status():
+    """Get the current training status"""
     return {
         "in_progress": training_in_progress,
         "progress": training_progress,
-        "status_msg": training_status_msg
+        "status_msg": training_status_msg,
+        "training_count": len(model_trainer.training_data) if model_trainer else 0
     }
+
+@app.post("/api/add_training_example")
+async def add_training_example(data: dict):
+    """Add a new training example"""
+    if not model_trainer:
+        return {"status": "error", "message": "Model trainer not initialized"}
+    
+    try:
+        # Parse the feature vector and decision
+        feature_vector = np.array(data['feature_vector'])
+        decision = int(data['decision'])
+        
+        # Add the example
+        model_trainer.add_training_example(feature_vector, decision)
+        
+        return {
+            "status": "success",
+            "message": "Training example added",
+            "training_count": len(model_trainer.training_data)
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Error adding training example: {str(e)}"}
+
+@app.get("/api/get_training_example")
+async def get_training_example():
+    """Get a random training example"""
+    if not model_trainer:
+        return {"status": "error", "message": "Model trainer not initialized"}
+    
+    try:
+        features, feature_vector, actual_result = model_trainer.get_random_stock_data()
+        
+        if features is None:
+            return {"status": "error", "message": "Failed to fetch stock data"}
+        
+        return {
+            "status": "success",
+            "features": features,
+            "feature_vector": feature_vector.tolist(),
+            "actual_result": bool(actual_result)
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Error getting training example: {str(e)}"}
 
 if __name__ == "__main__":
     import uvicorn
