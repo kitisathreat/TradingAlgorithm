@@ -24,6 +24,7 @@ import yfinance as yf
 # Local imports
 from sentiment_analyzer import SentimentAnalyzer
 from market_analyzer import MarketAnalyzer
+from trading_config import SYMBOLS_TO_TRADE
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -285,8 +286,6 @@ def main():
     """Main function to train models for all symbols"""
     try:
         # Get symbols from config
-        from config import SYMBOLS_TO_TRADE
-        
         analyzer = MarketPatternAnalyzer()
         
         for symbol in SYMBOLS_TO_TRADE:

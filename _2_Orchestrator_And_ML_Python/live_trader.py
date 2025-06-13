@@ -13,7 +13,7 @@ import yfinance as yf
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
-import config
+import trading_config
 try:
     from data_fetcher import FMPFetcher, NewsFetcher
 except ImportError:
@@ -135,8 +135,8 @@ class LiveTrader:
     def __init__(self):
         # Initialize APIs and components
         try:
-            self.api = tradeapi.REST(config.APCA_API_KEY_ID, config.APCA_API_SECRET_KEY, config.APCA_BASE_URL)
-            self.stream = Stream(config.APCA_API_KEY_ID, config.APCA_API_SECRET_KEY, config.APCA_BASE_URL)
+            self.api = tradeapi.REST(trading_config.APCA_API_KEY_ID, trading_config.APCA_API_SECRET_KEY, trading_config.APCA_BASE_URL)
+            self.stream = Stream(trading_config.APCA_API_KEY_ID, trading_config.APCA_API_SECRET_KEY, trading_config.APCA_BASE_URL)
             
             self.fmp_fetcher = FMPFetcher()
             self.news_fetcher = NewsFetcher(self.api)
@@ -172,7 +172,7 @@ class LiveTrader:
             
             # Initialize trading state tracking
             self.trading_states: Dict[str, TradingState] = {}
-            for symbol in config.SYMBOLS_TO_TRADE:
+            for symbol in trading_config.SYMBOLS_TO_TRADE:
                 self.trading_states[symbol] = TradingState(
                     symbol=symbol,
                     current_position=0.0,
@@ -214,7 +214,7 @@ class LiveTrader:
         """Load historical data for all symbols and VIX with retry logic"""
         logger.info("Loading historical data...")
         
-        for symbol in config.SYMBOLS_TO_TRADE:
+        for symbol in trading_config.SYMBOLS_TO_TRADE:
             try:
                 # Get 100 days of historical data
                 end_date = datetime.now()
@@ -431,8 +431,8 @@ class LiveTrader:
     def run(self):
         """Start the trading bot with error handling"""
         try:
-            logger.info(f"Starting C++ Trading Engine... Monitoring: {config.SYMBOLS_TO_TRADE}")
-            self.stream.subscribe_trades(self.on_trade_update, *config.SYMBOLS_TO_TRADE)
+            logger.info(f"Starting C++ Trading Engine... Monitoring: {trading_config.SYMBOLS_TO_TRADE}")
+            self.stream.subscribe_trades(self.on_trade_update, *trading_config.SYMBOLS_TO_TRADE)
             self.stream.run()
         except Exception as e:
             logger.critical(f"Fatal error in trading bot: {e}")
