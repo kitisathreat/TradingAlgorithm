@@ -16,10 +16,86 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 import config
 from data_fetcher import FMPFetcher, NewsFetcher
 from sentiment_analyzer import SentimentAnalyzer
-from decision_engine import (
-    TradingModel, SentimentData, PriceData, TradeSignal,
-    MarketRegime, RiskLevel, TradingDecision, TradingEngineError
-)
+
+# Try to import decision engine, with fallback for development
+try:
+    from decision_engine import (
+        TradingModel, SentimentData, PriceData, TradeSignal,
+        MarketRegime, RiskLevel, TradingDecision, TradingEngineError
+    )
+    DECISION_ENGINE_AVAILABLE = True
+except ImportError:
+    logging.warning("Decision engine module not found. Using fallback implementation.")
+    DECISION_ENGINE_AVAILABLE = False
+    
+    # Fallback implementations for development
+    class TradingEngineError(Exception):
+        pass
+    
+    class MarketRegime:
+        TRENDING_UP = "TRENDING_UP"
+        TRENDING_DOWN = "TRENDING_DOWN"
+        RANGING = "RANGING"
+        VOLATILE = "VOLATILE"
+        UNKNOWN = "UNKNOWN"
+    
+    class TradeSignal:
+        STRONG_BUY = "STRONG_BUY"
+        WEAK_BUY = "WEAK_BUY"
+        HOLD = "HOLD"
+        REDUCE_POSITION = "REDUCE_POSITION"
+        INCREASE_POSITION = "INCREASE_POSITION"
+        WEAK_SELL = "WEAK_SELL"
+        STRONG_SELL = "STRONG_SELL"
+        OPTIONS_BUY = "OPTIONS_BUY"
+        OPTIONS_SELL = "OPTIONS_SELL"
+    
+    class RiskLevel:
+        VERY_LOW = "VERY_LOW"
+        LOW = "LOW"
+        MEDIUM = "MEDIUM"
+        HIGH = "HIGH"
+        VERY_HIGH = "VERY_HIGH"
+    
+    class PriceData:
+        def __init__(self, price: float, volume: float, timestamp: float):
+            self.price = price
+            self.volume = volume
+            self.timestamp = timestamp
+    
+    class SentimentData:
+        def __init__(self):
+            self.social_sentiment = 0.0
+            self.analyst_sentiment = 0.0
+            self.news_sentiment = 0.0
+            self.overall_sentiment = 0.0
+    
+    class TradingDecision:
+        def __init__(self):
+            self.signal = TradeSignal.HOLD
+            self.confidence = 0.0
+            self.suggested_position_size = 0.0
+            self.stop_loss = 0.0
+            self.take_profit = 0.0
+            self.reasoning = ""
+    
+    class TradingModel:
+        def __init__(self):
+            logging.warning("Using fallback TradingModel implementation")
+        
+        def get_trading_decision(self, *args, **kwargs):
+            decision = TradingDecision()
+            decision.reasoning = "Using fallback implementation"
+            return decision
+        
+        def set_risk_parameters(self, *args, **kwargs):
+            pass
+        
+        def set_technical_parameters(self, *args, **kwargs):
+            pass
+        
+        def set_sentiment_weights(self, *args, **kwargs):
+            pass
 
 # Set up logging
 logging.basicConfig(
