@@ -16,7 +16,8 @@ requests==2.31.0         # HTTP client
 httpx==0.24.0           # Async HTTP client
 aiohttp==3.8.0          # Async HTTP server/client
 
-# Data Fetching and Processing
+# Trading and Market Data
+alpaca-trade-api==3.0.0  # Trading API integration
 yfinance==0.2.36         # Market data
 lxml>=4.9.1             # Required by yfinance
 tqdm==4.65.0            # Progress bars
@@ -37,6 +38,10 @@ textblob==0.17.1        # Text processing
 # System and Performance
 psutil==5.9.0           # System monitoring
 tenacity==8.2.2         # Retry logic
+
+# Development and Testing
+pytest==7.4.0           # Testing framework
+pybind11==2.11.1        # C++ Python bindings
 
 # Streamlit Extras (Optional)
 streamlit-plotly-events==0.0.6    # Interactive plot events

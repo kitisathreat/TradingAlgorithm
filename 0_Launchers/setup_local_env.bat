@@ -31,14 +31,14 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
     )
 )
 
-:: Create and activate virtual environment
-if not exist venv (
-    echo Creating virtual environment...
-    %PYTHON_PATH%\python.exe -m venv venv
+:: Create and activate virtual environment in root directory
+if not exist "..\venv" (
+    echo Creating virtual environment in root directory...
+    %PYTHON_PATH%\python.exe -m venv "..\venv"
 )
 
-:: Activate virtual environment
-call venv\Scripts\activate.bat
+:: Activate virtual environment from root
+call "..\venv\Scripts\activate.bat"
 
 :: Upgrade pip and install wheel
 echo Upgrading pip and installing wheel...
@@ -82,7 +82,7 @@ del requirements.tmp
 del requirements.lock
 
 echo Setup complete! Virtual environment is ready.
-echo To activate the environment, run: venv\Scripts\activate.bat
+echo To activate the environment, run: ..\venv\Scripts\activate.bat
 
 REM Optional: Disk write speed test (writes a 100MB file and times it)
 echo Testing disk write speed...
@@ -99,7 +99,7 @@ REM Record start time for pip install
 echo Installing dependencies...
 set pipstart=%time%
 
-pip install -r requirements.txt
+pip install -r ..\requirements.txt
 
 set pipend=%time%
 echo.

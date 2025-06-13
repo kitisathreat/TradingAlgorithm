@@ -2,9 +2,9 @@
 setlocal enabledelayedexpansion
 
 echo Step 1: Checking for existing virtual environment...
-if exist ".\venv" (
+if exist "..\venv" (
     echo Removing existing virtual environment...
-    rmdir /s /q .\venv
+    rmdir /s /q "..\venv"
 )
 
 echo Step 2: Running setup_local_env.bat...
