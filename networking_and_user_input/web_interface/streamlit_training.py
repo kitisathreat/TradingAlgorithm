@@ -23,18 +23,6 @@ except ImportError as e:
     st.error(f"❌ Failed to import ModelTrainer: {str(e)}")
     ModelTrainer = None
 
-# Initialize session state
-if 'model_trainer' not in st.session_state:
-    st.session_state.model_trainer = ModelTrainer() if ModelTrainer else None
-if 'current_features' not in st.session_state:
-    st.session_state.current_features = None
-if 'current_feature_vector' not in st.session_state:
-    st.session_state.current_feature_vector = None
-if 'training_history' not in st.session_state:
-    st.session_state.training_history = []
-if 'training_count' not in st.session_state:
-    st.session_state.training_count = 0
-
 def plot_technical_indicators(features):
     """Create an interactive plot of technical indicators"""
     fig = go.Figure()
@@ -95,6 +83,20 @@ def plot_technical_indicators(features):
     return fig
 
 def main():
+    # Initialize session state variables if not already set
+    if 'model_trainer' not in st.session_state:
+        st.session_state.model_trainer = ModelTrainer() if ModelTrainer else None
+    if 'current_features' not in st.session_state:
+        st.session_state.current_features = None
+    if 'current_feature_vector' not in st.session_state:
+        st.session_state.current_feature_vector = None
+    if 'training_history' not in st.session_state:
+        st.session_state.training_history = []
+    if 'training_count' not in st.session_state:
+        st.session_state.training_count = 0
+    if 'current_actual_result' not in st.session_state:
+        st.session_state.current_actual_result = None
+
     st.title("Trading Model Training Interface")
     st.markdown("""
     This interface helps train our trading model by collecting your trading decisions
