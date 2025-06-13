@@ -23,14 +23,6 @@ except ImportError as e:
     st.error(f"❌ Failed to import ModelTrainer: {str(e)}")
     ModelTrainer = None
 
-# Page config
-st.set_page_config(
-    page_title="Trading Model Training Interface",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 # Initialize session state
 if 'model_trainer' not in st.session_state:
     st.session_state.model_trainer = ModelTrainer() if ModelTrainer else None
