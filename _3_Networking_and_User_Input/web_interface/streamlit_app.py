@@ -31,10 +31,10 @@ st.set_page_config(
 
 # Add the orchestrator directory to Python path
 REPO_ROOT = Path(__file__).parent.parent.parent
-ORCHESTRATOR_PATH = REPO_ROOT / "2_Orchestrator_And_ML_Python"
+ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
 sys.path.append(str(ORCHESTRATOR_PATH))
 # Add the networking directory to Python path
-NETWORKING_PATH = REPO_ROOT / "3_Networking_and_User_Input"
+NETWORKING_PATH = REPO_ROOT / "_3_Networking_and_User_Input"
 sys.path.append(str(NETWORKING_PATH))
 
 # Constants for model state
@@ -131,7 +131,7 @@ except ImportError as e:
 # Try to import the training interface with graceful fallback
 try:
     from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
-    from networking_and_user_input.web_interface.streamlit_training import main
+    from _3_Networking_and_User_Input.web_interface.streamlit_training import main
     TRAINING_AVAILABLE = True
 except ImportError as e:
     st.warning(f"""
