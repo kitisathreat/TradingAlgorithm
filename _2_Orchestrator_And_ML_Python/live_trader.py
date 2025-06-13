@@ -14,7 +14,21 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Local imports
 import config
-from data_fetcher import FMPFetcher, NewsFetcher
+try:
+    from data_fetcher import FMPFetcher, NewsFetcher
+except ImportError:
+    import logging
+    logging.warning("Could not import FMPFetcher or NewsFetcher. Running in basic mode.")
+    class FMPFetcher:
+        def get_analyst_ratings(self, symbol):
+            logging.warning("FMPFetcher is unavailable. Returning default ratings.")
+            return {"buy_ratio": 0.5}
+    class NewsFetcher:
+        def __init__(self, api=None):
+            pass
+        def get_latest_headline(self, symbol):
+            logging.warning("NewsFetcher is unavailable. Returning default headline.")
+            return "No news available."
 from sentiment_analyzer import SentimentAnalyzer
 
 # Try to import decision engine, with fallback for development
