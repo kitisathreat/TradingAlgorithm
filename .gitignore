@@ -50,3 +50,7 @@ sp500_historical_data_*.csv
 
 # Large data files
 2_Orchestrator_And_ML_(Python)/sp500_historical_data_*.csv
+
+# Wheel files
+*.whl
+wheels/
