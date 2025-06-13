@@ -45,12 +45,16 @@ echo Upgrading pip and installing wheel...
 python -m pip install --upgrade pip
 python -m pip install --upgrade wheel
 
-:: Install packages from root_requirements.txt
+:: Install packages from root_requirements.txt for local development
 echo Installing dependencies from root_requirements.txt...
 python -m pip install -r ..\root_requirements.txt
 
+:: Install ML requirements for local development
+echo Installing ML dependencies...
+python -m pip install -r "..\_2_Orchestrator_And_ML_Python\ml_requirements.txt"
+
 echo.
 echo Environment setup complete. You can now run your Streamlit app with:
-echo streamlit run streamlit_app.py
+echo run_streamlit_app.bat
 echo.
 pause 
