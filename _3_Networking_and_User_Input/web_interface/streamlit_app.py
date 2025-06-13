@@ -13,6 +13,29 @@ import logging
 import json
 from datetime import datetime
 
+def is_streamlit_cloud() -> bool:
+    """
+    Detect if running in Streamlit Cloud using multiple checks.
+    Returns True if any of the checks indicate Streamlit Cloud.
+    """
+    # Check 1: Platform processor (empty string in Streamlit Cloud)
+    if platform.processor() == '':
+        return True
+        
+    # Check 2: Environment variable
+    if os.environ.get('STREAMLIT_SERVER_RUNNING_ON_CLOUD', '').lower() == 'true':
+        return True
+        
+    # Check 3: Mount path (exists in Streamlit Cloud)
+    if os.path.exists('/mount/src'):
+        return True
+        
+    # Check 4: Home directory (exists in Streamlit Cloud)
+    if os.path.exists('/home/adminuser'):
+        return True
+        
+    return False
+
 # Configure logging with file rotation
 logging.basicConfig(
     filename="streamlit_app.log",
@@ -36,9 +59,9 @@ for var in ['STREAMLIT_SERVER_RUNNING_ON_CLOUD', 'STREAMLIT_SERVER_PORT',
 logger.info(f"Mount path exists: {os.path.exists('/mount/src')}")
 logger.info(f"Home directory exists: {os.path.exists('/home/adminuser')}")
 
-# Detect if running in Streamlit Cloud
-is_streamlit_cloud = platform.processor() == ''
-logger.info(f"Running in Streamlit Cloud: {is_streamlit_cloud}")
+# Detect if running in Streamlit Cloud using multiple checks
+is_cloud = is_streamlit_cloud()
+logger.info(f"Running in Streamlit Cloud: {is_cloud}")
 logger.info("=====================================")
 
 # Set page config - must be the first Streamlit command

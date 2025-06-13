@@ -8,6 +8,29 @@ from packaging import version
 from packaging.specifiers import SpecifierSet
 import platform
 
+def is_streamlit_cloud() -> bool:
+    """
+    Detect if running in Streamlit Cloud using multiple checks.
+    Returns True if any of the checks indicate Streamlit Cloud.
+    """
+    # Check 1: Platform processor (empty string in Streamlit Cloud)
+    if platform.processor() == '':
+        return True
+        
+    # Check 2: Environment variable
+    if os.environ.get('STREAMLIT_SERVER_RUNNING_ON_CLOUD', '').lower() == 'true':
+        return True
+        
+    # Check 3: Mount path (exists in Streamlit Cloud)
+    if os.path.exists('/mount/src'):
+        return True
+        
+    # Check 4: Home directory (exists in Streamlit Cloud)
+    if os.path.exists('/home/adminuser'):
+        return True
+        
+    return False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -231,15 +254,14 @@ def main():
     logger.info(f"Platform Processor: {platform.processor()}")
     logger.info(f"Current working directory: {os.getcwd()}")
     logger.info(f"Directory contents: {os.listdir('.')}")
+    logger.info(f"Mount path exists: {os.path.exists('/mount/src')}")
+    logger.info(f"Home directory exists: {os.path.exists('/home/adminuser')}")
 
-    # Detect Streamlit Cloud using platform.processor()
-    # On Streamlit Cloud, platform.processor() returns empty string
-    # On local machines, it returns the processor name
-    is_streamlit_cloud = platform.processor() == ''
+    # Detect Streamlit Cloud using multiple checks
+    is_cloud = is_streamlit_cloud()
+    logger.info(f"Streamlit Cloud detection result: {is_cloud}")
     
-    logger.info(f"Streamlit Cloud detection result: {is_streamlit_cloud}")
-    
-    if is_streamlit_cloud:
+    if is_cloud:
         requirements_file = os.path.join(script_dir, "requirements.txt")
         logger.info("Detected Streamlit Cloud environment. Using requirements.txt")
     else:
