@@ -9,7 +9,7 @@ TradingAlgorithm/
 │   ├── bindings.cpp                    # Python bindings
 │   ├── setup.py                        # Package setup
 │   ├── CMakeLists.txt                  # Build config
-│   ├── requirements.txt                # Dependencies
+│   ├── cpp_requirements.txt            # C++ module dependencies
 │   └── [Visual Studio project files]
 │
 ├── 2_Orchestrator_And_ML_Python/       # ML and Trading Logic (Python)
@@ -19,13 +19,15 @@ TradingAlgorithm/
 │   ├── train_model.py                  # ML training
 │   ├── sentiment_analyzer.py           # Sentiment analysis
 │   ├── config.py                       # Configuration
-│   ├── requirements.txt                # Dependencies
+│   ├── ml_requirements.txt             # ML module dependencies
+│   ├── ml_dev_requirements.txt         # ML development dependencies
 │   ├── interactive_training_app/       # Training interface
 │   ├── deployment_services/            # Model deployment
 │   └── tests/                          # Test suite
 │
 ├── 3_Networking_and_User_Input/        # UI and API Layer
 │   └── web_interface/                  # Web interface
+│       └── web_requirements.txt        # Web interface dependencies
 │
 ├── .streamlit/                         # Streamlit config
 ├── .github/                            # GitHub workflows
@@ -34,8 +36,7 @@ TradingAlgorithm/
 ├── main.py                            # Entry point
 ├── streamlit_app.py                   # Dashboard
 ├── setup.sh                           # Setup script
-├── requirements.txt                   # Main deps
-├── streamlit_requirements.txt         # Streamlit deps
+├── root_requirements.txt              # Main project dependencies
 ├── README.md                          # Documentation
 └── TradingAlgo.sln                    # VS solution
 

@@ -16,7 +16,7 @@ python -m pip install --upgrade pip
 python -m pip install --upgrade wheel
 
 echo Installing requirements...
-python -m pip install -r ..\requirements.txt
+python -m pip install -r ..\root_requirements.txt
 
 echo Setup complete! Virtual environment is ready.
 echo To activate the environment, run: ..\venv\Scripts\activate.bat

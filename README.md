@@ -23,7 +23,7 @@ TradingAlgorithm/
 │   ├── logs/                          # Trading and system logs
 │   ├── tests/                         # Python tests
 │   ├── main.py                        # Main entry point
-│   └── requirements.txt               # Python dependencies
+│   └── root_requirements.txt          # Main project dependencies
 ├── 3_Networking_and_User_Input/        # Web interface and API
 │   └── web_interface/                 # Streamlit-based UI
 ├── docs/                              # Documentation
@@ -58,7 +58,7 @@ TradingAlgorithm/
    .\venv\Scripts\activate
 
    # Install dependencies
-   pip install -r 2_Orchestrator_And_ML_Python/requirements.txt
+   pip install -r 2_Orchestrator_And_ML_Python/ml_requirements.txt
    ```
 
 2. **Building C++ Module**
