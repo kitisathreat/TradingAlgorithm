@@ -6,6 +6,7 @@ import os
 from typing import Dict, Optional, Tuple, List
 from packaging import version
 from packaging.specifiers import SpecifierSet
+import platform
 
 # Configure logging
 logging.basicConfig(
@@ -223,8 +224,20 @@ def main():
     # Get the directory of this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # Auto-detect Streamlit Cloud using official environment variable
-    is_streamlit_cloud = os.environ.get('STREAMLIT_SERVER_RUNNING_ON_CLOUD', 'false').lower() == 'true'
+    # Debug: Log all relevant environment variables
+    logger.info("Environment Variables Check:")
+    logger.info(f"STREAMLIT_SERVER_RUNNING_ON_CLOUD: {os.environ.get('STREAMLIT_SERVER_RUNNING_ON_CLOUD')}")
+    logger.info(f"STREAMLIT_SERVER_PORT: {os.environ.get('STREAMLIT_SERVER_PORT')}")
+    logger.info(f"Platform Processor: {platform.processor()}")
+    logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info(f"Directory contents: {os.listdir('.')}")
+
+    # Detect Streamlit Cloud using platform.processor()
+    # On Streamlit Cloud, platform.processor() returns empty string
+    # On local machines, it returns the processor name
+    is_streamlit_cloud = platform.processor() == ''
+    
+    logger.info(f"Streamlit Cloud detection result: {is_streamlit_cloud}")
     
     if is_streamlit_cloud:
         requirements_file = os.path.join(script_dir, "requirements.txt")

@@ -13,18 +13,33 @@ import logging
 import json
 from datetime import datetime
 
-# Clear all existing handlers
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
-
 # Configure logging with file rotation
 logging.basicConfig(
     filename="streamlit_app.log",
     filemode="w",  # Overwrite log file on each app start
-    level=logging.ERROR,  # Only log errors to reduce verbosity
+    level=logging.INFO,  # Set to INFO to see debug messages
     format="%(asctime)s - %(levelname)s - %(message)s",
     force=True  # Force reconfiguration of logging
 )
+
+# Log environment information
+logger = logging.getLogger(__name__)
+logger.info("=== Streamlit App Environment Check ===")
+logger.info(f"Python Version: {platform.python_version()}")
+logger.info(f"Platform Processor: {platform.processor()}")
+logger.info(f"Current Working Directory: {os.getcwd()}")
+logger.info(f"Directory Contents: {os.listdir('.')}")
+logger.info("Environment Variables:")
+for var in ['STREAMLIT_SERVER_RUNNING_ON_CLOUD', 'STREAMLIT_SERVER_PORT', 
+            'STREAMLIT_SERVER_HEADLESS', 'STREAMLIT_BROWSER_GATHER_USAGE_STATS']:
+    logger.info(f"{var}: {os.environ.get(var)}")
+logger.info(f"Mount path exists: {os.path.exists('/mount/src')}")
+logger.info(f"Home directory exists: {os.path.exists('/home/adminuser')}")
+
+# Detect if running in Streamlit Cloud
+is_streamlit_cloud = platform.processor() == ''
+logger.info(f"Running in Streamlit Cloud: {is_streamlit_cloud}")
+logger.info("=====================================")
 
 # Set page config - must be the first Streamlit command
 st.set_page_config(
