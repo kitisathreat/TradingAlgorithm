@@ -222,13 +222,24 @@ def main():
     """Example usage of the PackageManager."""
     # Get the directory of this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    requirements_file = os.path.join(script_dir, "root_requirements.txt")
-    
+
+    # Auto-detect Streamlit Cloud
+    is_streamlit_cloud = (
+        os.environ.get("STREAMLIT_SERVER_PORT") is not None or
+        os.path.exists("/mount/src")
+    )
+    if is_streamlit_cloud:
+        requirements_file = os.path.join(script_dir, "requirements.txt")
+        logger.info("Auto-detected Streamlit Cloud environment. Using requirements.txt.")
+    else:
+        requirements_file = os.path.join(script_dir, "root_requirements.txt")
+        logger.info("Using root_requirements.txt (local/dev environment).")
+
     manager = PackageManager()
-    
+
     # First, try to install all requirements
     failed = manager.install_requirements(requirements_file)
-    
+
     if failed:
         print("\nFailed packages:")
         for pkg in failed:
