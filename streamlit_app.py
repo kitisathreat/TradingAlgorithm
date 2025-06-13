@@ -9,6 +9,14 @@ from pathlib import Path
 import streamlit as st
 import platform
 
+# Set page config - must be the first Streamlit command
+st.set_page_config(
+    page_title="Trading Algorithm Training Interface",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Add the orchestrator directory to Python path
 REPO_ROOT = Path(__file__).parent
 ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
