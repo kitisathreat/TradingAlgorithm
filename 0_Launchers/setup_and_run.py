@@ -4,6 +4,30 @@ import subprocess
 import logging
 from pathlib import Path
 from typing import Optional
+import platform
+
+def is_streamlit_cloud() -> bool:
+    """
+    Detect if running in Streamlit Cloud using multiple checks.
+    Returns True if any of the checks indicate Streamlit Cloud.
+    """
+    # Check 1: Platform processor (empty string in Streamlit Cloud)
+    if platform.processor() == '':
+        return True
+        
+    # Check 2: Environment variable
+    if os.environ.get('STREAMLIT_SERVER_RUNNING_ON_CLOUD', '').lower() == 'true':
+        return True
+        
+    # Check 3: Mount path (exists in Streamlit Cloud)
+    if os.path.exists('/mount/src'):
+        return True
+        
+    # Check 4: Home directory (exists in Streamlit Cloud)
+    if os.path.exists('/home/adminuser'):
+        return True
+        
+    return False
 
 # Configure logging
 logging.basicConfig(
@@ -11,10 +35,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-def is_streamlit_cloud() -> bool:
-    """Check if running in Streamlit Cloud environment."""
-    return os.environ.get('STREAMLIT_SERVER_RUNNING_ON_CLOUD', 'false').lower() == 'true'
 
 def setup_virtual_env() -> Optional[str]:
     """
