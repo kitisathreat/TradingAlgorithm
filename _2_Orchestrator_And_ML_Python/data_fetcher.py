@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta
 from typing import List, Dict
 import logging
+import requests
 
 # Third-party imports
 import yfinance as yf
@@ -189,6 +190,39 @@ def manage_csv_files():
                     logging.error(f"Error deleting file {old_file}: {str(e)}")
     except Exception as e:
         logging.error(f"Error managing CSV files: {str(e)}")
+
+class FMPFetcher:
+    def __init__(self):
+        self.api_key = os.getenv("FMP_API_KEY")
+        self.base_url = "https://financialmodelingprep.com/api/v3"
+
+    def get_analyst_ratings(self, symbol):
+        if not self.api_key:
+            logging.warning("FMP API key not set.")
+            return {"buy_ratio": 0.5}
+        url = f"{self.base_url}/historical-rating/{symbol}?apikey={self.api_key}"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            if not data:
+                return {"buy_ratio": 0.5}
+            latest = data[0]
+            buy = latest.get("ratingBuy", 0) + latest.get("ratingOverweight", 0)
+            total = buy + latest.get("ratingHold", 0) + latest.get("ratingUnderweight", 0) + latest.get("ratingSell", 0) + latest.get("ratingStrongSell", 0)
+            buy_ratio = buy / total if total else 0.5
+            return {"buy_ratio": buy_ratio}
+        except Exception as e:
+            logging.error(f"Error fetching analyst ratings: {e}")
+            return {"buy_ratio": 0.5}
+
+class NewsFetcher:
+    def __init__(self, api=None):
+        self.api = api  # Optionally pass an API client
+
+    def get_latest_headline(self, symbol):
+        # Placeholder: implement actual news fetching logic
+        return f"No news available for {symbol}."
 
 def main():
     try:
