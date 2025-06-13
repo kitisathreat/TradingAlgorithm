@@ -25,3 +25,22 @@ wheel>=0.40.0
 
 # System dependencies for Streamlit Cloud
 # These are automatically handled by the packages.txt file 
+
+# Sentiment analysis
+vaderSentiment>=3.3.2
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# API and Vision Service (optional, for deployment_services/vision_service.py)
+fastapi>=0.100.0
+opencv-python>=4.7.0.72
+onnxruntime>=1.15.0
+
+# Retry logic
+tenacity>=8.2.2
+
+# Testing (optional, for local development)
+pytest>=7.4.0
+fastapi[testclient]>=0.100.0 
