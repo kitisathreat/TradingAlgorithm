@@ -5,7 +5,7 @@ import time
 import os
 
 def start_streamlit():
-    print("Starting Trading Algorithm Interface...")
+    print("Starting Trading Model Training Interface...")
     
     # Get the directory containing this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -13,7 +13,7 @@ def start_streamlit():
     try:
         # Start the Streamlit app
         process = subprocess.Popen(
-            [sys.executable, '-m', 'streamlit', 'run', 'streamlit_app.py'],
+            [sys.executable, '-m', 'streamlit', 'run', 'streamlit_training.py'],
             cwd=script_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -27,7 +27,7 @@ def start_streamlit():
         # Open the browser
         webbrowser.open('http://localhost:8501')
         
-        print("✨ Trading Algorithm Interface is running!")
+        print("✨ Trading Model Training Interface is running!")
         print("📊 Access the interface at: http://localhost:8501")
         print("Press Ctrl+C to stop the server...")
         
