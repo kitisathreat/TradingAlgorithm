@@ -13,7 +13,7 @@ if not exist "%PYTHON_PATH%\python.exe" (
 )
 
 :: Verify virtual environment
-if not exist "venv\Scripts\activate.bat" (
+if not exist "..\venv\Scripts\activate.bat" (
     echo Error: Virtual environment not found
     echo Please run setup_local_env.bat first to create the virtual environment
     pause
@@ -25,7 +25,7 @@ cd /d "%~dp0"
 
 :: Activate the virtual environment
 echo Activating virtual environment...
-call venv\Scripts\activate.bat
+call ..\venv\Scripts\activate.bat
 if errorlevel 1 (
     echo Error: Failed to activate virtual environment
     pause
