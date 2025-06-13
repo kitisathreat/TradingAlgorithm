@@ -61,4 +61,26 @@ tensorflow>=2.15.0,<2.20.0
 scikit-learn>=1.3.0
 joblib>=1.3.0
 yfinance>=0.2.36
+pandas>=2.0.0
+
+# Core trading and data handling
+alpaca-trade-api>=2.3.0  # For live trading
+requests>=2.31.0         # For API calls
+python-dotenv>=1.0.0     # For environment variables
+pandas>=2.0.0           # For data manipulation
+numpy>=1.24.0           # For numerical operations
+yfinance>=0.2.36        # For market data
+tqdm>=4.66.0           # For progress bars
+lxml>=4.9.0             # For XML/HTML parsing (required by some data sources)
+
+# Web Interface
+streamlit>=1.31.0
+plotly>=5.18.0
+
+# ML and data science
+numpy>=1.24.0,<2.0.0
+tensorflow>=2.15.0,<2.20.0
+scikit-learn>=1.3.0
+joblib>=1.3.0
+yfinance>=0.2.36
 pandas>=2.0.0 

@@ -6,6 +6,7 @@ pandas>=2.0.0           # For data manipulation
 numpy>=1.24.0           # For numerical operations
 yfinance>=0.2.36        # For market data
 tqdm>=4.66.0           # For progress bars
+lxml>=4.9.0             # For XML/HTML parsing (required by some data sources)
 
 # Web Interface
 streamlit>=1.28.0       # For interactive web interface
