@@ -13,12 +13,17 @@ import logging
 import json
 from datetime import datetime
 
-# Configure logging: clear log file and restart logging on app start
+# Clear all existing handlers
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+# Configure logging with file rotation
 logging.basicConfig(
     filename="streamlit_app.log",
     filemode="w",  # Overwrite log file on each app start
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.ERROR,  # Only log errors to reduce verbosity
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    force=True  # Force reconfiguration of logging
 )
 
 # Set page config - must be the first Streamlit command
