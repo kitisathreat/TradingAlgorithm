@@ -1,11 +1,23 @@
-streamlit>=1.31.0
-pandas>=2.0.0
-plotly>=5.18.0
-python-dotenv>=1.0.0
-requests>=2.31.0
-alpaca-trade-api>=3.0.0
-numpy>=1.24.0
-tensorflow>=2.15.0
-yfinance>=0.2.36
-psutil
-tqdm 
+# Web Interface Dependencies (fixed versions for Python 3.9 compatibility)
+streamlit==1.31.0
+pandas==2.0.0
+plotly==5.18.0
+python-dotenv==1.0.0
+requests==2.31.0
+alpaca-trade-api==3.0.0
+numpy==1.24.0  # Fixed version for Python 3.9 compatibility
+tensorflow==2.13.0  # Fixed version for Python 3.9 compatibility
+yfinance==0.2.36
+psutil==5.9.0
+tqdm==4.65.0
+
+# Streamlit extras
+streamlit-plotly-events==0.0.6
+streamlit-option-menu==0.3.12
+streamlit-autorefresh==0.3.1
+streamlit-extras==0.3.5
+
+# HTTP and Retry Logic
+httpx==0.24.0
+aiohttp==3.8.0
+tenacity==8.2.2 
