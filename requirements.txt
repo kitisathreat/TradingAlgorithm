@@ -15,14 +15,14 @@ fastapi==0.100.0
 python-dotenv==1.0.0
 requests==2.31.0
 httpx==0.24.0
-aiohttp==3.8.1
+aiohttp==3.8.3  # Updated to be compatible with alpaca-trade-api
 
 # Trading and Market Data
 alpaca-trade-api==3.2.0
 yfinance==0.2.63
 lxml==4.9.1  # Pinned version for stability
 tqdm==4.65.0
-websockets==13.0
+websockets==10.4  # Updated to be compatible with alpaca-trade-api (<11 and >=9.0)
 
 # Visualization
 plotly==5.18.0
