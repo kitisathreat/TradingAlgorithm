@@ -10,7 +10,7 @@ import json
 import logging
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import time
 import random
@@ -174,35 +174,29 @@ class ModelTrainer:
             
             # Use current date minus buffer to ensure we get real data
             # Make timezone-aware to match yfinance data
-            current_date = datetime.now()
-            end_date = current_date - timedelta(days=5)  # 5 days ago to ensure data availability
+            current_date = datetime.now(timezone.utc)
+            end_date = current_date - timedelta(days=5)
             start_date = end_date - timedelta(days=years_back * 365)
             
-            # Validate dates to prevent future date issues
             if start_date >= end_date:
                 logger.error(f"Invalid date range: start_date {start_date} >= end_date {end_date}")
                 return self._generate_synthetic_historical_data(symbol, years_back)
             
             logger.info(f"Fetching {years_back} years of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using {current_date.year} reference date)")
             
-            # Try different approaches to get maximum data
             ticker = yf.Ticker(symbol)
             
-            # Try period first (more reliable) - but limit to reasonable periods
             for period in ["5y", "2y", "1y", "6mo"]:
                 try:
                     data = ticker.history(period=period)
-                    if not data.empty and len(data) > 30:  # At least 30 days of data
-                        # Make end_date timezone-aware to match data.index timezone
-                        if hasattr(data.index, 'tz') and data.index.tz is not None:
-                            # Convert end_date to the same timezone as the data
-                            end_date_tz = pd.Timestamp(end_date).tz_localize(data.index.tz)
+                    if not data.empty and len(data) > 30:
+                        # Ensure index is UTC-aware
+                        if data.index.tz is None:
+                            data.index = data.index.tz_localize('UTC')
                         else:
-                            # If data has no timezone, localize end_date to UTC
-                            end_date_tz = pd.Timestamp(end_date).tz_localize('UTC')
-                        
-                        # Filter data to end at our end_date
-                        filtered_data = data[data.index <= end_date_tz]
+                            data.index = data.index.tz_convert('UTC')
+                        end_date_utc = pd.Timestamp(end_date).tz_localize('UTC') if pd.Timestamp(end_date).tzinfo is None else pd.Timestamp(end_date).tz_convert('UTC')
+                        filtered_data = data[data.index <= end_date_utc]
                         if not filtered_data.empty and len(filtered_data) > 30:
                             logger.info(f"Successfully fetched {len(filtered_data)} days of {symbol} data using period={period}")
                             logger.info(f"Data range: {filtered_data.index.min().strftime('%Y-%m-%d')} to {filtered_data.index.max().strftime('%Y-%m-%d')}")
@@ -214,27 +208,27 @@ class ModelTrainer:
                     logger.warning(f"Period {period} failed for {symbol}: {e}")
                     continue
             
-            # Fallback to date range with strict validation
             try:
-                # Use a more conservative date range (max 2 years back)
                 safe_end_date = end_date
-                safe_start_date = safe_end_date - timedelta(days=min(years_back * 365, 730))  # Max 2 years
-                
+                safe_start_date = safe_end_date - timedelta(days=min(years_back * 365, 730))
                 data = ticker.history(start=safe_start_date, end=safe_end_date)
                 if not data.empty:
+                    if data.index.tz is None:
+                        data.index = data.index.tz_localize('UTC')
+                    else:
+                        data.index = data.index.tz_convert('UTC')
                     logger.info(f"Successfully fetched {len(data)} days of {symbol} data using date range")
                     logger.info(f"Data range: {data.index.min().strftime('%Y-%m-%d')} to {data.index.max().strftime('%Y-%m-%d')}")
                     return self._clean_and_enhance_data(data)
             except Exception as e:
                 logger.warning(f"Date range fetch failed for {symbol}: {e}")
             
-            # Final fallback to synthetic data
             logger.info(f"Using synthetic data for {symbol}")
-            return self._generate_synthetic_historical_data(symbol, min(years_back, 2))  # Max 2 years for synthetic
+            return self._generate_synthetic_historical_data(symbol, min(years_back, 2))
             
         except Exception as e:
             logger.error(f"Error loading data: {e}")
-            return self._generate_synthetic_historical_data(symbol, min(years_back, 2))  # Max 2 years for synthetic
+            return self._generate_synthetic_historical_data(symbol, min(years_back, 2))
     
     def _clean_and_enhance_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """Clean and enhance stock data with technical indicators"""
