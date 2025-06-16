@@ -1,6 +1,6 @@
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QComboBox, QSpinBox,
@@ -267,7 +267,7 @@ class MainWindow(QMainWindow):
             
             # Use a reference date that yfinance should definitely have data for
             # Since today is June 16, 2025, let's use a date from 2024 that we know exists
-            reference_date = datetime(2024, 12, 20)  # December 20, 2024 - should have data
+            reference_date = datetime(2024, 12, 20, tzinfo=timezone.utc)  # December 20, 2024 - should have data
             end_date = reference_date
             start_date = end_date - timedelta(days=days)
             
@@ -284,6 +284,12 @@ class MainWindow(QMainWindow):
             if df.empty:
                 QMessageBox.warning(self, "Error", f"No data found for {stock}. Please try a different stock or fewer days.")
                 return
+            
+            # Ensure df.index is timezone-aware (UTC)
+            if df.index.tz is None:
+                df.index = df.index.tz_localize('UTC')
+            else:
+                df.index = df.index.tz_convert('UTC')
             
             # Validate that data is not newer than our end_date
             if df.index.max() > end_date:
@@ -381,7 +387,7 @@ class MainWindow(QMainWindow):
         try:
             # Use a reference date that yfinance should definitely have data for
             # Since today is June 16, 2025, let's use a date from 2024 that we know exists
-            reference_date = datetime(2024, 12, 20)  # December 20, 2024 - should have data
+            reference_date = datetime(2024, 12, 20, tzinfo=timezone.utc)  # December 20, 2024 - should have data
             end_date = reference_date
             start_date = end_date - timedelta(days=30)  # Last 30 days from the reference date
             
@@ -398,6 +404,12 @@ class MainWindow(QMainWindow):
             if df.empty:
                 self.prediction_label.setText(f"No data available for {stock}")
                 return
+            
+            # Ensure df.index is timezone-aware (UTC)
+            if df.index.tz is None:
+                df.index = df.index.tz_localize('UTC')
+            else:
+                df.index = df.index.tz_convert('UTC')
             
             # Validate that data is not newer than our end_date
             if df.index.max() > end_date:
