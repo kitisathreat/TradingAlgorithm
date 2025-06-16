@@ -18,10 +18,11 @@ httpx==0.24.0
 aiohttp==3.8.1
 
 # Trading and Market Data
-alpaca-trade-api==3.0.0
-yfinance==0.2.36
+alpaca-trade-api==3.2.0
+yfinance==0.2.63
 lxml==4.9.1  # Pinned version for stability
 tqdm==4.65.0
+websockets==13.0
 
 # Visualization
 plotly==5.18.0

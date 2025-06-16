@@ -32,6 +32,13 @@ class StockChartWidget(pg.PlotWidget):
         
     def plot_stock_data(self, df):
         self.clear()
+        
+        if df.empty:
+            print("No data to plot")
+            return
+            
+        print(f"Plotting {len(df)} data points")
+        
         # Plot candlesticks
         for i in range(len(df)):
             # Calculate candlestick coordinates
@@ -54,6 +61,25 @@ class StockChartWidget(pg.PlotWidget):
                      pen=pg.mkPen(color=color, width=1),
                      fillLevel=0,
                      brush=pg.mkBrush(color))
+        
+        # Add price range info
+        min_price = df['Low'].min()
+        max_price = df['High'].max()
+        current_price = df['Close'].iloc[-1]
+        
+        # Set proper axis ranges
+        price_padding = (max_price - min_price) * 0.05  # 5% padding
+        self.setYRange(max(0, min_price - price_padding), max_price + price_padding)
+        self.setXRange(0, len(df) - 1)
+        
+        # Set axis labels with more info
+        self.setLabel('left', f'Price (${min_price:.2f} - ${max_price:.2f})')
+        self.setLabel('bottom', f'Days ({len(df)} data points)')
+        
+        # Add current price line
+        self.addLine(y=current_price, pen=pg.mkPen('b', width=2, style=pg.QtCore.Qt.DashLine))
+        
+        print(f"Chart updated - Price range: ${min_price:.2f} to ${max_price:.2f}, Current: ${current_price:.2f}")
 
 class TrainingThread(QThread):
     progress = pyqtSignal(int)

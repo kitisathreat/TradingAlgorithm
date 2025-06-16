@@ -172,10 +172,10 @@ class ModelTrainer:
             if not ML_IMPORTS_AVAILABLE:
                 return self._generate_synthetic_historical_data(symbol, years_back)
             
-            # Use a reference date that yfinance should definitely have data for
-            # Since today is June 16, 2025, let's use a date from 2024 that we know exists
-            reference_date = datetime(2024, 12, 20)  # December 20, 2024 - should have data
-            end_date = reference_date
+            # Use current date minus buffer to ensure we get real data
+            # Make timezone-aware to match yfinance data
+            current_date = datetime.now()
+            end_date = current_date - timedelta(days=5)  # 5 days ago to ensure data availability
             start_date = end_date - timedelta(days=years_back * 365)
             
             # Validate dates to prevent future date issues
@@ -183,7 +183,7 @@ class ModelTrainer:
                 logger.error(f"Invalid date range: start_date {start_date} >= end_date {end_date}")
                 return self._generate_synthetic_historical_data(symbol, years_back)
             
-            logger.info(f"Fetching {years_back} years of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using 2024 reference date)")
+            logger.info(f"Fetching {years_back} years of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using {current_date.year} reference date)")
             
             # Try different approaches to get maximum data
             ticker = yf.Ticker(symbol)
@@ -193,14 +193,22 @@ class ModelTrainer:
                 try:
                     data = ticker.history(period=period)
                     if not data.empty and len(data) > 30:  # At least 30 days of data
-                        # Filter data to end at our reference date
-                        filtered_data = data[data.index <= end_date]
+                        # Make end_date timezone-aware to match data.index timezone
+                        if hasattr(data.index, 'tz') and data.index.tz is not None:
+                            # Convert end_date to the same timezone as the data
+                            end_date_tz = pd.Timestamp(end_date).tz_localize(data.index.tz)
+                        else:
+                            # If data has no timezone, localize end_date to UTC
+                            end_date_tz = pd.Timestamp(end_date).tz_localize('UTC')
+                        
+                        # Filter data to end at our end_date
+                        filtered_data = data[data.index <= end_date_tz]
                         if not filtered_data.empty and len(filtered_data) > 30:
-                            logger.info(f"Successfully fetched {len(filtered_data)} days of {symbol} data using period={period} (filtered to reference date)")
+                            logger.info(f"Successfully fetched {len(filtered_data)} days of {symbol} data using period={period}")
                             logger.info(f"Data range: {filtered_data.index.min().strftime('%Y-%m-%d')} to {filtered_data.index.max().strftime('%Y-%m-%d')}")
                             return self._clean_and_enhance_data(filtered_data)
                         else:
-                            logger.warning(f"Data for {symbol} filtered to reference date is insufficient, trying next period")
+                            logger.warning(f"Data for {symbol} filtered to end_date is insufficient, trying next period")
                             continue
                 except Exception as e:
                     logger.warning(f"Period {period} failed for {symbol}: {e}")
@@ -225,20 +233,40 @@ class ModelTrainer:
             return self._generate_synthetic_historical_data(symbol, min(years_back, 2))  # Max 2 years for synthetic
             
         except Exception as e:
-            logger.error(f"Error fetching historical data for {symbol}: {e}")
+            logger.error(f"Error loading data: {e}")
             return self._generate_synthetic_historical_data(symbol, min(years_back, 2))  # Max 2 years for synthetic
     
     def _clean_and_enhance_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """Clean and enhance stock data with technical indicators"""
         df = data.copy()
         
+        # Ensure we have the required columns
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        if not all(col in df.columns for col in required_columns):
+            logger.error(f"Missing required columns. Available: {df.columns.tolist()}")
+            return self._generate_synthetic_historical_data("UNKNOWN", 1)
+        
         # Remove any invalid data
         df = df.dropna()
         df = df[df['Volume'] > 0]
+        df = df[df['Close'] > 0]  # Ensure positive prices
+        
+        # Ensure index is properly formatted as datetime
+        if not isinstance(df.index, pd.DatetimeIndex):
+            logger.warning("Index is not DatetimeIndex, attempting to convert")
+            try:
+                df.index = pd.to_datetime(df.index)
+            except Exception as e:
+                logger.error(f"Could not convert index to datetime: {e}")
+                return self._generate_synthetic_historical_data("UNKNOWN", 1)
+        
+        # Sort by date to ensure chronological order
+        df = df.sort_index()
         
         # Calculate technical indicators
         df = self._add_comprehensive_technical_indicators(df)
         
+        logger.info(f"Cleaned data shape: {df.shape}, date range: {df.index.min()} to {df.index.max()}")
         return df
     
     def _add_comprehensive_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -295,27 +323,33 @@ class ModelTrainer:
         """Generate realistic synthetic historical data"""
         logger.info(f"Generating {years} years of synthetic data for {symbol}")
         
-        # Create date range (business days only)
-        end_date = datetime.now()
+        # Create date range (business days only) - use recent dates
+        end_date = datetime.now() - timedelta(days=5)  # 5 days ago
         start_date = end_date - timedelta(days=years * 365)
         date_range = pd.bdate_range(start=start_date, end=end_date)
         
+        if len(date_range) < 30:
+            logger.warning(f"Generated date range too short ({len(date_range)} days), using 30 days")
+            end_date = datetime.now() - timedelta(days=5)
+            start_date = end_date - timedelta(days=30)
+            date_range = pd.bdate_range(start=start_date, end=end_date)
+        
         # Generate realistic price movements with trends and cycles
         np.random.seed(hash(symbol) % 2**32)
-        base_price = np.random.uniform(20, 500)
+        base_price = np.random.uniform(20, 500)  # Realistic stock price range
         
         # Add long-term trend and cyclical components
-        trend = np.linspace(0, np.random.uniform(-0.5, 1.5), len(date_range))
-        cycle = np.sin(np.linspace(0, years * 2 * np.pi, len(date_range))) * 0.1
+        trend = np.linspace(0, np.random.uniform(-0.3, 0.8), len(date_range))  # More conservative trend
+        cycle = np.sin(np.linspace(0, years * 2 * np.pi, len(date_range))) * 0.05  # Smaller cycles
         
         # Generate daily returns with realistic volatility clustering
         returns = []
-        volatility = 0.02
+        volatility = 0.02  # 2% daily volatility
         
         for i in range(len(date_range)):
             # Volatility clustering
             volatility = volatility * 0.95 + np.random.exponential(0.001)
-            volatility = np.clip(volatility, 0.005, 0.08)
+            volatility = np.clip(volatility, 0.005, 0.08)  # Between 0.5% and 8%
             
             # Daily return with trend and cycle
             daily_return = np.random.normal(0.0003 + trend[i]/252 + cycle[i]/252, volatility)
@@ -324,15 +358,40 @@ class ModelTrainer:
         # Calculate prices
         prices = [base_price]
         for ret in returns:
-            prices.append(prices[-1] * (1 + ret))
+            new_price = prices[-1] * (1 + ret)
+            prices.append(max(new_price, 1.0))  # Ensure minimum price of $1
         
         prices = prices[1:]  # Remove initial price
         
-        # Generate OHLCV data
-        highs = [p * (1 + np.random.uniform(0, 0.05)) for p in prices]
-        lows = [p * (1 - np.random.uniform(0, 0.05)) for p in prices]
-        opens = [prices[0]] + [prices[i-1] * (1 + np.random.normal(0, 0.01)) for i in range(1, len(prices))]
-        volumes = [np.random.randint(100000, 10000000) for _ in prices]
+        # Generate OHLCV data with realistic relationships
+        highs = []
+        lows = []
+        opens = []
+        volumes = []
+        
+        for i, close_price in enumerate(prices):
+            # Generate realistic OHLC relationships
+            if i == 0:
+                open_price = close_price * (1 + np.random.normal(0, 0.01))
+            else:
+                open_price = prices[i-1] * (1 + np.random.normal(0, 0.01))
+            
+            # High and low should bracket open and close
+            price_range = close_price * np.random.uniform(0.005, 0.03)  # 0.5% to 3% range
+            high_price = max(open_price, close_price) + price_range * np.random.uniform(0.3, 1.0)
+            low_price = min(open_price, close_price) - price_range * np.random.uniform(0.3, 1.0)
+            
+            # Ensure low <= min(open, close) <= max(open, close) <= high
+            low_price = min(low_price, open_price, close_price)
+            high_price = max(high_price, open_price, close_price)
+            
+            # Generate realistic volume
+            volume = np.random.randint(100000, 10000000)
+            
+            highs.append(high_price)
+            lows.append(low_price)
+            opens.append(open_price)
+            volumes.append(volume)
         
         df = pd.DataFrame({
             'Open': opens,
@@ -342,6 +401,7 @@ class ModelTrainer:
             'Volume': volumes
         }, index=date_range)
         
+        logger.info(f"Generated synthetic data: {len(df)} days, price range: ${df['Low'].min():.2f} - ${df['High'].max():.2f}")
         return self._add_comprehensive_technical_indicators(df)
     
     def get_random_stock_data(self) -> Tuple[Dict, pd.DataFrame, str]:

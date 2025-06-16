@@ -189,7 +189,7 @@ def setup_environment(venv_path):
         "PyQt6==6.4.2",
         "pyqtgraph==0.13.3",
         "pandas==2.0.3",
-        "yfinance==0.2.36",
+        "yfinance==0.2.63",
         "qt-material==2.14",
         "tensorflow==2.13.0"
     ]
