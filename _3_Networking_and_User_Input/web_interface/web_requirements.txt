@@ -9,7 +9,7 @@ pandas==2.0.3
 plotly==5.18.0
 python-dotenv==1.0.0
 requests==2.31.0
-yfinance==0.2.36  # Using older version for compatibility
+yfinance==0.2.63
 numpy==1.24.3
 tqdm==4.65.0
 
@@ -31,9 +31,9 @@ streamlit-plotly-events==0.0.6
 streamlit-option-menu==0.3.12
 
 # API and data services (minimal set)
-alpaca-trade-api==2.3.0  # Using older version for compatibility
+alpaca-trade-api==3.2.0
 fastapi==0.100.0
-websockets==10.4  # Explicitly setting websockets version to be compatible with both
+websockets==13.0
 
 # Remove unnecessary packages:
 # - textblob (not essential for core functionality)

@@ -143,7 +143,7 @@ py -3.9 -m pip install --upgrade pip
 py -3.9 -m pip install wheel
 
 echo    Installing core dependencies first...
-py -3.9 -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "pandas==2.0.3" "yfinance==0.2.36" "tensorflow==2.13.0"
+py -3.9 -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "pandas==2.0.3" "yfinance==0.2.63" "tensorflow==2.13.0"
 
 echo    Installing PyQt5 for Windows compatibility...
 py -3.9 -m pip install "PyQt5==5.15.9" "PyQt5-Qt5==5.15.2" "PyQt5-sip==12.11.0"

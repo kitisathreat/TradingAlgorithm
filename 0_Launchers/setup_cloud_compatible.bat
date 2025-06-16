@@ -171,12 +171,12 @@ if "%IS_WINDOWS%"=="1" (
     
     %PYTHON_CMD% -m pip install --upgrade pip
     %PYTHON_CMD% -m pip install wheel
-    %PYTHON_CMD% -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "PyQt5==5.15.9" "pyqtgraph==0.13.3" "pandas==2.0.3" "yfinance==0.2.36" "qt-material==2.14" "tensorflow==2.13.0"
+    %PYTHON_CMD% -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "PyQt5==5.15.9" "pyqtgraph==0.13.3" "pandas==2.0.3" "yfinance==0.2.63" "qt-material==2.14" "tensorflow==2.13.0"
 ) else (
     echo [INFO] Non-Windows environment - using pip directly
     %PYTHON_CMD% -m pip install --upgrade pip
     %PYTHON_CMD% -m pip install wheel
-    %PYTHON_CMD% -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "pandas==2.0.3" "yfinance==0.2.36" "tensorflow==2.13.0"
+    %PYTHON_CMD% -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "pandas==2.0.3" "yfinance==0.2.63" "tensorflow==2.13.0"
 )
 
 if errorlevel 1 (

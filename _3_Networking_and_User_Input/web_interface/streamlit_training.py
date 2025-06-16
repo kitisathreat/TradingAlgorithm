@@ -1,5 +1,6 @@
 """
 Advanced Streamlit Training Interface
+Updated to match local GUI approach and coding patterns
 Presents historical stock data and collects human trading intuition
 Uses the neural network ModelTrainer from the orchestrator layer
 """
@@ -9,9 +10,12 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
+import os
+import json
 from pathlib import Path
+import yfinance as yf
 
 # Add orchestrator path to import the ModelTrainer
 repo_root = Path(__file__).parent.parent.parent
@@ -23,6 +27,38 @@ try:
 except ImportError as e:
     st.error(f"Could not import ModelTrainer: {e}")
     TRAINER_AVAILABLE = False
+
+# Load stock symbols from JSON file (matching local GUI approach)
+def load_stock_symbols():
+    """Load stock symbols from the JSON file like the local GUI does"""
+    try:
+        symbols_file = repo_root / "_2_Orchestrator_And_ML_Python" / "interactive_training_app" / "sp100_symbols.json"
+        if symbols_file.exists():
+            with open(symbols_file, 'r') as f:
+                symbols = json.load(f)
+            return symbols
+        else:
+            st.warning("SP100 symbols file not found, using fallback symbols")
+            return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META']
+    except Exception as e:
+        st.error(f"Error loading stock symbols: {e}")
+        return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META']
+
+# Create a simple ModelBridge class matching the local GUI approach
+class ModelBridge:
+    def __init__(self):
+        pass
+    
+    def get_trading_decision(self, symbol, features, sentiment_data, vix, account_value, current_position):
+        # Placeholder implementation matching local GUI
+        return {
+            'signal': 'HOLD',
+            'confidence': 0.65,
+            'position_size': 0.0,
+            'stop_loss': 0.0,
+            'take_profit': 0.0,
+            'reasoning': 'Model not yet trained'
+        }
 
 def create_stock_chart(data: pd.DataFrame, symbol: str, current_date: str):
     """Create an interactive stock chart with technical indicators"""
@@ -89,14 +125,29 @@ def create_stock_chart(data: pd.DataFrame, symbol: str, current_date: str):
             annotation_position="top"
         )
     
-    # Update layout
+    # Calculate proper axis ranges
+    min_price = data['Low'].min()
+    max_price = data['High'].max()
+    price_padding = (max_price - min_price) * 0.05  # 5% padding
+    
+    # Update layout with proper axis ranges
     fig.update_layout(
         title=f"{symbol} Stock Chart - Make Your Trading Decision",
         xaxis_title="Date",
         yaxis_title="Price ($)",
         height=600,
         showlegend=True,
-        xaxis_rangeslider_visible=False
+        xaxis_rangeslider_visible=False,
+        # Set proper x-axis range (full date range)
+        xaxis=dict(
+            range=[data.index.min(), data.index.max()],
+            type='date'
+        ),
+        # Set proper y-axis range (price range with padding)
+        yaxis=dict(
+            range=[max(0, min_price - price_padding), max_price + price_padding],
+            type='linear'
+        )
     )
     
     return fig
@@ -131,7 +182,15 @@ def create_technical_indicators_chart(data: pd.DataFrame, current_date: str):
                 rsi_fig.add_vline(x=current_date_parsed, line_dash="dash", line_color="red")
                 st.metric("Current RSI", f"{current_rsi:.1f}")
             
-            rsi_fig.update_layout(height=300, yaxis=dict(range=[0, 100]))
+            # Set proper axis ranges for RSI
+            rsi_fig.update_layout(
+                height=300, 
+                yaxis=dict(range=[0, 100]),
+                xaxis=dict(
+                    range=[data.index.min(), data.index.max()],
+                    type='date'
+                )
+            )
             st.plotly_chart(rsi_fig, use_container_width=True)
     
     with col2:
@@ -161,104 +220,114 @@ def create_technical_indicators_chart(data: pd.DataFrame, current_date: str):
                 macd_fig.add_vline(x=current_date_parsed, line_dash="dash", line_color="red")
                 st.metric("Current MACD", f"{current_macd:.4f}")
             
-            macd_fig.update_layout(height=300)
+            # Calculate proper MACD axis range
+            macd_min = min(data['MACD'].min(), data['MACD_Signal'].min())
+            macd_max = max(data['MACD'].max(), data['MACD_Signal'].max())
+            macd_padding = (macd_max - macd_min) * 0.1 if macd_max != macd_min else 0.1
+            
+            macd_fig.update_layout(
+                height=300,
+                xaxis=dict(
+                    range=[data.index.min(), data.index.max()],
+                    type='date'
+                ),
+                yaxis=dict(
+                    range=[macd_min - macd_padding, macd_max + macd_padding]
+                )
+            )
             st.plotly_chart(macd_fig, use_container_width=True)
 
 def display_performance_metrics(features: dict):
-    """Display performance and technical metrics"""
+    """Display performance metrics in a clean format"""
     
-    st.subheader("📊 Performance & Technical Analysis")
+    st.subheader("📊 Performance Metrics")
     
-    # Performance metrics
+    # Create metrics in columns
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric(
-            "5-Day Return", 
-            f"{features.get('return_5d', 0):.2f}%",
-            delta=None
-        )
-        st.metric(
-            "Volatility (20d)", 
-            f"{features.get('volatility_20d', 0):.2f}%"
-        )
+        st.metric("Price Change", f"${features.get('price_change', 0):.2f}")
     
     with col2:
-        st.metric(
-            "20-Day Return", 
-            f"{features.get('return_20d', 0):.2f}%"
-        )
-        st.metric(
-            "Max Drawdown", 
-            f"{features.get('max_drawdown', 0):.2f}%"
-        )
+        st.metric("Price Change %", f"{features.get('price_change_pct', 0):.2f}%")
     
     with col3:
-        st.metric(
-            "Distance from 52W High", 
-            f"{features.get('distance_from_52w_high', 0):.2f}%"
-        )
-        st.metric(
-            "Sharpe Ratio", 
-            f"{features.get('sharpe_ratio', 0):.2f}"
-        )
+        st.metric("Volume", f"{features.get('volume', 0):,}")
     
     with col4:
-        st.metric(
-            "Distance from 52W Low", 
-            f"{features.get('distance_from_52w_low', 0):.2f}%"
-        )
-        st.metric(
-            "Volume Ratio", 
-            f"{features.get('volume_ratio', 1.0):.2f}x"
-        )
+        st.metric("Volatility", f"{features.get('volatility', 0):.2f}%")
     
-    # Technical indicators summary
-    st.subheader("🔧 Technical Indicators Summary")
+    # Additional metrics
+    col1, col2, col3, col4 = st.columns(4)
     
+    with col1:
+        if 'RSI' in features:
+            st.metric("RSI", f"{features['RSI']:.1f}")
+    
+    with col2:
+        if 'MACD' in features:
+            st.metric("MACD", f"{features['MACD']:.4f}")
+    
+    with col3:
+        if 'BB_Position' in features:
+            bb_pos = features['BB_Position']
+            if bb_pos > 0.8:
+                bb_status = "Overbought"
+            elif bb_pos < 0.2:
+                bb_status = "Oversold"
+            else:
+                bb_status = "Neutral"
+            st.metric("BB Position", bb_status)
+    
+    with col4:
+        if 'SMA_Trend' in features:
+            trend = features['SMA_Trend']
+            if trend > 0:
+                trend_text = "Bullish"
+            elif trend < 0:
+                trend_text = "Bearish"
+            else:
+                trend_text = "Neutral"
+            st.metric("SMA Trend", trend_text)
+
+def collect_trading_decision():
+    """Collect trading decision from user"""
+    
+    st.subheader("🎯 Make Your Trading Decision")
+    
+    # Decision buttons in a row
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.write("**Price vs Moving Averages:**")
-        current_price = features.get('current_price', 0)
-        sma_10 = features.get('sma_10', current_price)
-        sma_20 = features.get('sma_20', current_price)
-        sma_50 = features.get('sma_50', current_price)
-        
-        st.write(f"Price vs SMA10: {((current_price/sma_10-1)*100):+.1f}%")
-        st.write(f"Price vs SMA20: {((current_price/sma_20-1)*100):+.1f}%")
-        st.write(f"Price vs SMA50: {((current_price/sma_50-1)*100):+.1f}%")
+        buy_clicked = st.button("🟢 BUY", type="primary", use_container_width=True)
     
     with col2:
-        st.write("**Momentum Indicators:**")
-        st.write(f"RSI: {features.get('rsi', 50):.1f}")
-        st.write(f"MACD: {features.get('macd', 0):.4f}")
-        st.write(f"BB Position: {features.get('bb_position', 0.5):.2f}")
+        sell_clicked = st.button("🔴 SELL", type="primary", use_container_width=True)
     
     with col3:
-        st.write("**Recent Price Action:**")
-        st.write(f"1-Day Change: {features.get('price_change_1d', 0)*100:+.2f}%")
-        st.write(f"5-Day Change: {features.get('price_change_5d', 0)*100:+.2f}%")
-        st.write(f"20-Day Change: {features.get('price_change_20d', 0)*100:+.2f}%")
-
-def collect_trading_decision():
-    """Collect the user's trading decision and reasoning"""
+        hold_clicked = st.button("🟡 HOLD", type="primary", use_container_width=True)
     
-    st.subheader("🧠 Your Trading Decision")
-    st.write("Based on the data above, what would you do with this stock?")
+    # Determine decision
+    if buy_clicked:
+        decision = "BUY"
+        confidence = 0.8
+    elif sell_clicked:
+        decision = "SELL"
+        confidence = 0.8
+    elif hold_clicked:
+        decision = "HOLD"
+        confidence = 0.8
+    else:
+        decision = "HOLD"
+        confidence = 0.6
     
-    # Trading decision
-    decision = st.radio(
-        "Your Trading Decision:",
-        ["BUY", "SELL", "HOLD"],
-        help="Select your trading decision based on the analysis above"
-    )
-    
-    # Confidence level
-    confidence = st.select_slider(
-        "Confidence Level:",
-        options=["Very Low", "Low", "Medium", "High", "Very High"],
-        value="Medium",
+    # Confidence slider
+    confidence = st.slider(
+        "Confidence Level",
+        min_value=0.1,
+        max_value=1.0,
+        value=confidence,
+        step=0.1,
         help="How confident are you in this decision?"
     )
     
@@ -271,6 +340,62 @@ def collect_trading_decision():
     )
     
     return decision, confidence, reasoning
+
+def load_stock_data(symbol: str, days: int = 30):
+    """Load stock data using the same approach as local GUI"""
+    try:
+        # Use a reference date that yfinance should definitely have data for
+        # Since today is June 16, 2025, let's use a date from 2024 that we know exists
+        reference_date = datetime(2024, 12, 20)  # December 20, 2024 - should have data
+        end_date = reference_date
+        start_date = end_date - timedelta(days=days)
+        
+        # Validate dates to prevent future date issues
+        if start_date >= end_date:
+            st.error(f"Invalid date range: start_date {start_date.strftime('%Y-%m-%d')} >= end_date {end_date.strftime('%Y-%m-%d')}")
+            return None, None
+        
+        st.info(f"Fetching {days} days of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using 2024 reference date)")
+        
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(start=start_date, end=end_date)
+        
+        if df.empty:
+            st.error(f"No data found for {symbol}. Please try a different stock or fewer days.")
+            return None, None
+        
+        # Validate that data is not newer than our end_date
+        if df.index.max() > end_date:
+            st.warning(f"Data for {symbol} contains dates newer than expected. This may indicate a system clock issue.")
+            # Filter out dates newer than our end_date
+            df = df[df.index <= end_date]
+            if df.empty:
+                st.error(f"No valid data found for {symbol} after filtering dates.")
+                return None, None
+            
+        st.success(f"Successfully loaded {len(df)} days of data for {symbol}")
+        st.info(f"Data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
+        
+        # Calculate basic features
+        current_price = df['Close'].iloc[-1]
+        price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
+        price_change_pct = (price_change / df['Close'].iloc[-2]) * 100 if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
+        
+        features = {
+            'symbol': symbol,
+            'date': df.index[-1].strftime('%Y-%m-%d'),
+            'current_price': current_price,
+            'price_change': price_change,
+            'price_change_pct': price_change_pct,
+            'volume': df['Volume'].iloc[-1],
+            'volatility': df['Close'].pct_change().std() * 100
+        }
+        
+        return features, df
+        
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        return None, None
 
 def main():
     """Main training interface"""
@@ -286,12 +411,17 @@ def main():
         st.error("ModelTrainer not available. Please check the installation.")
         return
     
-    # Initialize trainer
+    # Initialize trainer in session state (matching local GUI approach)
     if 'trainer' not in st.session_state:
         with st.spinner("Initializing Advanced Neural Network Trainer..."):
             st.session_state.trainer = ModelTrainer()
     
+    # Initialize model bridge
+    if 'model_bridge' not in st.session_state:
+        st.session_state.model_bridge = ModelBridge()
+    
     trainer = st.session_state.trainer
+    model_bridge = st.session_state.model_bridge
     
     # Sidebar - Training Controls
     st.sidebar.header("🎯 Training Controls")
@@ -315,15 +445,28 @@ def main():
         col1, col2 = st.columns([2, 1])
         
         with col2:
-            if st.button("🎲 Get New Stock", type="primary"):
-                with st.spinner("Fetching random stock data..."):
-                    features, historical_data, symbol = trainer.get_random_stock_data()
+            # Stock selection (matching local GUI approach - load from JSON)
+            stock_symbols = load_stock_symbols()
+            selected_stock = st.selectbox("Select Stock:", stock_symbols)
+            
+            # Date range (matching local GUI approach)
+            days_history = st.number_input(
+                "Days of History:", 
+                min_value=1, 
+                max_value=365, 
+                value=30,
+                help="Number of days of historical data to fetch"
+            )
+            
+            if st.button("📊 Get Stock Data", type="primary"):
+                with st.spinner("Fetching stock data..."):
+                    features, historical_data = load_stock_data(selected_stock, days_history)
                     
-                    if features is not None:
+                    if features is not None and historical_data is not None:
                         st.session_state.current_features = features
                         st.session_state.current_data = historical_data
-                        st.session_state.current_symbol = symbol
-                        st.success(f"✅ Loaded {symbol} data from {features['date']}")
+                        st.session_state.current_symbol = selected_stock
+                        st.success(f"✅ Loaded {selected_stock} data from {features['date']}")
                     else:
                         st.error("❌ Failed to fetch stock data")
         
@@ -420,7 +563,7 @@ def main():
                 else:
                     st.warning("⚠️ Please provide your reasoning before submitting")
         else:
-            st.info("👆 Click 'Get New Stock' to start training the neural network")
+            st.info("👆 Select a stock and click 'Get Stock Data' to start training the neural network")
     
     with tab2:
         st.header("🤖 Neural Network Training & Predictions")

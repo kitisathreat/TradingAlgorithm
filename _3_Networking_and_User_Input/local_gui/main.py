@@ -82,6 +82,11 @@ class StockChartWidget(pg.PlotWidget):
         max_price = df['High'].max()
         current_price = df['Close'].iloc[-1]
         
+        # Set proper axis ranges
+        price_padding = (max_price - min_price) * 0.05  # 5% padding
+        self.setYRange(max(0, min_price - price_padding), max_price + price_padding)
+        self.setXRange(0, len(df) - 1)
+        
         # Set axis labels with more info
         self.setLabel('left', f'Price (${min_price:.2f} - ${max_price:.2f})')
         self.setLabel('bottom', f'Days ({len(df)} data points)')
