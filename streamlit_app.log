@@ -1,0 +1,15 @@
+2025-06-16 18:31:41,300 - INFO - === Advanced Neural Network Trading System ===
+2025-06-16 18:31:41,300 - INFO - Python Version: 3.9.13
+2025-06-16 18:31:41,300 - INFO - Platform Processor: Intel64 Family 6 Model 142 Stepping 12, GenuineIntel
+2025-06-16 18:31:41,302 - INFO - Current Working Directory: C:\Users\KitKumar\Documents\repos\TradingAlgorithm
+2025-06-16 18:31:41,307 - INFO - Directory Contents: ['.cursorignore', '.devcontainer', '.env', '.git', '.gitattributes', '.github', '.gitignore', '.streamlit', '.streamlitignore', '.vscode', '0_Launchers', '1_High_Performance_Module_(C++)', 'docs', 'packages.txt', 'package_manager.py', 'pip.ini', 'README.md', 'requirements.txt', 'root_requirements.txt', 'streamlit_app.log', 'TradingAlgo.sln', 'venv', 'wheels', '_2_Orchestrator_And_ML_Python', '_3_Networking_and_User_Input', '__pycache__']
+2025-06-16 18:31:41,307 - INFO - Environment Variables:
+2025-06-16 18:31:41,307 - INFO - STREAMLIT_SERVER_RUNNING_ON_CLOUD: None
+2025-06-16 18:31:41,307 - INFO - STREAMLIT_SERVER_PORT: None
+2025-06-16 18:31:41,308 - INFO - STREAMLIT_SERVER_HEADLESS: None
+2025-06-16 18:31:41,308 - INFO - STREAMLIT_BROWSER_GATHER_USAGE_STATS: None
+2025-06-16 18:31:41,308 - INFO - Mount path exists: False
+2025-06-16 18:31:41,309 - INFO - Home directory exists: False
+2025-06-16 18:31:41,309 - INFO - Running in Streamlit Cloud: False
+2025-06-16 18:31:41,309 - INFO - =====================================
+2025-06-16 18:31:41,389 - INFO - ModelTrainer initialized with 463 symbols

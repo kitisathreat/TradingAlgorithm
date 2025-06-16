@@ -13,7 +13,7 @@ import streamlit as st
 import platform
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -297,13 +297,10 @@ def check_model_availability():
 def load_stock_data(symbol: str, days: int = 30):
     """Load stock data using the same approach as local GUI"""
     try:
-        # Use a reference date that yfinance should definitely have data for
-        # Since today is June 16, 2025, let's use a date from 2024 that we know exists
-        reference_date = datetime(2024, 12, 20)  # December 20, 2024 - should have data
+        reference_date = datetime(2024, 12, 20, tzinfo=timezone.utc)  # December 20, 2024 - should have data
         end_date = reference_date
         start_date = end_date - timedelta(days=days)
         
-        # Validate dates to prevent future date issues
         if start_date >= end_date:
             st.error(f"Invalid date range: start_date {start_date.strftime('%Y-%m-%d')} >= end_date {end_date.strftime('%Y-%m-%d')}")
             return None, None
@@ -317,19 +314,22 @@ def load_stock_data(symbol: str, days: int = 30):
             st.error(f"No data found for {symbol}. Please try a different stock or fewer days.")
             return None, None
         
-        # Validate that data is not newer than our end_date
+        # Ensure df.index is timezone-aware (UTC)
+        if df.index.tz is None:
+            df.index = df.index.tz_localize('UTC')
+        else:
+            df.index = df.index.tz_convert('UTC')
+        
         if df.index.max() > end_date:
             st.warning(f"Data for {symbol} contains dates newer than expected. This may indicate a system clock issue.")
-            # Filter out dates newer than our end_date
             df = df[df.index <= end_date]
             if df.empty:
                 st.error(f"No valid data found for {symbol} after filtering dates.")
                 return None, None
-            
+        
         st.success(f"Successfully loaded {len(df)} days of data for {symbol}")
         st.info(f"Data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
         
-        # Calculate basic features
         current_price = df['Close'].iloc[-1]
         price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
         price_change_pct = (price_change / df['Close'].iloc[-2]) * 100 if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
