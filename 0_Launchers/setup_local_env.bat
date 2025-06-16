@@ -1,60 +1,48 @@
 @echo off
-echo Setting up local Python environment for Trading Algorithm...
-
-:: Set Python 3.9 path
-set PYTHON_PATH=C:\Users\KitKumar\AppData\Local\Programs\Python\Python39
-set PATH=%PYTHON_PATH%;%PYTHON_PATH%\Scripts;%PATH%
-
-:: Check if Python 3.9 is available
-%PYTHON_PATH%\python.exe --version >nul 2>&1
-if errorlevel 1 (
-    echo Python 3.9 is not found at %PYTHON_PATH%
-    echo Please install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
-    exit /b 1
-)
-
-:: Check Python version
-for /f "tokens=2" %%I in ('%PYTHON_PATH%\python.exe --version 2^>^&1') do set PYTHON_VERSION=%%I
-echo Detected Python version: %PYTHON_VERSION%
-
-:: Verify Python version is exactly 3.9.x
-for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
-    if not "%%a"=="3" (
-        echo Error: Python 3.9.x is required, but found version %PYTHON_VERSION%
-        echo Please install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
-        exit /b 1
-    )
-    if not "%%b"=="9" (
-        echo Error: Python 3.9.x is required, but found version %PYTHON_VERSION%
-        echo Please install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
-        exit /b 1
-    )
-)
-
-:: Create and activate virtual environment in root directory
-if not exist "..\venv" (
-    echo Creating virtual environment in root directory...
-    %PYTHON_PATH%\python.exe -m venv "..\venv"
-)
-
-:: Activate virtual environment from root
-call "..\venv\Scripts\activate.bat"
-
-:: Upgrade pip and install wheel
-echo Upgrading pip and installing wheel...
-python -m pip install --upgrade pip
-python -m pip install --upgrade wheel
-
-:: Install packages from root_requirements.txt for local development
-echo Installing dependencies from root_requirements.txt...
-python -m pip install -r ..\root_requirements.txt
-
-:: Install ML requirements for local development
-echo Installing ML dependencies...
-python -m pip install -r "..\_2_Orchestrator_And_ML_Python\ml_requirements.txt"
+setlocal enabledelayedexpansion
 
 echo.
-echo Environment setup complete. You can now run your Streamlit app with:
-echo run_streamlit_app.bat
+echo ====================================================================
+echo 🚀 OPTIMIZED ENVIRONMENT SETUP
+echo ====================================================================
 echo.
-pause 
+
+:: Create and activate virtual environment
+echo Step 1: Creating Python virtual environment...
+python -m venv venv
+call venv\Scripts\activate.bat
+
+:: Upgrade pip and install wheel first
+echo Step 2: Upgrading pip and installing wheel...
+python -m pip install --upgrade pip --no-cache-dir
+pip install wheel --no-cache-dir
+
+:: Configure pip for faster downloads
+echo Step 3: Configuring pip for faster downloads...
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+pip config set global.trusted-host pypi.tuna.tsinghua.edu.cn
+pip config set global.parallel-downloads 8
+pip config set global.prefer-binary true
+pip config set global.timeout 60
+pip config set global.progress-bar on
+
+:: Install core packages first (these are needed for other packages)
+echo Step 4: Installing core packages...
+pip install --no-cache-dir numpy==1.24.3 pandas==2.0.3 tensorflow==2.13.0
+
+:: Install remaining packages in parallel using requirements file
+echo Step 5: Installing remaining packages...
+pip install --no-cache-dir -r web_requirements.txt
+
+:: Verify installation
+echo Step 6: Verifying installation...
+python -c "import tensorflow as tf; print(f'TensorFlow version: {tf.__version__}')"
+python -c "import streamlit as st; print(f'Streamlit version: {st.__version__}')"
+
+echo.
+echo ====================================================================
+echo ✅ ENVIRONMENT SETUP COMPLETE
+echo ====================================================================
+echo.
+
+endlocal 

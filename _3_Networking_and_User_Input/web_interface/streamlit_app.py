@@ -1,6 +1,7 @@
 """
 Trading Algorithm Training Interface
 Main entry point for Streamlit Cloud deployment.
+Enhanced with structural dependency management.
 For troubleshooting, see docs/streamlit_cloud_troubleshooting.md
 """
 
@@ -47,7 +48,7 @@ logging.basicConfig(
 
 # Log environment information
 logger = logging.getLogger(__name__)
-logger.info("=== Streamlit App Environment Check ===")
+logger.info("=== Advanced Neural Network Trading System ===")
 logger.info(f"Python Version: {platform.python_version()}")
 logger.info(f"Platform Processor: {platform.processor()}")
 logger.info(f"Current Working Directory: {os.getcwd()}")
@@ -66,8 +67,8 @@ logger.info("=====================================")
 
 # Set page config - must be the first Streamlit command
 st.set_page_config(
-    page_title="Trading Algorithm Training Interface",
-    page_icon="📈",
+    page_title="🧠 Neural Network Trading Algorithm",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -82,7 +83,101 @@ sys.path.append(str(NETWORKING_PATH))
 
 # Constants for model state
 MODEL_STATE_FILE = "model_state.json"
-TRAINING_THRESHOLD = 5  # Minimum examples needed for training
+TRAINING_THRESHOLD = 10  # Minimum examples needed for neural network training
+
+def check_dependencies():
+    """
+    Check if all required dependencies are available with helpful error messages
+    """
+    missing_deps = []
+    ml_deps_available = True
+    
+    # Check core dependencies
+    try:
+        import pandas as pd
+        import plotly.graph_objects as go
+        import numpy as np
+        from dotenv import load_dotenv
+    except ImportError as e:
+        missing_deps.append(f"Core dependencies: {str(e)}")
+    
+    # Check yfinance (optional - has fallback)
+    try:
+        import yfinance as yf
+        yf_available = True
+    except ImportError:
+        yf_available = False
+    
+    # Check ML dependencies
+    try:
+        import tensorflow as tf
+        from sklearn.preprocessing import StandardScaler
+        from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+        ml_deps_available = True
+        tf_version = tf.__version__
+    except ImportError as e:
+        missing_deps.append(f"ML dependencies: {str(e)}")
+        ml_deps_available = False
+        tf_version = "Not installed"
+    
+    return missing_deps, ml_deps_available, yf_available, tf_version
+
+def display_setup_instructions():
+    """Display setup instructions when dependencies are missing"""
+    st.error("🚨 **Missing Dependencies for Neural Network Training System**")
+    
+    st.markdown("""
+    ### 🔧 **Setup Required**
+    
+    It looks like the required dependencies for the **Advanced Neural Network Trading System** are not installed.
+    
+    #### **For Local Development:**
+    1. **Close this browser tab**
+    2. **Open Command Prompt/PowerShell in your project directory**
+    3. **Run the setup command:**
+       ```bash
+       0_Launchers\\setup_and_run.bat
+       ```
+    4. **Wait for installation to complete (may take 5-10 minutes)**
+    5. **The Streamlit app will start automatically**
+    
+    #### **What Gets Installed:**
+    - 🧠 **TensorFlow 2.13.0** - Neural network engine
+    - 📊 **VADER Sentiment Analysis** - Analyzes your trading reasoning
+    - 📈 **Advanced Technical Indicators** - RSI, MACD, Bollinger Bands
+    - 🎯 **Interactive Charting** - Candlestick charts with 25 years of data
+    - 🔗 **All Supporting Libraries** - Pandas, NumPy, Plotly, etc.
+    
+    #### **For Streamlit Cloud:**
+    The system will automatically use the `web_requirements.txt` file which includes all necessary dependencies.
+    """)
+    
+    # Show what's missing
+    with st.expander("🔍 **Detailed Dependency Status**"):
+        missing_deps, ml_available, yf_available, tf_version = check_dependencies()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("**Core Status:**")
+            if not missing_deps:
+                st.success("✅ Basic dependencies available")
+            else:
+                for dep in missing_deps:
+                    st.error(f"❌ {dep}")
+        
+        with col2:
+            st.write("**ML Status:**")
+            st.write(f"TensorFlow: {tf_version}")
+            if ml_available:
+                st.success("✅ Neural network ready")
+            else:
+                st.error("❌ Neural network not available")
+            
+            if yf_available:
+                st.success("✅ Real market data available")
+            else:
+                st.warning("⚠️ Using synthetic data (YFinance not available)")
 
 def get_model_state():
     """Get the current state of the model"""
@@ -123,16 +218,16 @@ def update_model_state(is_trained=False, training_examples=0, model_accuracy=0.0
 python_version = platform.python_version_tuple()
 if python_version[0] != '3' or python_version[1] != '9':
     st.error(f"""
-    ❌ Incompatible Python version: {platform.python_version()}
+    ❌ **Incompatible Python Version: {platform.python_version()}**
     
-    This app requires Python 3.9.x for compatibility with TensorFlow and other dependencies.
-    Please update your environment to use Python 3.9.x:
+    This advanced neural network system requires **Python 3.9.x** for optimal compatibility 
+    with TensorFlow 2.13.0 and other ML dependencies.
     
-    For local development:
+    **For Local Development:**
     1. Install Python 3.9.x from https://www.python.org/downloads/release/python-3913/
-    2. Run setup_local_env.bat to create a new virtual environment
+    2. Run: `0_Launchers\\setup_and_run.bat`
     
-    For Streamlit Cloud:
+    **For Streamlit Cloud:**
     1. Go to your app settings
     2. Under 'Python version', select Python 3.9
     3. Redeploy your app
@@ -140,48 +235,27 @@ if python_version[0] != '3' or python_version[1] != '9':
     st.stop()
 
 # Check for required dependencies
-try:
-    import pandas as pd
-    import plotly.graph_objects as go
-    import yfinance as yf
-    import numpy as np
-    from dotenv import load_dotenv
-except ImportError as e:
-    st.error(f"""
-    ❌ Missing required dependencies: {str(e)}
-    
-    Please ensure all dependencies are installed:
-    1. Check that web_requirements.txt is properly configured
-    2. Try restarting the app
-    3. If the issue persists, contact support
-    """)
+missing_deps, ml_available, yf_available, tf_version = check_dependencies()
+
+if missing_deps:
+    display_setup_instructions()
     st.stop()
 
-# Try to import ML dependencies with graceful fallback
-try:
-    import tensorflow as tf
-    ML_AVAILABLE = True
-    st.sidebar.success(f"TensorFlow {tf.__version__} loaded successfully")
-except ImportError as e:
-    st.warning(f"""
-    ⚠️ TensorFlow not available: {str(e)}
-    
-    The app will run in basic mode without ML capabilities.
-    This is expected if you're running on Streamlit Cloud without proper Python version.
-    """)
-    ML_AVAILABLE = False
+# Success! All dependencies are available
+st.success(f"✅ **Neural Network Training System Ready** (TensorFlow {tf_version})")
 
-# Try to import the training interface with graceful fallback
+# Try to import the training interface
 try:
     from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
     from _3_Networking_and_User_Input.web_interface.streamlit_training import main
     TRAINING_AVAILABLE = True
+    st.sidebar.success("🧠 Neural Network Engine: Ready")
 except ImportError as e:
-    st.warning(f"""
-    ⚠️ Training interface not available: {str(e)}
+    st.error(f"""
+    ⚠️ **Training Interface Import Error: {str(e)}**
     
-    The app will run in basic mode without training capabilities.
-    This is expected if you're running on Streamlit Cloud.
+    The neural network training system is not properly set up.
+    Please run the setup script: `0_Launchers\\setup_and_run.bat`
     """)
     TRAINING_AVAILABLE = False
 
@@ -191,6 +265,7 @@ os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 
 # Load environment variables
+from dotenv import load_dotenv
 load_dotenv()
 
 def check_environment():
@@ -205,13 +280,11 @@ def check_environment():
     
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
-        st.warning(f"""
-        ⚠️ Missing environment variables: {', '.join(missing_vars)}
+        st.sidebar.warning(f"""
+        ⚠️ **Missing API Keys:** {', '.join(missing_vars)}
         
-        Please add these to your Streamlit Cloud secrets:
-        1. Go to your app settings
-        2. Click on 'Secrets'
-        3. Add the missing variables
+        These are optional for training but required for live trading.
+        Add them to Streamlit Cloud secrets or your .env file.
         """)
         return False
     return True
@@ -219,92 +292,70 @@ def check_environment():
 def check_model_availability():
     """Check if a trained model is available and provide appropriate messaging"""
     model_state = get_model_state()
-    
-    if not ML_AVAILABLE:
-        st.error("""
-        ❌ TensorFlow is not available.
-        
-        This is required for model training and predictions.
-        Please ensure you're using Python 3.9 in Streamlit Cloud settings.
-        See docs/streamlit_cloud_troubleshooting.md for more information.
-        """)
-        return False
         
     if not TRAINING_AVAILABLE:
         st.error("""
-        ❌ Training interface is not available.
+        ❌ **Neural Network Training Interface Not Available**
         
-        This is required for model training and predictions.
-        Please check that all required modules are properly installed.
+        Please run the setup script: `0_Launchers\\setup_and_run.bat`
         """)
         return False
     
     if not model_state['is_trained']:
         if model_state['training_examples'] > 0:
-            st.warning(f"""
-            ⚠️ Model needs training
+            st.info(f"""
+            🔄 **Model Ready for Training**
             
             You have {model_state['training_examples']} training examples.
-            Need at least {TRAINING_THRESHOLD} examples to train the model.
+            Need at least {TRAINING_THRESHOLD} examples to train the neural network.
             
-            Please continue training to enable predictions.
+            Continue adding examples to enable neural network training.
             """)
         else:
             st.info("""
-            ℹ️ No trained model available
+            🎯 **Welcome to Neural Network Training**
             
-            To get started:
-            1. Use the training interface to provide examples
-            2. Train the model with at least 5 examples
-            3. Once trained, you can use the model for predictions
+            This system learns to mimic your trading decisions by analyzing both:
+            - **Technical indicators** (RSI, MACD, etc.)  
+            - **Your reasoning** (sentiment analysis of your explanations)
+            
+            Start by providing some training examples!
             """)
         return False
     
     st.success(f"""
-    ✅ Model is trained and ready
+    ✅ **Neural Network Trained and Ready**
     
-    - Last trained: {model_state['last_training_date']}
-    - Training examples: {model_state['training_examples']}
-    - Model accuracy: {model_state['model_accuracy']:.2%}
+    - **Last trained:** {model_state['last_training_date']}
+    - **Training examples:** {model_state['training_examples']}
+    - **Model accuracy:** {model_state['model_accuracy']:.2%}
     """)
     return True
 
 if __name__ == "__main__":
     # Check environment first
-    if not check_environment():
-        st.stop()
+    check_environment()
     
-    # Run the main Streamlit app
-    if TRAINING_AVAILABLE and ML_AVAILABLE:
-        # Check model availability before running main interface
-        model_ready = check_model_availability()
-        if model_ready:
+    # Run the main neural network training interface
+    if TRAINING_AVAILABLE:
             main()
-        else:
-            # Show training interface even if model isn't ready
-            st.title("Trading Algorithm Training Interface")
-            st.write("Please train the model to enable predictions.")
-            # Import and show training interface
-            from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
-            trainer = ModelTrainer()
-            # Show training interface components
-            st.subheader("Training Interface")
-            # Add your training interface components here
     else:
-        # Basic mode without ML
-        st.title("Trading Algorithm Training Interface")
+        # Show setup instructions
+        st.title("🧠 Advanced Neural Network Trading Algorithm")
+        st.markdown("**Intelligent Trading Decision System with Sentiment Analysis**")
         
-        if not ML_AVAILABLE:
-            st.error("""
-            ❌ TensorFlow is not available.
-            Please ensure you're using Python 3.9 in Streamlit Cloud settings.
-            """)
+        display_setup_instructions()
         
-        if not TRAINING_AVAILABLE:
-            st.warning("""
-            ⚠️ Training interface is not available.
-            Running in basic mode with limited functionality.
-            """)
+        st.markdown("---")
+        st.markdown("""
+        ### 🎯 **What This System Does:**
         
-        # Add basic functionality here
-        st.write("Basic trading interface coming soon...") 
+        1. **📊 Presents Random S&P100 Stocks** - Shows interactive charts with 25 years of data
+        2. **🧠 Collects Your Trading Decisions** - You analyze and decide: BUY, SELL, or HOLD
+        3. **📝 Analyzes Your Reasoning** - VADER sentiment analysis extracts keywords and sentiment
+        4. **🤖 Trains Neural Network** - TensorFlow neural network learns your trading psychology
+        5. **🔮 Makes Predictions** - AI mimics your decision-making process on new stocks
+        
+        This combines **technical analysis** with **sentiment analysis** to create an AI that 
+        thinks like you do when making trading decisions.
+        """) 
