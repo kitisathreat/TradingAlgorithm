@@ -1,0 +1,14 @@
+2025-06-16 18:25:16,837 - INFO - === Advanced Neural Network Trading System ===
+2025-06-16 18:25:16,839 - INFO - Python Version: 3.9.13
+2025-06-16 18:25:16,839 - INFO - Platform Processor: Intel64 Family 6 Model 142 Stepping 12, GenuineIntel
+2025-06-16 18:25:16,839 - INFO - Current Working Directory: C:\Users\KitKumar\Documents\repos\TradingAlgorithm\0_Launchers
+2025-06-16 18:25:16,839 - INFO - Directory Contents: ['build_cpp_module.bat', 'quick_launch_gui.bat', 'run_local_gui.bat', 'run_local_gui.py', 'run_local_gui_python.bat', 'run_streamlit_app.bat', 'setup.sh', 'setup_and_run.bat', 'setup_and_run.py', 'setup_cloud_compatible.bat', 'setup_local_env.bat', 'streamlit_app.log']
+2025-06-16 18:25:16,841 - INFO - Environment Variables:
+2025-06-16 18:25:16,841 - INFO - STREAMLIT_SERVER_RUNNING_ON_CLOUD: None
+2025-06-16 18:25:16,841 - INFO - STREAMLIT_SERVER_PORT: None
+2025-06-16 18:25:16,841 - INFO - STREAMLIT_SERVER_HEADLESS: None
+2025-06-16 18:25:16,841 - INFO - STREAMLIT_BROWSER_GATHER_USAGE_STATS: None
+2025-06-16 18:25:16,841 - INFO - Mount path exists: False
+2025-06-16 18:25:16,841 - INFO - Home directory exists: False
+2025-06-16 18:25:16,843 - INFO - Running in Streamlit Cloud: False
+2025-06-16 18:25:16,843 - INFO - =====================================
