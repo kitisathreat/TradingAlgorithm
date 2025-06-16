@@ -37,7 +37,7 @@ py -3.9 -m pip config set global.progress-bar on
 
 :: Install core packages first (these are needed for other packages)
 echo Step 4: Installing core packages...
-py -3.9 -m pip install --no-cache-dir "numpy==1.24.3" "pandas==2.0.3" "tensorflow==2.13.0"
+py -3.9 -m pip install --no-cache-dir "numpy==1.24.3" "pandas==2.0.3" "tensorflow==2.13.0" "PyQt5==5.15.9"
 
 :: Install remaining packages in parallel using requirements file
 echo Step 5: Installing remaining packages...

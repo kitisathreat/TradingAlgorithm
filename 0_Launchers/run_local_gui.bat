@@ -48,6 +48,7 @@ echo  * Technical Analysis (RSI, MACD, Bollinger Bands)
 echo  * Sentiment Analysis (VADER analysis of your reasoning)
 echo  * Neural Network Learning (TensorFlow deep learning)
 echo.
+echo  Using PyQt5 for better Windows compatibility
 echo  Virtual Environment Location: %VENV_PATH%
 echo  (This location is accessible to all users and requires no admin rights)
 echo.
@@ -55,7 +56,7 @@ echo ---------------------------------------------------------------------------
 echo.
 
 :: Check for Python 3.9
-echo [1/6] Checking Python installation...
+echo [1/5] Checking Python installation...
 python --version 2>nul | findstr /R "Python 3.9" >nul
 if errorlevel 1 (
     echo.
@@ -70,7 +71,7 @@ if errorlevel 1 (
 
 :: Check and remove existing virtual environment
 echo.
-echo [2/6] Checking virtual environment...
+echo [2/5] Checking virtual environment...
 if exist "%VENV_PATH%" (
     echo    Found existing virtual environment
     echo    Attempting to remove...
@@ -109,7 +110,7 @@ if "%VENV_PATH%"=="%LOCALAPPDATA%\TradingAlgorithm\venv" (
 
 :: Set up new environment
 echo.
-echo [3/6] Setting up Python environment...
+echo [3/5] Setting up Python environment...
 echo    This may take a few minutes for first-time setup...
 echo    Installing dependencies (this will show progress)...
 
@@ -144,8 +145,8 @@ py -3.9 -m pip install wheel
 echo    Installing core dependencies first...
 py -3.9 -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "pandas==2.0.3" "yfinance==0.2.36" "tensorflow==2.13.0"
 
-echo    Installing PyQt6 with specific version for Windows compatibility...
-py -3.9 -m pip install "PyQt6==6.4.2" "PyQt6-Qt6==6.4.2" "PyQt6-sip==13.4.1"
+echo    Installing PyQt5 for Windows compatibility...
+py -3.9 -m pip install "PyQt5==5.15.9" "PyQt5-Qt5==5.15.2" "PyQt5-sip==12.11.0"
 
 echo    Installing additional GUI dependencies...
 py -3.9 -m pip install "pyqtgraph==0.13.3" "qt-material==2.14"
@@ -165,44 +166,32 @@ if errorlevel 1 (
 
 echo [OK] Environment setup completed successfully
 
-:: Test PyQt6 import
+:: Test PyQt5 import
 echo.
-echo [4/6] Testing PyQt6 installation...
-py -3.9 -c "from PyQt6.QtWidgets import QApplication; print('PyQt6 import successful')" 2>nul
+echo [4/5] Testing PyQt5 installation...
+py -3.9 -c "from PyQt5.QtWidgets import QApplication; print('PyQt5 import successful')" 2>nul
 if errorlevel 1 (
     echo.
-    echo [WARNING] PyQt6 import test failed. Attempting alternative installation...
-    echo    Trying PyQt5 as fallback...
-    py -3.9 -m pip uninstall PyQt6 PyQt6-Qt6 PyQt6-sip -y
-    py -3.9 -m pip install "PyQt5==5.15.9"
-    echo    Testing PyQt5...
-    py -3.9 -c "from PyQt5.QtWidgets import QApplication; print('PyQt5 import successful')" 2>nul
-    if errorlevel 1 (
-        echo.
-        echo [ERROR] Both PyQt6 and PyQt5 failed to import!
-        echo.
-        echo This may be due to:
-        echo    * Missing Visual C++ Redistributable (download from Microsoft)
-        echo    * Conflicting Qt installations
-        echo    * System architecture mismatch
-        echo.
-        echo Please try:
-        echo    1. Install Visual C++ Redistributable 2015-2022
-        echo    2. Restart your computer
-        echo    3. Run this script again
-        echo.
-        pause
-        exit /b 1
-    ) else (
-        echo [OK] PyQt5 import successful - will use PyQt5 instead
-    )
+    echo [ERROR] PyQt5 import test failed!
+    echo.
+    echo This may be due to:
+    echo    * Corrupted installation
+    echo    * System architecture mismatch
+    echo    * Conflicting Qt installations
+    echo.
+    echo Please try:
+    echo    1. Restart your computer
+    echo    2. Run this script again
+    echo.
+    pause
+    exit /b 1
 ) else (
-    echo [OK] PyQt6 import successful
+    echo [OK] PyQt5 import successful
 )
 
 :: Launch the GUI application
 echo.
-echo [5/6] Launching Neural Network Trading System GUI...
+echo [5/5] Launching Neural Network Trading System GUI...
 echo.
 echo ================================================================================
 echo  NOTES:
@@ -210,10 +199,11 @@ echo  * The GUI will open in a new window
 echo  * Close the GUI window to exit the application
 echo  * To deactivate the virtual environment after stopping, run: deactivate
 echo  * Virtual environment location: %VENV_PATH%
+echo  * Using PyQt5 for better Windows compatibility
 echo ================================================================================
 echo.
 
-py -3.9 "..\_3_Networking_and_User_Input\local_gui\main.py"
+py -3.9 "..\_3_Networking_and_User_Input\local_gui\main_pyqt5.py"
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start GUI application
@@ -221,7 +211,7 @@ if errorlevel 1 (
     echo.
     echo [TROUBLESHOOTING] If you're still having issues:
     echo    1. Try running: py -3.9 -c "import sys; print(sys.version)"
-    echo    2. Check if you have Visual C++ Redistributable installed
+    echo    2. Check if you have any conflicting Qt installations
     echo    3. Try restarting your computer and running again
     echo.
     pause

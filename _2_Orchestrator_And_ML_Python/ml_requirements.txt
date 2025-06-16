@@ -99,4 +99,6 @@ tensorflow==2.13.0  # For model training
 scikit-learn==1.3.0  # For feature engineering
 joblib==1.3.0  # For model persistence
 yfinance==0.2.36  # For training data
-pandas==2.0.3  # For feature processing 
+pandas==2.0.3  # For feature processing
+
+PyQt5==5.15.9 
