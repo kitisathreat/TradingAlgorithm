@@ -1,6 +1,18 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Check for Python 3.9 using py launcher
+py -3.9 --version >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Python 3.9 is required but not found or not registered with the 'py' launcher.
+    echo        Please install Python 3.9 and ensure it is registered with the 'py' launcher.
+    echo        Download: https://www.python.org/downloads/release/python-390/
+    echo.
+    pause
+    exit /b 1
+)
+
 :: Set virtual environment path to AppData
 set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
 set "VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
@@ -22,56 +34,9 @@ echo.
 echo --------------------------------------------------------------------------------
 echo.
 
-:: Check for Python 3.9
-echo [1/4] Checking Python installation...
-python --version 2>nul | findstr /R "Python 3.9" >nul
-if errorlevel 1 (
-    echo.
-    echo [ERROR] Python 3.9 is required but not found
-    echo        Please install Python 3.9 from https://www.python.org/downloads/
-    echo.
-    pause
-    exit /b 1
-) else (
-    echo [OK] Python 3.9 found
-)
-
-:: Check and remove existing virtual environment
-echo.
-echo [2/4] Checking virtual environment...
-if exist "%VENV_PATH%" (
-    echo    Found existing virtual environment
-    echo    Attempting to remove...
-    
-    :: Remove virtual environment (no admin rights needed in AppData)
-    rmdir /s /q "%VENV_PATH%" 2>nul
-    if exist "%VENV_PATH%" (
-        echo.
-        echo [ERROR] Could not remove existing virtual environment
-        echo        Please close any applications using the virtual environment and try again
-        echo.
-        pause
-        exit /b 1
-    )
-    echo [OK] Successfully removed existing virtual environment
-) else (
-    echo [OK] No existing virtual environment found
-)
-
-:: Create AppData directory if it doesn't exist
-if not exist "%LOCALAPPDATA%\TradingAlgorithm" (
-    mkdir "%LOCALAPPDATA%\TradingAlgorithm"
-)
-
-:: Set up new environment
-echo.
-echo [3/4] Setting up Python environment...
-echo    This may take 5-10 minutes for first-time setup...
-echo    Installing dependencies (this will show progress)...
-
 :: Create and activate virtual environment
-echo    Creating virtual environment in: %VENV_PATH%
-python -m venv "%VENV_PATH%"
+echo [1/4] Creating virtual environment in: %VENV_PATH%
+py -3.9 -m venv "%VENV_PATH%"
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to create virtual environment
@@ -93,11 +58,12 @@ if errorlevel 1 (
 )
 
 :: Install dependencies
-echo    Upgrading pip and installing core packages...
-python -m pip install --upgrade pip
-python -m pip install wheel
-echo    Installing project dependencies...
-python -m pip install -r "%~dp0..\_3_Networking_and_User_Input\web_interface\web_requirements.txt"
+echo [2/4] Upgrading pip and installing core packages...
+py -3.9 -m pip install --upgrade pip
+py -3.9 -m pip install wheel
+
+echo [3/4] Installing project dependencies...
+py -3.9 -m pip install -r "%~dp0..\_3_Networking_and_User_Input\web_interface\web_requirements.txt"
 
 if errorlevel 1 (
     echo.
