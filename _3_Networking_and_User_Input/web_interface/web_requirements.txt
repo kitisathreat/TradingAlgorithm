@@ -9,9 +9,16 @@ pandas==2.0.3
 plotly==5.18.0
 python-dotenv==1.0.0
 requests==2.31.0
-yfinance==0.2.36
+yfinance==0.2.36  # Using older version for compatibility
 numpy==1.24.3
 tqdm==4.65.0
+
+# GUI Application
+PyQt6==6.6.1
+PyQt6-Qt6==6.6.1
+PyQt6-sip==13.6.0
+pyqtgraph==0.13.3  # For high-performance plotting
+qt-material==2.14  # For modern material design theme
 
 # ML packages (binary distributions)
 tensorflow-cpu==2.13.0  # Using CPU-only version for faster installation
@@ -24,8 +31,9 @@ streamlit-plotly-events==0.0.6
 streamlit-option-menu==0.3.12
 
 # API and data services (minimal set)
-alpaca-trade-api==3.0.0
+alpaca-trade-api==2.3.0  # Using older version for compatibility
 fastapi==0.100.0
+websockets==10.4  # Explicitly setting websockets version to be compatible with both
 
 # Remove unnecessary packages:
 # - textblob (not essential for core functionality)
