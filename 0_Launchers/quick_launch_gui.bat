@@ -31,9 +31,20 @@ echo ===========================================================================
 echo                    NEURAL NETWORK TRADING SYSTEM - QUICK LAUNCH
 echo ================================================================================
 echo.
+echo  This system trains an AI to mimic your trading decisions by combining:
+echo  * Technical Analysis (RSI, MACD, Bollinger Bands)
+echo  * Sentiment Analysis (VADER analysis of your reasoning)
+echo  * Neural Network Learning (TensorFlow deep learning)
+echo.
+echo  Using PyQt5 for better Windows compatibility
+echo  Virtual Environment Location: %VENV_PATH%
+echo  (This location is accessible to all users and requires no admin rights)
+echo.
+echo --------------------------------------------------------------------------------
+echo.
 
 :: Check for Python 3.9
-echo [1/3] Checking Python installation...
+echo [1/4] Checking Python installation...
 python --version 2>nul | findstr /R "Python 3.9" >nul
 if errorlevel 1 (
     echo.
@@ -48,11 +59,11 @@ if errorlevel 1 (
 
 :: Check if virtual environment exists
 echo.
-echo [2/3] Checking virtual environment...
+echo [2/4] Checking virtual environment...
 if not exist "%VENV_PATH%" (
     echo    No existing virtual environment found
     echo    Running full setup...
-    call "%~dp0setup_local_env.bat"
+    call "%~dp0run_local_gui.bat"
     if errorlevel 1 (
         echo.
         echo [ERROR] Environment setup failed
@@ -61,13 +72,37 @@ if not exist "%VENV_PATH%" (
         pause
         exit /b 1
     )
+    exit /b 0
 ) else (
     echo [OK] Found existing virtual environment
 )
 
+:: Test PyQt5 installation
+echo.
+echo [3/4] Testing PyQt5 installation...
+call "%VENV_ACTIVATE%"
+py -3.9 -c "from PyQt5.QtWidgets import QApplication; print('PyQt5 import successful')" 2>nul
+if errorlevel 1 (
+    echo.
+    echo [WARNING] PyQt5 not found in existing environment
+    echo    Reinstalling environment with PyQt5...
+    call "%~dp0run_local_gui.bat"
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Environment setup failed
+        echo        Please check the error messages above
+        echo.
+        pause
+        exit /b 1
+    )
+    exit /b 0
+) else (
+    echo [OK] PyQt5 import successful
+)
+
 :: Activate environment and launch GUI
 echo.
-echo [3/3] Launching Neural Network Trading System GUI...
+echo [4/4] Launching Neural Network Trading System GUI...
 echo.
 echo ================================================================================
 echo  NOTES:
@@ -75,6 +110,7 @@ echo  * The GUI will open in a new window
 echo  * Close the GUI window to exit the application
 echo  * To deactivate the virtual environment after stopping, run: deactivate
 echo  * Virtual environment location: %VENV_PATH%
+echo  * Using PyQt5 for better Windows compatibility
 echo ================================================================================
 echo.
 
@@ -89,11 +125,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
-python "..\_3_Networking_and_User_Input\local_gui\main.py"
+py -3.9 "..\_3_Networking_and_User_Input\local_gui\main.py"
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start GUI application
     echo        Please check the error messages above
+    echo.
+    echo [TROUBLESHOOTING] If you're still having issues:
+    echo    1. Try running: py -3.9 -c "import sys; print(sys.version)"
+    echo    2. Check if you have any conflicting Qt installations
+    echo    3. Try restarting your computer and running again
     echo.
     pause
     exit /b 1

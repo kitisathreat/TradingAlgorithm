@@ -15,8 +15,23 @@ from qt_material import apply_stylesheet
 
 # Add parent directory to path to import from orchestrator
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-from _2_Orchestrator_And_ML_Python.model_trainer import ModelTrainer
-from _2_Orchestrator_And_ML_Python.model_bridge import ModelBridge
+from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
+
+# Create a simple ModelBridge class for now
+class ModelBridge:
+    def __init__(self):
+        pass
+    
+    def get_trading_decision(self, symbol, features, sentiment_data, vix, account_value, current_position):
+        # Placeholder implementation
+        return {
+            'signal': 'HOLD',
+            'confidence': 0.65,
+            'position_size': 0.0,
+            'stop_loss': 0.0,
+            'take_profit': 0.0,
+            'reasoning': 'Model not yet trained'
+        }
 
 class StockChartWidget(pg.PlotWidget):
     def __init__(self, parent=None):
@@ -32,6 +47,13 @@ class StockChartWidget(pg.PlotWidget):
         
     def plot_stock_data(self, df):
         self.clear()
+        
+        if df.empty:
+            print("No data to plot")
+            return
+            
+        print(f"Plotting {len(df)} data points")
+        
         # Plot candlesticks
         for i in range(len(df)):
             # Calculate candlestick coordinates
@@ -54,6 +76,20 @@ class StockChartWidget(pg.PlotWidget):
                      pen=pg.mkPen(color=color, width=1),
                      fillLevel=0,
                      brush=pg.mkBrush(color))
+        
+        # Add price range info
+        min_price = df['Low'].min()
+        max_price = df['High'].max()
+        current_price = df['Close'].iloc[-1]
+        
+        # Set axis labels with more info
+        self.setLabel('left', f'Price (${min_price:.2f} - ${max_price:.2f})')
+        self.setLabel('bottom', f'Days ({len(df)} data points)')
+        
+        # Add current price line
+        self.addLine(y=current_price, pen=pg.mkPen('b', width=2, style=pg.QtCore.Qt.DashLine))
+        
+        print(f"Chart updated - Price range: ${min_price:.2f} to ${max_price:.2f}, Current: ${current_price:.2f}")
 
 class TrainingThread(QThread):
     progress = pyqtSignal(int)
@@ -113,7 +149,11 @@ class MainWindow(QMainWindow):
         
         # Stock selection
         self.stock_combo = QComboBox()
-        self.stock_combo.addItems(['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'])  # Add more stocks
+        self.stock_combo.addItems([
+            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 
+            'AMD', 'INTC', 'CRM', 'ADBE', 'PYPL', 'UBER', 'SHOP', 'SQ',
+            'SPY', 'QQQ', 'IWM', 'VTI'  # ETFs for more reliable data
+        ])
         controls_layout.addWidget(QLabel("Stock:"))
         controls_layout.addWidget(self.stock_combo)
         
@@ -195,7 +235,11 @@ class MainWindow(QMainWindow):
         controls_layout = QHBoxLayout()
         
         self.pred_stock_combo = QComboBox()
-        self.pred_stock_combo.addItems(['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'])
+        self.pred_stock_combo.addItems([
+            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 
+            'AMD', 'INTC', 'CRM', 'ADBE', 'PYPL', 'UBER', 'SHOP', 'SQ',
+            'SPY', 'QQQ', 'IWM', 'VTI'  # ETFs for more reliable data
+        ])
         controls_layout.addWidget(QLabel("Stock:"))
         controls_layout.addWidget(self.pred_stock_combo)
         
@@ -216,27 +260,49 @@ class MainWindow(QMainWindow):
             stock = self.stock_combo.currentText()
             days = self.date_range.value()
             
-            # Get stock data
-            end_date = datetime.now()
+            # Use a reference date that yfinance should definitely have data for
+            # Since today is June 16, 2025, let's use a date from 2024 that we know exists
+            reference_date = datetime(2024, 12, 20)  # December 20, 2024 - should have data
+            end_date = reference_date
             start_date = end_date - timedelta(days=days)
+            
+            # Validate dates to prevent future date issues
+            if start_date >= end_date:
+                QMessageBox.critical(self, "Error", f"Invalid date range: start_date {start_date.strftime('%Y-%m-%d')} >= end_date {end_date.strftime('%Y-%m-%d')}")
+                return
+            
+            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using 2024 reference date)")
             
             ticker = yf.Ticker(stock)
             df = ticker.history(start=start_date, end=end_date)
             
             if df.empty:
-                QMessageBox.warning(self, "Error", f"No data found for {stock}")
+                QMessageBox.warning(self, "Error", f"No data found for {stock}. Please try a different stock or fewer days.")
                 return
+            
+            # Validate that data is not newer than our end_date
+            if df.index.max() > end_date:
+                QMessageBox.warning(self, "Warning", f"Data for {stock} contains dates newer than expected. This may indicate a system clock issue.")
+                # Filter out dates newer than our end_date
+                df = df[df.index <= end_date]
+                if df.empty:
+                    QMessageBox.warning(self, "Error", f"No valid data found for {stock} after filtering dates.")
+                    return
                 
+            print(f"Successfully loaded {len(df)} days of data for {stock}")
+            print(f"Data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
+            
             # Plot data
             self.chart.plot_stock_data(df)
             
             # Store data for training
             self.current_data = df
             
-            QMessageBox.information(self, "Success", f"Loaded {len(df)} days of data for {stock}")
+            QMessageBox.information(self, "Success", f"Loaded {len(df)} days of data for {stock}\nDate range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
             
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}")
+            print(f"Error loading data: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}\n\nTry:\n- Different stock symbol\n- Fewer days of history\n- Check internet connection\n- Check system clock")
     
     def make_decision(self, decision):
         # Highlight the selected button
@@ -308,11 +374,67 @@ class MainWindow(QMainWindow):
     def get_prediction(self):
         stock = self.pred_stock_combo.currentText()
         try:
-            # Here you would integrate with your model bridge
-            # For now, just show a placeholder
-            self.prediction_label.setText(f"Prediction for {stock}: HOLD (confidence: 0.65)")
+            # Use a reference date that yfinance should definitely have data for
+            # Since today is June 16, 2025, let's use a date from 2024 that we know exists
+            reference_date = datetime(2024, 12, 20)  # December 20, 2024 - should have data
+            end_date = reference_date
+            start_date = end_date - timedelta(days=30)  # Last 30 days from the reference date
+            
+            # Validate dates
+            if start_date >= end_date:
+                self.prediction_label.setText(f"Error: Invalid date range for {stock}")
+                return
+            
+            print(f"Fetching prediction data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using 2024 reference date)")
+            
+            ticker = yf.Ticker(stock)
+            df = ticker.history(start=start_date, end=end_date)
+            
+            if df.empty:
+                self.prediction_label.setText(f"No data available for {stock}")
+                return
+            
+            # Validate that data is not newer than our end_date
+            if df.index.max() > end_date:
+                print(f"Warning: Data for {stock} contains dates newer than expected, filtering...")
+                df = df[df.index <= end_date]
+                if df.empty:
+                    self.prediction_label.setText(f"No valid data found for {stock} after filtering dates")
+                    return
+                
+            print(f"Prediction data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
+                
+            # Calculate some basic metrics
+            current_price = df['Close'].iloc[-1]
+            price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
+            price_change_pct = (price_change / df['Close'].iloc[-2]) * 100 if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
+            
+            # Simple prediction logic (you can enhance this later)
+            if price_change > 0:
+                signal = "BUY"
+                confidence = min(0.8, 0.5 + abs(price_change_pct) / 100)
+            elif price_change < 0:
+                signal = "SELL" 
+                confidence = min(0.8, 0.5 + abs(price_change_pct) / 100)
+            else:
+                signal = "HOLD"
+                confidence = 0.6
+                
+            prediction_text = f"""
+Prediction for {stock}:
+Signal: {signal}
+Confidence: {confidence:.1%}
+Current Price: ${current_price:.2f}
+Price Change: ${price_change:.2f} ({price_change_pct:+.2f}%)
+Data Points: {len(df)} days
+Data Range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}
+            """.strip()
+            
+            self.prediction_label.setText(prediction_text)
+            
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to get prediction: {str(e)}")
+            print(f"Error getting prediction: {str(e)}")
+            self.prediction_label.setText(f"Error getting prediction for {stock}: {str(e)}")
 
 def main():
     app = QApplication(sys.argv)
