@@ -1,11 +1,35 @@
 @echo off
+setlocal enabledelayedexpansion
+
+:: Cloud-compatible virtual environment path detection
+echo [INFO] Detecting environment for virtual environment path...
+
+if defined LOCALAPPDATA (
+    :: Test if LOCALAPPDATA is writable
+    echo test > "%LOCALAPPDATA%\write_test.tmp" 2>nul
+    if exist "%LOCALAPPDATA%\write_test.tmp" (
+        del "%LOCALAPPDATA%\write_test.tmp" 2>nul
+        set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+        echo [OK] Using AppData location: %VENV_PATH%
+    ) else (
+        set "VENV_PATH=./venv"
+        echo [WARNING] LOCALAPPDATA not writable, using project directory: %VENV_PATH%
+    )
+) else (
+    set "VENV_PATH=./venv"
+    echo [INFO] LOCALAPPDATA not available, using project directory: %VENV_PATH%
+)
+
+set "VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
+
 echo Building and installing C++ trading engine module...
 
 :: Activate virtual environment if it exists
-if exist venv\Scripts\activate.bat (
-    call venv\Scripts\activate.bat
+if exist "%VENV_ACTIVATE%" (
+    call "%VENV_ACTIVATE%"
 ) else (
-    echo Virtual environment not found. Please run setup_local_env.bat first.
+    echo Virtual environment not found at: %VENV_PATH%
+    echo Please run setup_local_env.bat first.
     exit /b 1
 )
 
@@ -14,15 +38,15 @@ cd 1_High_Performance_Module_(C++)
 
 :: Install required packages
 echo Installing required packages...
-pip install -r cpp_requirements.txt
+py -3.9 -m pip install -r cpp_requirements.txt
 
 :: Build and install the module
 echo Building C++ module...
-python setup.py build_ext --inplace
+py -3.9 setup.py build_ext --inplace
 
 :: Install the module
 echo Installing module...
-pip install -e .
+py -3.9 -m pip install -e .
 
 :: Return to root directory
 cd ..

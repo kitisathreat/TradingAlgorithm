@@ -13,8 +13,25 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Set virtual environment path to AppData
-set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+:: Cloud-compatible virtual environment path detection
+echo [INFO] Detecting environment for virtual environment path...
+
+if defined LOCALAPPDATA (
+    :: Test if LOCALAPPDATA is writable
+    echo test > "%LOCALAPPDATA%\write_test.tmp" 2>nul
+    if exist "%LOCALAPPDATA%\write_test.tmp" (
+        del "%LOCALAPPDATA%\write_test.tmp" 2>nul
+        set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+        echo [OK] Using AppData location: %VENV_PATH%
+    ) else (
+        set "VENV_PATH=%~dp0..\venv"
+        echo [WARNING] LOCALAPPDATA not writable, using project directory: %VENV_PATH%
+    )
+) else (
+    set "VENV_PATH=%~dp0..\venv"
+    echo [INFO] LOCALAPPDATA not available, using project directory: %VENV_PATH%
+)
+
 set "VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
 
 :: Clear screen and set console width for better formatting
@@ -31,11 +48,14 @@ echo  * Technical Analysis (RSI, MACD, Bollinger Bands)
 echo  * Sentiment Analysis (VADER analysis of your reasoning)
 echo  * Neural Network Learning (TensorFlow deep learning)
 echo.
+echo  Virtual Environment Location: %VENV_PATH%
+echo  (This location is accessible to all users and requires no admin rights)
+echo.
 echo --------------------------------------------------------------------------------
 echo.
 
 :: Check for Python 3.9
-echo [1/5] Checking Python installation...
+echo [1/6] Checking Python installation...
 python --version 2>nul | findstr /R "Python 3.9" >nul
 if errorlevel 1 (
     echo.
@@ -50,7 +70,7 @@ if errorlevel 1 (
 
 :: Check and remove existing virtual environment
 echo.
-echo [2/5] Checking virtual environment...
+echo [2/6] Checking virtual environment...
 if exist "%VENV_PATH%" (
     echo    Found existing virtual environment
     echo    Attempting to remove...
@@ -70,14 +90,26 @@ if exist "%VENV_PATH%" (
     echo [OK] No existing virtual environment found
 )
 
-:: Create AppData directory if it doesn't exist
-if not exist "%LOCALAPPDATA%\TradingAlgorithm" (
-    mkdir "%LOCALAPPDATA%\TradingAlgorithm"
+:: Create AppData directory if it doesn't exist (only for AppData path)
+if "%VENV_PATH%"=="%LOCALAPPDATA%\TradingAlgorithm\venv" (
+    if not exist "%LOCALAPPDATA%\TradingAlgorithm" (
+        echo    Creating directory: %LOCALAPPDATA%\TradingAlgorithm
+        mkdir "%LOCALAPPDATA%\TradingAlgorithm"
+        if errorlevel 1 (
+            echo.
+            echo [ERROR] Could not create directory: %LOCALAPPDATA%\TradingAlgorithm
+            echo        This may be due to insufficient permissions or disk space.
+            echo        Please ensure you have write access to your AppData folder.
+            echo.
+            pause
+            exit /b 1
+        )
+    )
 )
 
 :: Set up new environment
 echo.
-echo [3/5] Setting up Python environment...
+echo [3/6] Setting up Python environment...
 echo    This may take a few minutes for first-time setup...
 echo    Installing dependencies (this will show progress)...
 
@@ -109,8 +141,14 @@ echo    Upgrading pip and installing core packages...
 py -3.9 -m pip install --upgrade pip
 py -3.9 -m pip install wheel
 
-echo    Installing GUI dependencies...
-py -3.9 -m pip install numpy==1.23.5 scikit-learn==1.3.0 PyQt6==6.4.2 pyqtgraph==0.13.3 pandas==2.0.3 yfinance==0.2.36 qt-material==2.14 tensorflow==2.13.0
+echo    Installing core dependencies first...
+py -3.9 -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "pandas==2.0.3" "yfinance==0.2.36" "tensorflow==2.13.0"
+
+echo    Installing PyQt6 with specific version for Windows compatibility...
+py -3.9 -m pip install "PyQt6==6.4.2" "PyQt6-Qt6==6.4.2" "PyQt6-sip==13.4.1"
+
+echo    Installing additional GUI dependencies...
+py -3.9 -m pip install "pyqtgraph==0.13.3" "qt-material==2.14"
 
 if errorlevel 1 (
     echo.
@@ -127,32 +165,44 @@ if errorlevel 1 (
 
 echo [OK] Environment setup completed successfully
 
-:: Verify required packages
+:: Test PyQt6 import
 echo.
-echo [4/5] Verifying required packages...
-python -c "import PyQt6" 2>nul
+echo [4/6] Testing PyQt6 installation...
+py -3.9 -c "from PyQt6.QtWidgets import QApplication; print('PyQt6 import successful')" 2>nul
 if errorlevel 1 (
-    echo [ERROR] PyQt6 is not installed
-    echo        Please check the installation logs above
     echo.
-    pause
-    exit /b 1
+    echo [WARNING] PyQt6 import test failed. Attempting alternative installation...
+    echo    Trying PyQt5 as fallback...
+    py -3.9 -m pip uninstall PyQt6 PyQt6-Qt6 PyQt6-sip -y
+    py -3.9 -m pip install "PyQt5==5.15.9"
+    echo    Testing PyQt5...
+    py -3.9 -c "from PyQt5.QtWidgets import QApplication; print('PyQt5 import successful')" 2>nul
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Both PyQt6 and PyQt5 failed to import!
+        echo.
+        echo This may be due to:
+        echo    * Missing Visual C++ Redistributable (download from Microsoft)
+        echo    * Conflicting Qt installations
+        echo    * System architecture mismatch
+        echo.
+        echo Please try:
+        echo    1. Install Visual C++ Redistributable 2015-2022
+        echo    2. Restart your computer
+        echo    3. Run this script again
+        echo.
+        pause
+        exit /b 1
+    ) else (
+        echo [OK] PyQt5 import successful - will use PyQt5 instead
+    )
+) else (
+    echo [OK] PyQt6 import successful
 )
-
-python -c "import tensorflow" 2>nul
-if errorlevel 1 (
-    echo [ERROR] TensorFlow is not installed
-    echo        Please check the installation logs above
-    echo.
-    pause
-    exit /b 1
-)
-
-echo [OK] All required packages verified
 
 :: Launch the GUI application
 echo.
-echo [5/5] Launching Neural Network Trading System GUI...
+echo [5/6] Launching Neural Network Trading System GUI...
 echo.
 echo ================================================================================
 echo  NOTES:
@@ -168,6 +218,11 @@ if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start GUI application
     echo        Please check the error messages above
+    echo.
+    echo [TROUBLESHOOTING] If you're still having issues:
+    echo    1. Try running: py -3.9 -c "import sys; print(sys.version)"
+    echo    2. Check if you have Visual C++ Redistributable installed
+    echo    3. Try restarting your computer and running again
     echo.
     pause
     exit /b 1
