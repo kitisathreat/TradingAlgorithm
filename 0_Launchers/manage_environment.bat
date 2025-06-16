@@ -120,7 +120,7 @@ if errorlevel 1 (
 
 py -3.9 -m pip install --upgrade pip
 py -3.9 -m pip install wheel
-py -3.9 -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "PyQt6==6.4.2" "pyqtgraph==0.13.3" "pandas==2.0.3" "yfinance==0.2.36" "qt-material==2.14" "tensorflow==2.13.0"
+py -3.9 -m pip install "numpy==1.23.5" "scikit-learn==1.3.0" "PyQt5==5.15.9" "pyqtgraph==0.13.3" "pandas==2.0.3" "yfinance==0.2.36" "qt-material==2.14" "tensorflow==2.13.0"
 
 if errorlevel 1 (
     echo [ERROR] Failed to install dependencies
@@ -176,7 +176,7 @@ if exist "%VENV_PATH%" (
             echo   Python Version:
             py -3.9 --version 2>nul
             echo   Installed Packages:
-            py -3.9 -m pip list --format=columns | findstr /R "numpy tensorflow PyQt6"
+            py -3.9 -m pip list --format=columns | findstr /R "numpy tensorflow PyQt5"
         )
     ) else (
         echo     No (activation script missing)

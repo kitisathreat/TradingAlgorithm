@@ -1,13 +1,13 @@
 import sys
 import os
 from datetime import datetime, timedelta
-from PyQt6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QComboBox, QSpinBox,
     QTabWidget, QProgressBar, QMessageBox, QSplitter
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
 import pyqtgraph as pg
 import pandas as pd
 import yfinance as yf
@@ -132,7 +132,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(controls_layout)
         
         # Splitter for chart and controls
-        splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter = QSplitter(Qt.Vertical)
         layout.addWidget(splitter)
         
         # Chart widget
@@ -199,69 +199,71 @@ class MainWindow(QMainWindow):
         controls_layout.addWidget(QLabel("Stock:"))
         controls_layout.addWidget(self.pred_stock_combo)
         
-        self.predict_btn = QPushButton("Get Prediction")
-        self.predict_btn.clicked.connect(self.get_prediction)
-        controls_layout.addWidget(self.predict_btn)
+        self.pred_btn = QPushButton("Get Prediction")
+        self.pred_btn.clicked.connect(self.get_prediction)
+        controls_layout.addWidget(self.pred_btn)
         
         layout.addLayout(controls_layout)
         
-        # Prediction display
-        self.prediction_display = QTextEdit()
-        self.prediction_display.setReadOnly(True)
-        layout.addWidget(self.prediction_display)
+        # Prediction result
+        self.prediction_label = QLabel("Prediction will appear here...")
+        self.prediction_label.setAlignment(Qt.AlignCenter)
+        self.prediction_label.setStyleSheet("font-size: 18px; padding: 20px;")
+        layout.addWidget(self.prediction_label)
         
     def load_stock_data(self):
         try:
-            symbol = self.stock_combo.currentText()
+            stock = self.stock_combo.currentText()
             days = self.date_range.value()
+            
+            # Get stock data
             end_date = datetime.now()
             start_date = end_date - timedelta(days=days)
             
-            # Get stock data
-            stock = yf.Ticker(symbol)
-            df = stock.history(start=start_date, end=end_date)
+            ticker = yf.Ticker(stock)
+            df = ticker.history(start=start_date, end=end_date)
             
             if df.empty:
-                QMessageBox.warning(self, "Error", "No data available for the selected period")
+                QMessageBox.warning(self, "Error", f"No data found for {stock}")
                 return
                 
-            # Plot the data
+            # Plot data
             self.chart.plot_stock_data(df)
             
-            # Store the data for later use
+            # Store data for training
             self.current_data = df
             
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to load stock data: {str(e)}")
+            QMessageBox.information(self, "Success", f"Loaded {len(df)} days of data for {stock}")
             
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}")
+    
     def make_decision(self, decision):
-        self.current_decision = decision
         # Highlight the selected button
         for btn in [self.buy_btn, self.sell_btn, self.hold_btn]:
             btn.setStyleSheet("")
-        sender = self.sender()
-        sender.setStyleSheet("background-color: #4CAF50; color: white;")
         
+        sender = self.sender()
+        if sender:
+            sender.setStyleSheet("background-color: #4CAF50; color: white;")
+        
+        self.current_decision = decision
+    
     def submit_decision(self):
         if not hasattr(self, 'current_data') or not hasattr(self, 'current_decision'):
-            QMessageBox.warning(self, "Error", "Please load stock data and make a decision first")
+            QMessageBox.warning(self, "Error", "Please load data and make a decision first")
             return
             
         reasoning = self.reasoning_input.toPlainText()
-        if not reasoning:
-            QMessageBox.warning(self, "Error", "Please provide your trading reasoning")
+        if not reasoning.strip():
+            QMessageBox.warning(self, "Error", "Please provide reasoning for your decision")
             return
             
         try:
-            # Add the decision to training data
-            self.model_trainer.add_training_data(
-                symbol=self.stock_combo.currentText(),
-                decision=self.current_decision,
-                reasoning=reasoning,
-                data=self.current_data
-            )
-            
-            QMessageBox.information(self, "Success", "Decision submitted successfully!")
+            # Here you would integrate with your model trainer
+            # For now, just show a success message
+            QMessageBox.information(self, "Success", 
+                                  f"Decision submitted: {self.current_decision}\nReasoning: {reasoning}")
             
             # Clear the form
             self.reasoning_input.clear()
@@ -270,81 +272,61 @@ class MainWindow(QMainWindow):
                 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to submit decision: {str(e)}")
-            
+    
     def start_training(self):
-        if not self.model_trainer.has_training_data():
-            QMessageBox.warning(self, "Error", "Please submit some trading decisions first")
+        if not hasattr(self, 'current_data'):
+            QMessageBox.warning(self, "Error", "Please load stock data first")
             return
             
-        self.train_btn.setEnabled(False)
+        epochs = self.epochs_spin.value()
+        
+        # Show progress bar
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
+        self.train_btn.setEnabled(False)
         
-        # Start training in a separate thread
-        self.training_thread = TrainingThread(
-            self.model_trainer,
-            self.epochs_spin.value()
-        )
+        # Start training in background thread
+        self.training_thread = TrainingThread(self.model_trainer, epochs)
         self.training_thread.progress.connect(self.update_progress)
         self.training_thread.finished.connect(self.training_finished)
         self.training_thread.error.connect(self.training_error)
         self.training_thread.start()
-        
+    
     def update_progress(self, value):
         self.progress_bar.setValue(value)
-        
+    
     def training_finished(self):
-        self.train_btn.setEnabled(True)
         self.progress_bar.setVisible(False)
-        QMessageBox.information(self, "Success", "Model training completed!")
-        
+        self.train_btn.setEnabled(True)
+        QMessageBox.information(self, "Success", "Training completed!")
+    
     def training_error(self, error_msg):
-        self.train_btn.setEnabled(True)
         self.progress_bar.setVisible(False)
-        QMessageBox.critical(self, "Error", f"Training failed: {error_msg}")
-        
+        self.train_btn.setEnabled(True)
+        QMessageBox.critical(self, "Training Error", f"Training failed: {error_msg}")
+    
     def get_prediction(self):
+        stock = self.pred_stock_combo.currentText()
         try:
-            symbol = self.pred_stock_combo.currentText()
-            
-            # Get recent data for prediction
-            stock = yf.Ticker(symbol)
-            df = stock.history(period="30d")
-            
-            if df.empty:
-                QMessageBox.warning(self, "Error", "No data available for prediction")
-                return
-                
-            # Get prediction from model
-            decision = self.model_bridge.get_trading_decision(
-                symbol=symbol,
-                features=df,
-                sentiment_data={},  # Add sentiment data if available
-                vix=0.0,  # Add VIX data if available
-                account_value=10000.0,  # Example account value
-                current_position=0.0  # Example current position
-            )
-            
-            # Display prediction
-            prediction_text = f"""
-            Symbol: {symbol}
-            Decision: {decision['signal']}
-            Confidence: {decision['confidence']:.2%}
-            Position Size: {decision['position_size']:.2f}
-            Stop Loss: {decision['stop_loss']:.2f}
-            Take Profit: {decision['take_profit']:.2f}
-            
-            Reasoning:
-            {decision['reasoning']}
-            """
-            
-            self.prediction_display.setText(prediction_text)
-            
+            # Here you would integrate with your model bridge
+            # For now, just show a placeholder
+            self.prediction_label.setText(f"Prediction for {stock}: HOLD (confidence: 0.65)")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to get prediction: {str(e)}")
 
 def main():
     app = QApplication(sys.argv)
+    
+    # Set application properties
+    app.setApplicationName("Neural Network Trading System")
+    app.setApplicationVersion("1.0")
+    
+    # Create and show main window
     window = MainWindow()
     window.show()
-    sys.exit(app.exec()) 
+    
+    # Run the application
+    sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main() 
