@@ -1,8 +1,25 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Set virtual environment path to AppData
-set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+:: Cloud-compatible virtual environment path detection
+echo [INFO] Detecting environment for virtual environment path...
+
+if defined LOCALAPPDATA (
+    :: Test if LOCALAPPDATA is writable
+    echo test > "%LOCALAPPDATA%\write_test.tmp" 2>nul
+    if exist "%LOCALAPPDATA%\write_test.tmp" (
+        del "%LOCALAPPDATA%\write_test.tmp" 2>nul
+        set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+        echo [OK] Using AppData location: %VENV_PATH%
+    ) else (
+        set "VENV_PATH=%~dp0..\venv"
+        echo [WARNING] LOCALAPPDATA not writable, using project directory: %VENV_PATH%
+    )
+) else (
+    set "VENV_PATH=%~dp0..\venv"
+    echo [INFO] LOCALAPPDATA not available, using project directory: %VENV_PATH%
+)
+
 set "VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
 
 echo Starting Streamlit app...
@@ -38,24 +55,6 @@ call "%VENV_ACTIVATE%"
 if errorlevel 1 (
     echo ❌ Error: Failed to activate virtual environment
     echo Please ensure no other processes are using the virtual environment
-    pause
-    exit /b 1
-)
-
-:: Verify key packages are installed
-echo Verifying required packages...
-python -c "import streamlit" 2>nul
-if errorlevel 1 (
-    echo ❌ Error: Streamlit is not installed
-    echo Please run setup_and_run.bat to install dependencies
-    pause
-    exit /b 1
-)
-
-python -c "import tensorflow" 2>nul
-if errorlevel 1 (
-    echo ❌ Error: TensorFlow is not installed
-    echo Please run setup_and_run.bat to install dependencies
     pause
     exit /b 1
 )

@@ -1,8 +1,25 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Set virtual environment path to AppData
-set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+:: Cloud-compatible virtual environment path detection
+echo [INFO] Detecting environment for virtual environment path...
+
+if defined LOCALAPPDATA (
+    :: Test if LOCALAPPDATA is writable
+    echo test > "%LOCALAPPDATA%\write_test.tmp" 2>nul
+    if exist "%LOCALAPPDATA%\write_test.tmp" (
+        del "%LOCALAPPDATA%\write_test.tmp" 2>nul
+        set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+        echo [OK] Using AppData location: %VENV_PATH%
+    ) else (
+        set "VENV_PATH=%~dp0..\venv"
+        echo [WARNING] LOCALAPPDATA not writable, using project directory: %VENV_PATH%
+    )
+) else (
+    set "VENV_PATH=%~dp0..\venv"
+    echo [INFO] LOCALAPPDATA not available, using project directory: %VENV_PATH%
+)
+
 set "VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
 
 :: Clear screen and set console width for better formatting

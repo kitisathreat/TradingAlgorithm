@@ -13,8 +13,25 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Set virtual environment path to AppData
-set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+:: Cloud-compatible virtual environment path detection
+echo [INFO] Detecting environment for virtual environment path...
+
+if defined LOCALAPPDATA (
+    :: Test if LOCALAPPDATA is writable
+    echo test > "%LOCALAPPDATA%\write_test.tmp" 2>nul
+    if exist "%LOCALAPPDATA%\write_test.tmp" (
+        del "%LOCALAPPDATA%\write_test.tmp" 2>nul
+        set "VENV_PATH=%LOCALAPPDATA%\TradingAlgorithm\venv"
+        echo [OK] Using AppData location: %VENV_PATH%
+    ) else (
+        set "VENV_PATH=%~dp0..\venv"
+        echo [WARNING] LOCALAPPDATA not writable, using project directory: %VENV_PATH%
+    )
+) else (
+    set "VENV_PATH=%~dp0..\venv"
+    echo [INFO] LOCALAPPDATA not available, using project directory: %VENV_PATH%
+)
+
 set "VENV_ACTIVATE=%VENV_PATH%\Scripts\activate.bat"
 
 :: Clear screen and set console width for better formatting
@@ -36,11 +53,28 @@ echo.
 
 :: Create and activate virtual environment
 echo [1/4] Creating virtual environment in: %VENV_PATH%
+
+:: Create parent directory if needed (only for AppData path)
+if "%VENV_PATH%"=="%LOCALAPPDATA%\TradingAlgorithm\venv" (
+    if not exist "%LOCALAPPDATA%\TradingAlgorithm" (
+        echo    Creating directory: %LOCALAPPDATA%\TradingAlgorithm
+        mkdir "%LOCALAPPDATA%\TradingAlgorithm"
+        if errorlevel 1 (
+            echo.
+            echo [ERROR] Could not create directory: %LOCALAPPDATA%\TradingAlgorithm
+            echo        This may be due to insufficient permissions or disk space.
+            echo.
+            pause
+            exit /b 1
+        )
+    )
+)
+
 py -3.9 -m venv "%VENV_PATH%"
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to create virtual environment
-    echo        Please check if you have write permissions to: %LOCALAPPDATA%
+    echo        Please check if you have write permissions to: %VENV_PATH%
     echo.
     pause
     exit /b 1
