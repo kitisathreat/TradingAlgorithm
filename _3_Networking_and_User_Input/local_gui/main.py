@@ -50,7 +50,8 @@ class MetricsWidget(QWidget):
         super().__init__(parent)
         self.display_level = 'medium'  # 'min', 'medium', 'full'
         self.is_dragging = False
-        self.drag_offset = QPoint(0, 0)
+        self.drag_start_pos = None
+        self.widget_start_pos = None
         self.setWindowFlags(Qt.Widget | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(self._get_style())
@@ -162,13 +163,14 @@ class MetricsWidget(QWidget):
             self.setMinimumWidth(300)
         self.updateGeometry()
 
-    # --- Draggable overlay logic ---
+    # --- Improved Draggable overlay logic ---
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             # Only start drag if click is in header area
             if event.pos().y() <= self.header.height():
                 self.is_dragging = True
-                self.drag_offset = event.globalPos() - self.frameGeometry().topLeft()
+                self.drag_start_pos = event.pos()
+                self.widget_start_pos = self.pos()
                 event.accept()
             else:
                 event.ignore()
@@ -177,13 +179,14 @@ class MetricsWidget(QWidget):
 
     def mouseMoveEvent(self, event):
         if self.is_dragging:
-            new_pos = event.globalPos() - self.drag_offset
+            # Calculate new position relative to parent (chart)
+            delta = event.pos() - self.drag_start_pos
+            new_pos = self.widget_start_pos + delta
             parent = self.parentWidget()
             if parent:
                 # Clamp to parent (chart) area
-                parent_top_left = parent.mapToGlobal(QPoint(0, 0))
-                x = max(0, min(new_pos.x() - parent_top_left.x(), parent.width() - self.width()))
-                y = max(0, min(new_pos.y() - parent_top_left.y(), parent.height() - self.height()))
+                x = max(0, min(new_pos.x(), parent.width() - self.width()))
+                y = max(0, min(new_pos.y(), parent.height() - self.height()))
                 self.move(x, y)
             else:
                 self.move(new_pos)
