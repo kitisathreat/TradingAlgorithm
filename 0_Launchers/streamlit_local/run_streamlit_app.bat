@@ -85,7 +85,7 @@ echo.
 echo Press Ctrl+C to stop the server when done
 echo.
 
-streamlit run "_3_Networking_and_User_Input/web_interface/streamlit_app.py" --server.port 8501 --server.address localhost
+streamlit run "streamlit_app.py" --server.port 8501 --server.address localhost
 set STREAMLIT_EXIT_CODE=%errorlevel%
 
 :: Only show error message if it's not a normal interruption (Ctrl+C typically returns 2)

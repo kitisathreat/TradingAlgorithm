@@ -25,7 +25,7 @@ The random date range functionality has been implemented across all three visual
 
 #### Streamlit Web Interface
 - **Files Updated**:
-  - `_3_Networking_and_User_Input/web_interface/streamlit_app.py`
+  - `streamlit_app.py` (project root)
   - `_3_Networking_and_User_Input/web_interface/streamlit_training.py`
 - **Functions Updated**:
   - `load_stock_data()` - Main data fetching function

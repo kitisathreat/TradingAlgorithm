@@ -15,7 +15,11 @@
 
 ```
 TradingAlgorithm/
-├── 0_Launchers/                        # Quick-start scripts and launchers
+├── 0_Launchers/
+│   ├── local_gui/           # Launchers for the local PyQt GUI
+│   ├── streamlit_local/     # Launchers for running Streamlit app locally
+│   ├── streamlit_cloud/     # Setup scripts for Streamlit Cloud deployment
+│   └── build_tools/         # Build and environment setup scripts
 ├── 1_High_Performance_Module_(C++)/    # Core trading engine (C++)
 │   ├── src/                           # Source code
 │   └── tests/                         # C++ unit tests
@@ -25,7 +29,6 @@ TradingAlgorithm/
 │   ├── main.py                        # Main entry point
 │   └── root_requirements.txt          # Main project dependencies
 ├── 3_Networking_and_User_Input/        # Web interface and API
-│   └── web_interface/                 # Streamlit-based UI
 ├── docs/                              # Documentation
 └── .github/                           # CI/CD workflows
 ```
@@ -36,17 +39,19 @@ TradingAlgorithm/
 
 1. **Setup Environment**
    - Install Python 3.9 (required for compatibility)
-   - Run the setup script in `0_Launchers/setup_environment.bat`
+   - Run the setup script in `0_Launchers/build_tools/setup_local_env.bat`
    - This will create a virtual environment and install all dependencies
 
 2. **Quick Start**
-   - Run `0_Launchers/start_trading.bat` to launch the system
-   - Access the web interface at `http://localhost:8501`
+   - **Local GUI:** Run `0_Launchers/local_gui/run_local_gui.bat` or `run_local_gui.py` to launch the PyQt GUI
+   - **Local Streamlit App:** Run `0_Launchers/streamlit_local/run_streamlit_app.bat` to launch the Streamlit web interface locally
+   - **Streamlit Cloud:** Use the GitHub repo with Streamlit Cloud; the main file is `streamlit_app.py` at the project root
+   - Access the web interface at `http://localhost:8501` (for local Streamlit)
    - Monitor trading activity in the logs directory
 
 3. **Key Files to Understand**
    - `2_Orchestrator_And_ML_Python/main.py`: Main trading logic
-   - `3_Networking_and_User_Input/web_interface/`: Web dashboard
+   - `streamlit_app.py`: Main Streamlit app for both local and cloud
    - `docs/project_structure.txt`: Detailed component documentation
 
 ### For Developers
@@ -112,6 +117,11 @@ TradingAlgorithm/
   - Strategy configuration
   - Log viewer
 
+### 4. UI Components
+- Add to the Streamlit app (`streamlit_app.py`) or local GUI as appropriate
+- Follow Streamlit or PyQt best practices
+- Include error handling
+
 ## Development Guidelines
 
 ### Adding New Features
@@ -126,8 +136,8 @@ TradingAlgorithm/
    - Add validation tests
 
 3. **UI Components**
-   - Add to `3_Networking_and_User_Input/web_interface/`
-   - Follow Streamlit best practices
+   - Add to the Streamlit app (`streamlit_app.py`) or local GUI as appropriate
+   - Follow Streamlit or PyQt best practices
    - Include error handling
 
 ### Best Practices
