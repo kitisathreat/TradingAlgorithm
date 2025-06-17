@@ -1,0 +1,2 @@
+# Constraints file to override websockets version for alpaca-trade-api compatibility
+websockets==13.0 

@@ -1,70 +1,81 @@
 #!/usr/bin/env python3
 """
 Streamlit Cloud Setup Script
-Handles Alpaca websocket version conflicts during deployment
+Handles dependency installation with overrides for compatibility issues.
 """
 
 import subprocess
 import sys
 import os
+from pathlib import Path
 
-def install_with_override():
-    """Install packages with version overrides to avoid conflicts"""
+def run_command(cmd, description):
+    """Run a command and handle errors."""
+    print(f"🔄 {description}...")
+    try:
+        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+        print(f"✅ {description} completed successfully")
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print(f"❌ {description} failed:")
+        print(f"Error: {e.stderr}")
+        return None
+
+def install_dependencies_with_overrides():
+    """Install dependencies with overrides to handle conflicts."""
     
-    print("🔧 Setting up Streamlit Cloud with Alpaca websocket override...")
+    print("🚀 Installing dependencies with websockets override...")
     
-    # Step 1: Install websockets first with the version we want
-    print("📦 Installing websockets==13.0...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "websockets==13.0"], check=True)
+    # Method 1: Install websockets 13.0 first to establish the version
+    run_command("pip install websockets==13.0", "Installing websockets 13.0")
     
-    # Step 2: Install Alpaca without dependencies
-    print("📦 Installing alpaca-trade-api without dependencies...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "--no-deps", "alpaca-trade-api==3.2.0"], check=True)
+    # Method 2: Install alpaca-trade-api without its websockets dependency
+    run_command("pip install alpaca-trade-api==3.2.0 --no-deps", "Installing alpaca-trade-api without dependencies")
     
-    # Step 3: Install remaining dependencies
-    print("📦 Installing remaining dependencies...")
+    # Method 3: Install remaining requirements using constraints
+    run_command("pip install -r streamlit_requirements.txt --constraint constraints.txt", "Installing requirements with constraints")
     
-    packages = [
-        "tensorflow==2.13.0",
-        "numpy==1.24.3", 
-        "pandas==2.0.3",
-        "scikit-learn==1.3.0",
-        "joblib==1.3.0",
-        "streamlit==1.31.0",
-        "fastapi==0.100.0",
-        "python-dotenv==1.0.0",
-        "requests==2.31.0",
-        "httpx==0.24.0",
-        "yfinance==0.2.63",
-        "lxml==4.9.1",
-        "tqdm==4.65.0",
-        "plotly==5.18.0",
-        "matplotlib==3.7.0",
-        "seaborn==0.12.0",
-        "onnxruntime==1.15.0",
-        "opencv-python-headless==4.7.0.72",
-        "vaderSentiment==3.3.2",
-        "textblob==0.17.1",
-        "psutil==5.9.0",
-        "tenacity==8.2.2",
-        "streamlit-plotly-events==0.0.6",
-        "streamlit-option-menu==0.3.12",
-        "streamlit-extras==0.3.5"
-    ]
+    # Method 4: Force reinstall websockets to ensure version 13.0 is used
+    run_command("pip install websockets==13.0 --force-reinstall", "Forcing websockets 13.0")
+
+def verify_installation():
+    """Verify that the correct versions are installed."""
+    print("🔍 Verifying installation...")
     
-    for package in packages:
-        try:
-            subprocess.run([sys.executable, "-m", "pip", "install", package], check=True)
-            print(f"✅ Installed {package}")
-        except subprocess.CalledProcessError:
-            print(f"⚠️ Failed to install {package}, trying without dependencies...")
-            try:
-                subprocess.run([sys.executable, "-m", "pip", "install", "--no-deps", package], check=True)
-                print(f"✅ Installed {package} without dependencies")
-            except subprocess.CalledProcessError:
-                print(f"❌ Failed to install {package} even without dependencies")
+    try:
+        import websockets
+        print(f"✅ websockets version: {websockets.__version__}")
+        
+        import alpaca_trade_api
+        print(f"✅ alpaca-trade-api version: {alpaca_trade_api.__version__}")
+        
+        if websockets.__version__ == "13.0":
+            print("✅ Websockets override successful!")
+        else:
+            print("⚠️ Warning: Websockets version is not 13.0")
+            
+    except ImportError as e:
+        print(f"❌ Import error: {e}")
+
+def main():
+    """Main setup function."""
+    print("🔧 Streamlit Cloud Setup Script")
+    print("=" * 50)
     
-    print("✅ Streamlit Cloud setup completed!")
+    # Change to the script directory
+    script_dir = Path(__file__).parent
+    os.chdir(script_dir)
+    
+    print(f"📁 Working directory: {os.getcwd()}")
+    
+    # Install dependencies with overrides
+    install_dependencies_with_overrides()
+    
+    # Verify installation
+    verify_installation()
+    
+    print("✅ Setup completed!")
+    print("🚀 Ready to run Streamlit app")
 
 if __name__ == "__main__":
-    install_with_override() 
+    main() 

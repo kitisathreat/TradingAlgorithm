@@ -1,0 +1,322 @@
+[
+  {
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "market_cap": 3200000000000
+  },
+  {
+    "symbol": "MSFT",
+    "name": "Microsoft Corporation",
+    "market_cap": 3100000000000
+  },
+  {
+    "symbol": "GOOGL",
+    "name": "Alphabet Inc. (Class A)",
+    "market_cap": 2200000000000
+  },
+  {
+    "symbol": "AMZN",
+    "name": "Amazon.com Inc.",
+    "market_cap": 1900000000000
+  },
+  {
+    "symbol": "NVDA",
+    "name": "NVIDIA Corporation",
+    "market_cap": 1800000000000
+  },
+  {
+    "symbol": "META",
+    "name": "Meta Platforms Inc.",
+    "market_cap": 1200000000000
+  },
+  {
+    "symbol": "BRK.B",
+    "name": "Berkshire Hathaway Inc. (Class B)",
+    "market_cap": 900000000000
+  },
+  {
+    "symbol": "LLY",
+    "name": "Eli Lilly and Company",
+    "market_cap": 750000000000
+  },
+  {
+    "symbol": "TSLA",
+    "name": "Tesla Inc.",
+    "market_cap": 700000000000
+  },
+  {
+    "symbol": "V",
+    "name": "Visa Inc.",
+    "market_cap": 550000000000
+  },
+  {
+    "symbol": "UNH",
+    "name": "UnitedHealth Group Incorporated",
+    "market_cap": 520000000000
+  },
+  {
+    "symbol": "JNJ",
+    "name": "Johnson & Johnson",
+    "market_cap": 480000000000
+  },
+  {
+    "symbol": "WMT",
+    "name": "Walmart Inc.",
+    "market_cap": 470000000000
+  },
+  {
+    "symbol": "JPM",
+    "name": "JPMorgan Chase & Co.",
+    "market_cap": 450000000000
+  },
+  {
+    "symbol": "PG",
+    "name": "Procter & Gamble Co.",
+    "market_cap": 420000000000
+  },
+  {
+    "symbol": "MA",
+    "name": "Mastercard Incorporated",
+    "market_cap": 400000000000
+  },
+  {
+    "symbol": "HD",
+    "name": "The Home Depot Inc.",
+    "market_cap": 380000000000
+  },
+  {
+    "symbol": "AVGO",
+    "name": "Broadcom Inc.",
+    "market_cap": 370000000000
+  },
+  {
+    "symbol": "CVX",
+    "name": "Chevron Corporation",
+    "market_cap": 350000000000
+  },
+  {
+    "symbol": "ABBV",
+    "name": "AbbVie Inc.",
+    "market_cap": 340000000000
+  },
+  {
+    "symbol": "PFE",
+    "name": "Pfizer Inc.",
+    "market_cap": 330000000000
+  },
+  {
+    "symbol": "KO",
+    "name": "The Coca-Cola Company",
+    "market_cap": 320000000000
+  },
+  {
+    "symbol": "PEP",
+    "name": "PepsiCo Inc.",
+    "market_cap": 310000000000
+  },
+  {
+    "symbol": "COST",
+    "name": "Costco Wholesale Corporation",
+    "market_cap": 300000000000
+  },
+  {
+    "symbol": "TMO",
+    "name": "Thermo Fisher Scientific Inc.",
+    "market_cap": 290000000000
+  },
+  {
+    "symbol": "DHR",
+    "name": "Danaher Corporation",
+    "market_cap": 280000000000
+  },
+  {
+    "symbol": "ACN",
+    "name": "Accenture plc",
+    "market_cap": 270000000000
+  },
+  {
+    "symbol": "MRK",
+    "name": "Merck & Co. Inc.",
+    "market_cap": 260000000000
+  },
+  {
+    "symbol": "VZ",
+    "name": "Verizon Communications Inc.",
+    "market_cap": 250000000000
+  },
+  {
+    "symbol": "ABT",
+    "name": "Abbott Laboratories",
+    "market_cap": 240000000000
+  },
+  {
+    "symbol": "TXN",
+    "name": "Texas Instruments Incorporated",
+    "market_cap": 230000000000
+  },
+  {
+    "symbol": "NKE",
+    "name": "NIKE Inc.",
+    "market_cap": 220000000000
+  },
+  {
+    "symbol": "PM",
+    "name": "Philip Morris International Inc.",
+    "market_cap": 210000000000
+  },
+  {
+    "symbol": "NEE",
+    "name": "NextEra Energy Inc.",
+    "market_cap": 200000000000
+  },
+  {
+    "symbol": "ADBE",
+    "name": "Adobe Inc.",
+    "market_cap": 190000000000
+  },
+  {
+    "symbol": "CRM",
+    "name": "Salesforce Inc.",
+    "market_cap": 180000000000
+  },
+  {
+    "symbol": "DIS",
+    "name": "The Walt Disney Company",
+    "market_cap": 170000000000
+  },
+  {
+    "symbol": "NFLX",
+    "name": "Netflix Inc.",
+    "market_cap": 160000000000
+  },
+  {
+    "symbol": "AMD",
+    "name": "Advanced Micro Devices Inc.",
+    "market_cap": 150000000000
+  },
+  {
+    "symbol": "INTC",
+    "name": "Intel Corporation",
+    "market_cap": 140000000000
+  },
+  {
+    "symbol": "QCOM",
+    "name": "QUALCOMM Incorporated",
+    "market_cap": 130000000000
+  },
+  {
+    "symbol": "HON",
+    "name": "Honeywell International Inc.",
+    "market_cap": 120000000000
+  },
+  {
+    "symbol": "IBM",
+    "name": "International Business Machines Corporation",
+    "market_cap": 110000000000
+  },
+  {
+    "symbol": "T",
+    "name": "AT&T Inc.",
+    "market_cap": 100000000000
+  },
+  {
+    "symbol": "GE",
+    "name": "General Electric Company",
+    "market_cap": 95000000000
+  },
+  {
+    "symbol": "CAT",
+    "name": "Caterpillar Inc.",
+    "market_cap": 90000000000
+  },
+  {
+    "symbol": "GS",
+    "name": "The Goldman Sachs Group Inc.",
+    "market_cap": 85000000000
+  },
+  {
+    "symbol": "MS",
+    "name": "Morgan Stanley",
+    "market_cap": 80000000000
+  },
+  {
+    "symbol": "BA",
+    "name": "The Boeing Company",
+    "market_cap": 75000000000
+  },
+  {
+    "symbol": "RTX",
+    "name": "Raytheon Technologies Corporation",
+    "market_cap": 70000000000
+  },
+  {
+    "symbol": "LMT",
+    "name": "Lockheed Martin Corporation",
+    "market_cap": 65000000000
+  },
+  {
+    "symbol": "SPGI",
+    "name": "S&P Global Inc.",
+    "market_cap": 60000000000
+  },
+  {
+    "symbol": "ISRG",
+    "name": "Intuitive Surgical Inc.",
+    "market_cap": 55000000000
+  },
+  {
+    "symbol": "GILD",
+    "name": "Gilead Sciences Inc.",
+    "market_cap": 50000000000
+  },
+  {
+    "symbol": "AMGN",
+    "name": "Amgen Inc.",
+    "market_cap": 45000000000
+  },
+  {
+    "symbol": "REGN",
+    "name": "Regeneron Pharmaceuticals Inc.",
+    "market_cap": 40000000000
+  },
+  {
+    "symbol": "CMCSA",
+    "name": "Comcast Corporation",
+    "market_cap": 35000000000
+  },
+  {
+    "symbol": "CME",
+    "name": "CME Group Inc.",
+    "market_cap": 30000000000
+  },
+  {
+    "symbol": "ADP",
+    "name": "Automatic Data Processing Inc.",
+    "market_cap": 25000000000
+  },
+  {
+    "symbol": "BLK",
+    "name": "BlackRock Inc.",
+    "market_cap": 20000000000
+  },
+  {
+    "symbol": "SCHW",
+    "name": "The Charles Schwab Corporation",
+    "market_cap": 15000000000
+  },
+  {
+    "symbol": "USB",
+    "name": "U.S. Bancorp",
+    "market_cap": 10000000000
+  },
+  {
+    "symbol": "WFC",
+    "name": "Wells Fargo & Company",
+    "market_cap": 5000000000
+  },
+  {
+    "symbol": "C",
+    "name": "Citigroup Inc.",
+    "market_cap": 1000000000
+  }
+] 

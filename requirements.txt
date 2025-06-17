@@ -22,7 +22,7 @@ alpaca-trade-api==3.2.0  # Same as working local requirements
 yfinance==0.2.63
 lxml==4.9.1  # Pinned version for stability
 tqdm==4.65.0
-websockets==13.0  # Same as working local requirements
+websockets>=9.0  # Allow any version >=9.0 to satisfy alpaca-trade-api, but we'll override to 13.0
 
 # Visualization
 plotly==5.18.0

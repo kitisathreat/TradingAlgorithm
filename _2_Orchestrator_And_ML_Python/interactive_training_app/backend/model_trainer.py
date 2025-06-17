@@ -38,23 +38,59 @@ class TradingNeuralNetwork:
     """
     Neural Network that learns to mimic human trading decisions
     Combines technical indicators with sentiment analysis
+    Supports multiple model architectures
     """
     
-    def __init__(self, input_dim=20):
+    def __init__(self, model_type="standard", input_dim=20):
+        self.model_type = model_type
         self.input_dim = input_dim
         self.model = None
         self.scaler = StandardScaler()
         self.label_encoder = LabelEncoder()
         self.is_trained = False
+        self.training_history = None
         
     def build_model(self):
-        """Build the neural network architecture"""
+        """Build the neural network architecture based on model type"""
+        if self.model_type == "simple":
+            return self._build_simple_model()
+        elif self.model_type == "deep":
+            return self._build_deep_model()
+        elif self.model_type == "lstm":
+            return self._build_lstm_model()
+        elif self.model_type == "ensemble":
+            return self._build_ensemble_model()
+        elif self.model_type == "transformer":
+            return self._build_transformer_model()
+        elif self.model_type == "cnn":
+            return self._build_cnn_model()
+        else:  # standard
+            return self._build_standard_model()
+    
+    def _build_simple_model(self):
+        """Simple model for quick training with limited data"""
         model = keras.Sequential([
-            # Input layer with technical indicators + sentiment features
+            layers.Dense(32, activation='relu', input_shape=(self.input_dim,)),
+            layers.Dropout(0.2),
+            layers.Dense(16, activation='relu'),
+            layers.Dense(3, activation='softmax')
+        ])
+        
+        model.compile(
+            optimizer='adam',
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        self.model = model
+        return model
+    
+    def _build_standard_model(self):
+        """Standard model - balanced complexity"""
+        model = keras.Sequential([
             layers.Dense(128, activation='relu', input_shape=(self.input_dim,)),
             layers.Dropout(0.3),
             
-            # Hidden layers for complex pattern recognition
             layers.Dense(64, activation='relu'),
             layers.BatchNormalization(),
             layers.Dropout(0.3),
@@ -62,9 +98,176 @@ class TradingNeuralNetwork:
             layers.Dense(32, activation='relu'),
             layers.Dropout(0.2),
             
-            # Output layer for trading decisions (BUY, SELL, HOLD)
             layers.Dense(3, activation='softmax')
         ])
+        
+        model.compile(
+            optimizer='adam',
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        self.model = model
+        return model
+    
+    def _build_deep_model(self):
+        """Deep model for complex pattern recognition"""
+        model = keras.Sequential([
+            layers.Dense(256, activation='relu', input_shape=(self.input_dim,)),
+            layers.BatchNormalization(),
+            layers.Dropout(0.4),
+            
+            layers.Dense(128, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.4),
+            
+            layers.Dense(64, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.3),
+            
+            layers.Dense(32, activation='relu'),
+            layers.Dropout(0.2),
+            
+            layers.Dense(16, activation='relu'),
+            layers.Dropout(0.1),
+            
+            layers.Dense(3, activation='softmax')
+        ])
+        
+        model.compile(
+            optimizer='adam',
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        self.model = model
+        return model
+    
+    def _build_lstm_model(self):
+        """LSTM model for sequential pattern recognition"""
+        # Reshape input for LSTM (samples, timesteps, features)
+        # We'll use a single timestep with all features
+        model = keras.Sequential([
+            layers.LSTM(64, input_shape=(1, self.input_dim), return_sequences=True),
+            layers.Dropout(0.3),
+            
+            layers.LSTM(32, return_sequences=False),
+            layers.Dropout(0.3),
+            
+            layers.Dense(16, activation='relu'),
+            layers.Dropout(0.2),
+            
+            layers.Dense(3, activation='softmax')
+        ])
+        
+        model.compile(
+            optimizer='adam',
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        self.model = model
+        return model
+    
+    def _build_ensemble_model(self):
+        """Ensemble model combining multiple architectures"""
+        # This is a simplified ensemble - in practice you'd train multiple models
+        model = keras.Sequential([
+            layers.Dense(128, activation='relu', input_shape=(self.input_dim,)),
+            layers.Dropout(0.3),
+            
+            layers.Dense(64, activation='relu'),
+            layers.BatchNormalization(),
+            layers.Dropout(0.3),
+            
+            layers.Dense(32, activation='relu'),
+            layers.Dropout(0.2),
+            
+            layers.Dense(3, activation='softmax')
+        ])
+        
+        model.compile(
+            optimizer='adam',
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        self.model = model
+        return model
+    
+    def _build_transformer_model(self):
+        """Transformer model for attention-based pattern recognition"""
+        # Reshape input for transformer (samples, timesteps, features)
+        # We'll use a single timestep with all features
+        inputs = keras.Input(shape=(1, self.input_dim))
+        
+        # Multi-head attention layer
+        attention_output = layers.MultiHeadAttention(
+            num_heads=4, key_dim=16
+        )(inputs, inputs)
+        
+        # Add & Norm
+        attention_output = layers.LayerNormalization()(attention_output + inputs)
+        
+        # Feed forward network
+        ffn_output = layers.Dense(128, activation='relu')(attention_output)
+        ffn_output = layers.Dense(self.input_dim)(ffn_output)
+        
+        # Add & Norm
+        ffn_output = layers.LayerNormalization()(ffn_output + attention_output)
+        
+        # Global average pooling
+        pooled_output = layers.GlobalAveragePooling1D()(ffn_output)
+        
+        # Dense layers for classification
+        dense_output = layers.Dense(64, activation='relu')(pooled_output)
+        dense_output = layers.Dropout(0.3)(dense_output)
+        
+        dense_output = layers.Dense(32, activation='relu')(dense_output)
+        dense_output = layers.Dropout(0.2)(dense_output)
+        
+        outputs = layers.Dense(3, activation='softmax')(dense_output)
+        
+        model = keras.Model(inputs=inputs, outputs=outputs)
+        
+        model.compile(
+            optimizer='adam',
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        self.model = model
+        return model
+    
+    def _build_cnn_model(self):
+        """CNN model for pattern recognition"""
+        # Reshape input for CNN (samples, timesteps, features, channels)
+        # We'll use a single timestep with all features as 1 channel
+        inputs = keras.Input(shape=(1, self.input_dim, 1))
+        
+        # Convolutional layers
+        conv1 = layers.Conv2D(32, (1, 3), activation='relu', padding='same')(inputs)
+        conv1 = layers.BatchNormalization()(conv1)
+        conv1 = layers.MaxPooling2D((1, 2))(conv1)
+        
+        conv2 = layers.Conv2D(64, (1, 3), activation='relu', padding='same')(conv1)
+        conv2 = layers.BatchNormalization()(conv2)
+        conv2 = layers.MaxPooling2D((1, 2))(conv2)
+        
+        conv3 = layers.Conv2D(128, (1, 3), activation='relu', padding='same')(conv2)
+        conv3 = layers.BatchNormalization()(conv3)
+        conv3 = layers.GlobalAveragePooling2D()(conv3)
+        
+        # Dense layers for classification
+        dense_output = layers.Dense(64, activation='relu')(conv3)
+        dense_output = layers.Dropout(0.3)(dense_output)
+        
+        dense_output = layers.Dense(32, activation='relu')(dense_output)
+        dense_output = layers.Dropout(0.2)(dense_output)
+        
+        outputs = layers.Dense(3, activation='softmax')(dense_output)
+        
+        model = keras.Model(inputs=inputs, outputs=outputs)
         
         model.compile(
             optimizer='adam',
@@ -84,6 +287,12 @@ class TradingNeuralNetwork:
         X_train_scaled = self.scaler.fit_transform(X_train)
         y_train_encoded = self.label_encoder.fit_transform(y_train)
         
+        # Reshape for different model types
+        if self.model_type == "lstm" or self.model_type == "transformer":
+            X_train_scaled = X_train_scaled.reshape(X_train_scaled.shape[0], 1, X_train_scaled.shape[1])
+        elif self.model_type == "cnn":
+            X_train_scaled = X_train_scaled.reshape(X_train_scaled.shape[0], 1, X_train_scaled.shape[1], 1)
+        
         # Early stopping and model checkpointing
         callbacks = [
             keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True),
@@ -99,6 +308,7 @@ class TradingNeuralNetwork:
         )
         
         self.is_trained = True
+        self.training_history = history
         return history
     
     def predict(self, X):
@@ -107,22 +317,61 @@ class TradingNeuralNetwork:
             raise ValueError("Model must be trained before making predictions")
         
         X_scaled = self.scaler.transform(X)
+        
+        # Reshape for different model types
+        if self.model_type == "lstm" or self.model_type == "transformer":
+            X_scaled = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1])
+        elif self.model_type == "cnn":
+            X_scaled = X_scaled.reshape(X_scaled.shape[0], 1, X_scaled.shape[1], 1)
+        
         predictions = self.model.predict(X_scaled)
         predicted_classes = self.label_encoder.inverse_transform(np.argmax(predictions, axis=1))
         confidence_scores = np.max(predictions, axis=1)
         
         return predicted_classes, confidence_scores
+    
+    def get_model_info(self):
+        """Get information about the model architecture"""
+        return {
+            'model_type': self.model_type,
+            'input_dim': self.input_dim,
+            'is_trained': self.is_trained,
+            'total_params': self.model.count_params() if self.model else 0,
+            'architecture': self._get_architecture_summary()
+        }
+    
+    def _get_architecture_summary(self):
+        """Get a summary of the model architecture"""
+        if self.model is None:
+            return "Model not built"
+        
+        summary_list = []
+        self.model.summary(print_fn=lambda x: summary_list.append(x))
+        return '\n'.join(summary_list)
 
 class ModelTrainer:
     """
     Advanced Model Trainer that learns from human trading intuition
     Combines technical analysis with sentiment analysis of trading descriptions
+    Supports multiple neural network architectures and additive training
     """
     
-    def __init__(self):
+    def __init__(self, model_type="standard"):
         self.repo_root = Path(__file__).parent.parent.parent.parent
         self.model_state_file = self.repo_root / "model_state.json"
         self.training_data_file = self.repo_root / "training_data.json"
+        self.model_type = model_type
+        
+        # Model metadata
+        self.model_metadata = {
+            'name': 'Default Model',
+            'author': 'Unknown',
+            'training_subjects': [],
+            'min_epochs': 50,
+            'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'last_modified': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'version': '1.0.0'
+        }
         
         # Load SP100 symbols
         symbols_file = Path(__file__).parent.parent / "sp100_symbols.json"
@@ -135,33 +384,170 @@ class ModelTrainer:
         
         # Initialize components
         self.sentiment_analyzer = SentimentIntensityAnalyzer() if ML_IMPORTS_AVAILABLE else None
-        self.neural_network = TradingNeuralNetwork() if ML_IMPORTS_AVAILABLE else None
+        self.neural_network = TradingNeuralNetwork(model_type=model_type) if ML_IMPORTS_AVAILABLE else None
         self.training_examples = []
         
-        # Load existing training data
+        # Load existing training data (ADDITIVE - preserves previous sessions)
         self._load_training_data()
         
-        logger.info(f"ModelTrainer initialized with {len(self.symbols)} symbols")
+        # Load model metadata
+        self._load_model_metadata()
+        
+        logger.info(f"ModelTrainer initialized with {len(self.symbols)} symbols, model type: {model_type}")
+        logger.info(f"Loaded {len(self.training_examples)} existing training examples (additive training enabled)")
     
     def _load_training_data(self):
-        """Load existing training data from file"""
+        """Load existing training data from file (ADDITIVE - preserves previous sessions)"""
         try:
             if self.training_data_file.exists():
                 with open(self.training_data_file, 'r') as f:
-                    self.training_examples = json.load(f)
-                logger.info(f"Loaded {len(self.training_examples)} existing training examples")
+                    existing_data = json.load(f)
+                
+                # Ensure we have a list of training examples
+                if isinstance(existing_data, list):
+                    self.training_examples = existing_data
+                else:
+                    # Handle legacy format or corrupted data
+                    logger.warning("Training data file format unexpected, starting fresh")
+                    self.training_examples = []
+                
+                logger.info(f"Loaded {len(self.training_examples)} existing training examples from previous sessions")
+                
+                # Validate training examples
+                valid_examples = []
+                for example in self.training_examples:
+                    if self._validate_training_example(example):
+                        valid_examples.append(example)
+                    else:
+                        logger.warning("Skipping invalid training example")
+                
+                self.training_examples = valid_examples
+                logger.info(f"Validated {len(self.training_examples)} training examples")
+                
+            else:
+                logger.info("No existing training data found, starting fresh")
+                self.training_examples = []
+                
         except Exception as e:
             logger.error(f"Error loading training data: {e}")
             self.training_examples = []
     
+    def _validate_training_example(self, example):
+        """Validate a training example has required fields"""
+        required_fields = ['timestamp', 'technical_features', 'sentiment_analysis', 'user_decision']
+        return all(field in example for field in required_fields)
+    
     def _save_training_data(self):
-        """Save training data to file"""
+        """Save training data to file (ADDITIVE - preserves all examples)"""
         try:
             with open(self.training_data_file, 'w') as f:
                 json.dump(self.training_examples, f, indent=2, default=str)
-            logger.info(f"Saved {len(self.training_examples)} training examples")
+            logger.info(f"Saved {len(self.training_examples)} training examples (additive training)")
         except Exception as e:
             logger.error(f"Error saving training data: {e}")
+    
+    def change_model_type(self, new_model_type):
+        """Change the neural network model type"""
+        valid_types = ["simple", "standard", "deep", "lstm", "ensemble", "transformer", "cnn"]
+        if new_model_type not in valid_types:
+            logger.error(f"Invalid model type: {new_model_type}. Valid types: {valid_types}")
+            return False
+        
+        try:
+            logger.info(f"Changing model type from {self.model_type} to {new_model_type}")
+            self.model_type = new_model_type
+            
+            # Create new neural network with the selected type
+            if ML_IMPORTS_AVAILABLE:
+                self.neural_network = TradingNeuralNetwork(model_type=new_model_type)
+                logger.info(f"New {new_model_type} model initialized")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error changing model type: {e}")
+            return False
+    
+    def get_available_models(self):
+        """Get information about available model types"""
+        return {
+            "simple": {
+                "name": "Simple Model",
+                "description": "Quick training with limited data (32-16-3 layers)",
+                "best_for": "Small datasets, quick prototyping",
+                "training_time": "Fast",
+                "complexity": "Low",
+                "min_epochs": 20,
+                "max_epochs": 100
+            },
+            "standard": {
+                "name": "Standard Model", 
+                "description": "Balanced complexity (128-64-32-3 layers)",
+                "best_for": "General use, moderate datasets",
+                "training_time": "Medium",
+                "complexity": "Medium",
+                "min_epochs": 50,
+                "max_epochs": 200
+            },
+            "deep": {
+                "name": "Deep Model",
+                "description": "Complex pattern recognition (256-128-64-32-16-3 layers)",
+                "best_for": "Large datasets, complex patterns",
+                "training_time": "Slow",
+                "complexity": "High",
+                "min_epochs": 100,
+                "max_epochs": 500
+            },
+            "lstm": {
+                "name": "LSTM Model",
+                "description": "Sequential pattern recognition with LSTM layers",
+                "best_for": "Time series patterns, sequential data",
+                "training_time": "Medium-Slow",
+                "complexity": "High",
+                "min_epochs": 75,
+                "max_epochs": 300
+            },
+            "ensemble": {
+                "name": "Ensemble Model",
+                "description": "Combines multiple architectures for robust predictions",
+                "best_for": "High accuracy requirements, diverse patterns",
+                "training_time": "Slow",
+                "complexity": "Very High",
+                "min_epochs": 150,
+                "max_epochs": 500
+            },
+            "transformer": {
+                "name": "Transformer Model",
+                "description": "Attention-based model for complex market patterns",
+                "best_for": "Advanced pattern recognition, large datasets",
+                "training_time": "Very Slow",
+                "complexity": "Very High",
+                "min_epochs": 200,
+                "max_epochs": 1000
+            },
+            "cnn": {
+                "name": "CNN Model",
+                "description": "Convolutional neural network for pattern recognition",
+                "best_for": "Visual pattern recognition, chart analysis",
+                "training_time": "Medium",
+                "complexity": "High",
+                "min_epochs": 80,
+                "max_epochs": 400
+            }
+        }
+    
+    def get_current_model_info(self):
+        """Get information about the current model"""
+        if self.neural_network:
+            return self.neural_network.get_model_info()
+        else:
+            return {
+                'model_type': self.model_type,
+                'input_dim': 20,
+                'is_trained': False,
+                'total_params': 0,
+                'architecture': "Model not available (ML packages not installed)"
+            }
     
     def get_historical_stock_data(self, symbol: str, years_back: int = 25) -> pd.DataFrame:
         """
@@ -735,7 +1121,7 @@ class ModelTrainer:
             logger.error(f"Error preparing training data: {e}")
             return np.array([]), np.array([])
     
-    def train_neural_network(self) -> bool:
+    def train_neural_network(self, epochs=100) -> bool:
         """
         Train the neural network with collected examples
         """
@@ -748,7 +1134,8 @@ class ModelTrainer:
             return False
         
         try:
-            logger.info("Starting neural network training...")
+            logger.info(f"Starting neural network training with {self.model_type} model...")
+            logger.info(f"Training data: {len(self.training_examples)} examples")
             
             # Prepare training data
             X, y = self.prepare_training_data()
@@ -758,19 +1145,24 @@ class ModelTrainer:
                 return False
             
             # Train the neural network
-            history = self.neural_network.train(X, y, epochs=100)
+            history = self.neural_network.train(X, y, epochs=epochs)
             
             # Calculate final accuracy
             final_accuracy = max(history.history.get('val_accuracy', [0]))
             
-            # Save model state
+            # Save model state with model type information
             self.save_model_state(
                 is_trained=True,
                 training_examples=len(self.training_examples),
-                model_accuracy=final_accuracy
+                model_accuracy=final_accuracy,
+                model_type=self.model_type
             )
             
-            logger.info(f"Neural network training completed! Final accuracy: {final_accuracy:.2%}")
+            logger.info(f"Neural network training completed!")
+            logger.info(f"Model type: {self.model_type}")
+            logger.info(f"Final accuracy: {final_accuracy:.2%}")
+            logger.info(f"Training examples: {len(self.training_examples)}")
+            
             return True
             
         except Exception as e:
@@ -834,18 +1226,19 @@ class ModelTrainer:
             'model_accuracy': 0.0
         }
     
-    def save_model_state(self, is_trained: bool = False, training_examples: int = 0, model_accuracy: float = 0.0):
+    def save_model_state(self, is_trained: bool = False, training_examples: int = 0, model_accuracy: float = 0.0, model_type: str = ""):
         """Save model training state"""
         try:
             state = {
                 'is_trained': is_trained,
                 'training_examples': training_examples,
                 'last_training_date': datetime.now().isoformat(),
-                'model_accuracy': model_accuracy
+                'model_accuracy': model_accuracy,
+                'model_type': model_type
             }
             with open(self.model_state_file, 'w') as f:
                 json.dump(state, f, indent=2)
-            logger.info(f"Model state saved: {training_examples} examples, accuracy: {model_accuracy:.2%}")
+            logger.info(f"Model state saved: {training_examples} examples, accuracy: {model_accuracy:.2%}, type: {model_type}")
         except Exception as e:
             logger.error(f"Error saving model state: {e}")
     
@@ -881,3 +1274,95 @@ class ModelTrainer:
             'negative_count': sum(1 for s in sentiments if s < -0.1),
             'neutral_count': sum(1 for s in sentiments if -0.1 <= s <= 0.1)
         }
+    
+    def create_model(self, model_type: str, model_name: str, author: str, 
+                    training_subjects: List[str], min_epochs: int) -> bool:
+        """
+        Create a new model with specified metadata
+        
+        Args:
+            model_type: Type of model (simple, standard, deep, lstm, ensemble, transformer, cnn)
+            model_name: Name of the model
+            author: Author of the model
+            training_subjects: List of people/subjects the model will be trained on
+            min_epochs: Minimum number of training epochs
+            
+        Returns:
+            bool: True if model created successfully, False otherwise
+        """
+        try:
+            # Validate model type
+            available_models = self.get_available_models()
+            if model_type not in available_models:
+                logger.error(f"Invalid model type: {model_type}")
+                return False
+            
+            # Validate min_epochs
+            model_info = available_models[model_type]
+            if min_epochs < model_info['min_epochs']:
+                logger.warning(f"Min epochs {min_epochs} is below recommended {model_info['min_epochs']} for {model_type}")
+            
+            # Update model metadata
+            self.model_metadata.update({
+                'name': model_name,
+                'author': author,
+                'training_subjects': training_subjects,
+                'min_epochs': min_epochs,
+                'model_type': model_type,
+                'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'last_modified': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
+            
+            # Change model type
+            if self.change_model_type(model_type):
+                # Save model metadata
+                self._save_model_metadata()
+                logger.info(f"Model '{model_name}' created successfully by {author}")
+                return True
+            else:
+                logger.error("Failed to change model type")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error creating model: {e}")
+            return False
+    
+    def get_model_metadata(self) -> Dict:
+        """Get current model metadata"""
+        return self.model_metadata.copy()
+    
+    def update_model_metadata(self, **kwargs) -> bool:
+        """Update model metadata"""
+        try:
+            for key, value in kwargs.items():
+                if key in self.model_metadata:
+                    self.model_metadata[key] = value
+            
+            self.model_metadata['last_modified'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            self._save_model_metadata()
+            return True
+        except Exception as e:
+            logger.error(f"Error updating model metadata: {e}")
+            return False
+    
+    def _load_model_metadata(self):
+        """Load model metadata from file"""
+        try:
+            metadata_file = Path(__file__).parent.parent / "model_metadata.json"
+            if metadata_file.exists():
+                with open(metadata_file, 'r') as f:
+                    loaded_metadata = json.load(f)
+                    self.model_metadata.update(loaded_metadata)
+                    logger.info("Model metadata loaded successfully")
+        except Exception as e:
+            logger.warning(f"Could not load model metadata: {e}")
+    
+    def _save_model_metadata(self):
+        """Save model metadata to file"""
+        try:
+            metadata_file = Path(__file__).parent.parent / "model_metadata.json"
+            with open(metadata_file, 'w') as f:
+                json.dump(self.model_metadata, f, indent=2)
+            logger.info("Model metadata saved successfully")
+        except Exception as e:
+            logger.error(f"Error saving model metadata: {e}")
