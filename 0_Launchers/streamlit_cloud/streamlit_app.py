@@ -17,9 +17,22 @@ import time
 import subprocess
 import yfinance as yf
 
+# Configure page (must be the first Streamlit command)
+st.set_page_config(
+    page_title="Advanced Neural Network Trading System",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Auto-setup dependencies on first run
 def auto_setup_dependencies():
     """Automatically setup dependencies to resolve websocket conflicts"""
+    # Temporarily disabled to prevent package_manager import error
+    st.info("🔧 Auto-setup temporarily disabled to resolve import issues")
+    st.session_state.dependencies_setup = True
+    return
+    
     if 'dependencies_setup' not in st.session_state:
         st.session_state.dependencies_setup = False
     
@@ -102,23 +115,24 @@ handle_version_conflicts()
 # Add the orchestrator path to sys.path
 REPO_ROOT = Path(__file__).parent.parent.parent
 ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
-sys.path.append(str(ORCHESTRATOR_PATH))
+ROOT_PATH = REPO_ROOT
 
-# Import the ModelTrainer
+# Add both paths to sys.path
+sys.path.append(str(ORCHESTRATOR_PATH))
+sys.path.append(str(ROOT_PATH))
+
+# Import the ModelTrainer with better error handling
 try:
     from interactive_training_app.backend.model_trainer import ModelTrainer
     MODEL_TRAINER_AVAILABLE = True
+    st.success("✅ ModelTrainer imported successfully")
 except ImportError as e:
     st.error(f"Failed to import ModelTrainer: {e}")
+    st.info("This may be due to missing dependencies. The app will continue with limited functionality.")
     MODEL_TRAINER_AVAILABLE = False
-
-# Configure page
-st.set_page_config(
-    page_title="Advanced Neural Network Trading System",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+except Exception as e:
+    st.error(f"Unexpected error importing ModelTrainer: {e}")
+    MODEL_TRAINER_AVAILABLE = False
 
 # Custom CSS for better styling
 st.markdown("""
