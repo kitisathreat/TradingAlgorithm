@@ -46,8 +46,19 @@ if not exist "%VENV_ACTIVATE%" (
     exit /b 1
 )
 
-:: Change to script directory
-cd /d "%~dp0"
+:: Change to project root directory (two levels up from streamlit_local)
+cd /d "%~dp0..\.."
+
+:: Verify we're in the correct directory and streamlit_app.py exists
+if not exist "streamlit_app.py" (
+    echo ❌ Error: streamlit_app.py not found in current directory: %CD%
+    echo Expected location: %CD%\streamlit_app.py
+    echo Please ensure you're running this from the correct project structure
+    pause
+    exit /b 1
+)
+
+echo ✓ Found streamlit_app.py in: %CD%
 
 :: Activate the virtual environment
 echo Activating virtual environment...
@@ -58,9 +69,6 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-
-:: Change to project root directory
-cd /d "%~dp0.."
 
 :: Check if port 8501 is already in use before starting
 echo Checking if port 8501 is available...
