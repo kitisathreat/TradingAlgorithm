@@ -386,12 +386,13 @@ def load_stock_data(trainer, symbol, days):
                 else:
                     data.index = data.index.tz_convert('UTC')
                 
-                # Validate that data is not newer than our end_date
-                if data.index.max() > end_date:
-                    data = data[data.index <= end_date]
-                    if data.empty:
-                        st.error(f"No valid data found for {symbol} after filtering dates")
-                        return None, None, None
+                # Calculate expected trading days in the requested range
+                from date_range_utils import calculate_trading_days
+                expected_trading_days = calculate_trading_days(start_date, end_date)
+                
+                # Check if we got the expected amount of data (compare trading days)
+                if len(data) < expected_trading_days * 0.9:  # Allow 10% tolerance for holidays
+                    st.warning(f"Got {len(data)} trading days of data for {symbol}, expected around {expected_trading_days} trading days")
                 
                 if len(data) > 0:
                     # Create stock_info structure similar to get_random_stock_data

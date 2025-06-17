@@ -517,9 +517,13 @@ class MainWindow(QMainWindow):
             else:
                 df.index = df.index.tz_convert('UTC')
             
-            # Check if we got the expected amount of data
-            if len(df) < days * 0.8:  # Allow 20% tolerance for weekends/holidays
-                print(f"Warning: Got {len(df)} days of data for {stock}, expected around {days} days")
+            # Calculate expected trading days in the requested range
+            from date_range_utils import calculate_trading_days
+            expected_trading_days = calculate_trading_days(start_date, end_date)
+            
+            # Check if we got the expected amount of data (compare trading days)
+            if len(df) < expected_trading_days * 0.9:  # Allow 10% tolerance for holidays
+                print(f"Warning: Got {len(df)} trading days of data for {stock}, expected around {expected_trading_days} trading days")
             
             # Validate that data is not newer than our end_date
             if df.index.max() > end_date:
@@ -736,9 +740,13 @@ class MainWindow(QMainWindow):
             else:
                 df.index = df.index.tz_convert('UTC')
             
-            # Check if we got the expected amount of data
-            if len(df) < 24:  # Allow tolerance for weekends/holidays
-                print(f"Warning: Got {len(df)} days of data for {stock}, expected around 30 days")
+            # Calculate expected trading days in the requested range
+            from date_range_utils import calculate_trading_days
+            expected_trading_days = calculate_trading_days(start_date, end_date)
+            
+            # Check if we got the expected amount of data (compare trading days)
+            if len(df) < expected_trading_days * 0.9:  # Allow 10% tolerance for holidays
+                print(f"Warning: Got {len(df)} trading days of data for {stock}, expected around {expected_trading_days} trading days")
             
             # Validate that data is not newer than our end_date
             if df.index.max() > end_date:

@@ -527,6 +527,19 @@ class DataLoadingThread(QThread):
             else:
                 df.index = df.index.tz_convert('UTC')
             
+            # Calculate expected trading days in the requested range
+            import sys
+            from pathlib import Path
+            REPO_ROOT = Path(__file__).parent.parent.parent
+            ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+            sys.path.append(str(ORCHESTRATOR_PATH))
+            from date_range_utils import calculate_trading_days
+            expected_trading_days = calculate_trading_days(self.start_date, self.end_date)
+            
+            # Check if we got the expected amount of data (compare trading days)
+            if len(df) < expected_trading_days * 0.9:  # Allow 10% tolerance for holidays
+                print(f"Warning: Got {len(df)} trading days of data for {self.stock}, expected around {expected_trading_days} trading days")
+            
             # Validate that data is not newer than our end_date
             if df.index.max() > self.end_date:
                 df = df[df.index <= self.end_date]
@@ -993,9 +1006,13 @@ class MainWindow(QMainWindow):
             else:
                 df.index = df.index.tz_convert('UTC')
             
-            # Check if we got the expected amount of data
-            if len(df) < days * 0.8:  # Allow 20% tolerance for weekends/holidays
-                print(f"Warning: Got {len(df)} days of data for {stock}, expected around {days} days")
+            # Calculate expected trading days in the requested range
+            from _2_Orchestrator_And_ML_Python.date_range_utils import calculate_trading_days
+            expected_trading_days = calculate_trading_days(start_date, end_date)
+            
+            # Check if we got the expected amount of data (compare trading days)
+            if len(df) < expected_trading_days * 0.9:  # Allow 10% tolerance for holidays
+                print(f"Warning: Got {len(df)} trading days of data for {stock}, expected around {expected_trading_days} trading days")
             
             # Validate that data is not newer than our end_date
             if df.index.max() > end_date:

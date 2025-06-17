@@ -1,54 +1,106 @@
 #!/usr/bin/env python3
 """
 Streamlit Cloud Requirements Installer
-Handles the websockets/alpaca-trade-api conflict by installing in the correct order.
+Handles the websocket dependency conflict between TensorFlow and Alpaca
 """
 
 import subprocess
 import sys
 import os
+from pathlib import Path
 
-def install_with_override():
-    """Install requirements with websockets override for alpaca-trade-api compatibility."""
+def run_pip_install(package, description, extra_args=""):
+    """Run pip install with error handling"""
+    cmd = f"pip install {package} {extra_args}"
+    print(f"🔄 {description}...")
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"✅ {description} successful")
+            return True
+        else:
+            print(f"⚠️ {description} had issues: {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"❌ {description} failed: {e}")
+        return False
+
+def main():
+    """Main installation function"""
+    print("🔧 Installing Streamlit Cloud requirements with dependency conflict resolution...")
     
-    print("🔧 Installing requirements with websockets override...")
+    # Step 1: Force install websockets 13+ first
+    print("\n📦 Step 1: Installing websockets 13+ for TensorFlow compatibility")
+    success = run_pip_install(
+        "websockets>=13.0", 
+        "Installing websockets 13+", 
+        "--force-reinstall --no-deps"
+    )
     
-    # Step 1: Install websockets 13.0 first (this establishes the version we want)
-    print("📦 Step 1: Installing websockets==13.0...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "websockets==13.0"], check=True)
+    if not success:
+        print("⚠️ Websockets installation had issues, but continuing...")
     
-    # Step 2: Install alpaca-trade-api without its websockets dependency
-    print("📦 Step 2: Installing alpaca-trade-api==3.2.0 without websockets dependency...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "--no-deps", "alpaca-trade-api==3.2.0"], check=True)
+    # Step 2: Install alpaca-trade-api with --no-deps to ignore websocket constraint
+    print("\n📦 Step 2: Installing alpaca-trade-api without dependencies")
+    success = run_pip_install(
+        "alpaca-trade-api==3.2.0", 
+        "Installing alpaca-trade-api", 
+        "--no-deps --force-reinstall"
+    )
     
-    # Step 3: Install the rest of the requirements (excluding the conflicting ones)
-    print("📦 Step 3: Installing remaining requirements...")
+    if not success:
+        print("⚠️ Alpaca installation had issues, but continuing...")
     
-    # Read requirements.txt and filter out the conflicting packages
-    with open("requirements.txt", "r") as f:
-        requirements = f.readlines()
+    # Step 3: Install the rest of the requirements
+    print("\n📦 Step 3: Installing remaining requirements")
     
-    # Filter out alpaca-trade-api and websockets (we already installed them)
-    filtered_requirements = []
-    for req in requirements:
-        req = req.strip()
-        if req and not req.startswith("#"):
-            if not any(pkg in req for pkg in ["alpaca-trade-api", "websockets"]):
-                filtered_requirements.append(req)
+    # Read requirements file and install each package
+    script_dir = Path(__file__).parent
+    requirements_file = script_dir / "streamlit_requirements.txt"
     
-    # Install filtered requirements
-    for req in filtered_requirements:
-        try:
-            print(f"📦 Installing {req}...")
-            subprocess.run([sys.executable, "-m", "pip", "install", req], check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"⚠️ Warning: Failed to install {req}: {e}")
+    if requirements_file.exists():
+        with open(requirements_file, 'r') as f:
+            lines = f.readlines()
+        
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith('#') and 'alpaca-trade-api' not in line and 'websockets' not in line:
+                # Extract package name and version
+                if '==' in line:
+                    package = line.split('==')[0].strip()
+                    version = line.split('==')[1].split()[0].strip()  # Remove any extra args
+                    package_spec = f"{package}=={version}"
+                elif '>=' in line:
+                    package = line.split('>=')[0].strip()
+                    version = line.split('>=')[1].split()[0].strip()
+                    package_spec = f"{package}>={version}"
+                else:
+                    package_spec = line
+                
+                run_pip_install(package_spec, f"Installing {package_spec}")
     
-    # Step 4: Force reinstall websockets to ensure version 13.0 is used
-    print("📦 Step 4: Ensuring websockets==13.0 is active...")
-    subprocess.run([sys.executable, "-m", "pip", "install", "websockets==13.0", "--force-reinstall"], check=True)
+    # Step 4: Verify installation
+    print("\n🔍 Step 4: Verifying installation...")
+    try:
+        import websockets
+        print(f"✅ websockets version: {websockets.__version__}")
+        
+        import alpaca_trade_api
+        print(f"✅ alpaca-trade-api imported successfully")
+        
+        import tensorflow as tf
+        print(f"✅ tensorflow version: {tf.__version__}")
+        
+        if websockets.__version__ >= "13.0":
+            print("🎉 SUCCESS: All dependencies installed with correct versions!")
+        else:
+            print("⚠️ WARNING: websockets version is below 13.0, but continuing...")
+            
+    except ImportError as e:
+        print(f"❌ Import error: {e}")
+        print("⚠️ Some features may not work, but the app will continue...")
     
-    print("✅ Requirements installation completed with websockets override!")
+    print("\n✅ Installation process completed!")
 
 if __name__ == "__main__":
-    install_with_override() 
+    main() 
