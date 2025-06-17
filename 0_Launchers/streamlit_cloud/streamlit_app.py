@@ -5,6 +5,15 @@ Main entry point for Streamlit Cloud deployment with unlimited date range suppor
 """
 
 import streamlit as st
+
+# Configure page (MUST be the first Streamlit command)
+st.set_page_config(
+    page_title="Advanced Neural Network Trading System",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import sys
 import os
 from pathlib import Path
@@ -16,14 +25,6 @@ from datetime import datetime, timedelta
 import time
 import subprocess
 import yfinance as yf
-
-# Configure page (must be the first Streamlit command)
-st.set_page_config(
-    page_title="Advanced Neural Network Trading System",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Auto-setup dependencies on first run
 def auto_setup_dependencies():
@@ -74,11 +75,14 @@ def handle_version_conflicts():
         import websockets
         websocket_version = websockets.__version__
         
-        # Check if we have the right version for TensorFlow
-        if websocket_version >= "13.0":
-            st.success(f"✅ Websockets {websocket_version} - Compatible with TensorFlow")
+        # Check websocket version compatibility
+        if "9.0" <= websocket_version < "11.0":
+            st.success(f"✅ Websockets {websocket_version} - Compatible with Alpaca Trade API")
+        elif websocket_version >= "13.0":
+            st.warning(f"⚠️ Websockets {websocket_version} - May conflict with Alpaca Trade API")
+            st.info("Consider downgrading to websockets<11.0 for full compatibility")
         else:
-            st.warning(f"⚠️ Websockets {websocket_version} - May cause TensorFlow issues")
+            st.warning(f"⚠️ Websockets {websocket_version} - Version may be too old")
         
         # Try to import alpaca-trade-api with graceful handling
         try:

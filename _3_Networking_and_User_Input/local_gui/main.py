@@ -1029,6 +1029,9 @@ class MainWindow(QMainWindow):
             # Plot data
             self.chart.plot_stock_data(df)
             
+            # Update metrics widget with the new data
+            self.metrics_widget.update_metrics(df)
+            
             # Store data for training
             self.current_data = df
             
