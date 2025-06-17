@@ -41,7 +41,7 @@ py -3.9 -m pip install --no-cache-dir "numpy==1.24.3" "pandas==2.0.3" "tensorflo
 
 :: Install remaining packages in parallel using requirements file
 echo Step 5: Installing remaining packages...
-py -3.9 -m pip install --no-cache-dir -r web_requirements.txt
+py -3.9 -m pip install --no-cache-dir -r "%~dp0..\..\requirements.txt"
 
 :: Verify installation
 echo Step 6: Verifying installation...

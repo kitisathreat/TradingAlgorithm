@@ -125,7 +125,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-py -3.9 "..\_3_Networking_and_User_Input\local_gui\main.py"
+py -3.9 "..\..\_3_Networking_and_User_Input\local_gui\main.py"
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start GUI application
