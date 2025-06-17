@@ -50,7 +50,7 @@ class MetricsWidget(QWidget):
         super().__init__(parent)
         self.display_level = 'medium'  # 'min', 'medium', 'full'
         self.is_dragging = False
-        self.drag_start_pos = None
+        self.drag_start_global = None
         self.widget_start_pos = None
         self.setWindowFlags(Qt.Widget | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_StyledBackground, True)
@@ -151,25 +151,30 @@ class MetricsWidget(QWidget):
             self.scroll_area.setVisible(True)
             self.setMaximumWidth(350)
             self.setMinimumWidth(250)
-            self.setFixedHeight(320)
+            self.setMinimumHeight(200)
+            self.setMaximumHeight(400)
+            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         elif level == 'full':
             self.scroll_area.setVisible(True)
             parent = self.parentWidget()
             if parent:
-                self.setFixedHeight(parent.height() - 20)
+                self.setMinimumHeight(parent.height() - 20)
+                self.setMaximumHeight(parent.height() - 20)
             else:
-                self.setFixedHeight(600)
+                self.setMinimumHeight(400)
+                self.setMaximumHeight(800)
             self.setMaximumWidth(400)
             self.setMinimumWidth(300)
+            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.updateGeometry()
 
-    # --- Improved Draggable overlay logic ---
+    # --- DPI-safe Draggable overlay logic ---
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             # Only start drag if click is in header area
             if event.pos().y() <= self.header.height():
                 self.is_dragging = True
-                self.drag_start_pos = event.pos()
+                self.drag_start_global = event.globalPos()
                 self.widget_start_pos = self.pos()
                 event.accept()
             else:
@@ -179,8 +184,8 @@ class MetricsWidget(QWidget):
 
     def mouseMoveEvent(self, event):
         if self.is_dragging:
-            # Calculate new position relative to parent (chart)
-            delta = event.pos() - self.drag_start_pos
+            # Calculate delta in global coordinates
+            delta = event.globalPos() - self.drag_start_global
             new_pos = self.widget_start_pos + delta
             parent = self.parentWidget()
             if parent:
@@ -452,7 +457,7 @@ Volume: {row['Volume']:,}
             self.plot_items.append(wick)
         
         # Draw bodies (rectangles)
-        body_width = 0.35e4
+        body_width = 1.2e4  # Increased width
         for i in range(len(df)):
             color = 'g' if closes[i] >= opens[i] else 'r'
             left = x_vals[i] - body_width
@@ -474,9 +479,8 @@ Volume: {row['Volume']:,}
         current_price = df['Close'].iloc[-1]
         price_padding = (max_price - min_price) * 0.05  # 5% padding
         
-        # Always auto-range after plotting to match axes to data
+        # Auto-range ONCE, then lock
         self.getViewBox().enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
-        
         # Then set default zoom to last 30 days (or all data if less)
         num_points = len(x_vals)
         if num_points > 30:
@@ -488,6 +492,8 @@ Volume: {row['Volume']:,}
         self.getViewBox().setYRange(max(0, min_price - price_padding), max_price + price_padding, padding=0)
         self.setLabel('left', f'Price (USD$)')
         self.setLabel('bottom', 'Date')
+        # Lock auto-range so it doesn't rescale on hover
+        self.getViewBox().enableAutoRange(axis=pg.ViewBox.XYAxes, enable=False)
         
         # Add current price line
         self.addLine(y=current_price, pen=pg.mkPen('b', width=2, style=pg.QtCore.Qt.DashLine))
@@ -562,7 +568,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Neural Network Trading System")
-        self.setMinimumSize(1200, 800)
+        self.setMinimumSize(800, 600)
         
         # Initialize model components
         self.model_trainer = ModelTrainer()
@@ -621,6 +627,21 @@ class MainWindow(QMainWindow):
         self.chart = StockChartWidget()
         main_layout.addWidget(self.chart, stretch=1)
         self.chart.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        
+        # Auto Resize buttons below the chart
+        auto_resize_widget = QWidget()
+        auto_resize_layout = QHBoxLayout(auto_resize_widget)
+        auto_resize_layout.setContentsMargins(0, 0, 0, 0)
+        auto_resize_layout.setSpacing(10)
+        self.auto_x_btn = QPushButton("Auto Resize X Axis")
+        self.auto_x_btn.clicked.connect(self.auto_resize_x)
+        auto_resize_layout.addWidget(self.auto_x_btn)
+        self.auto_y_btn = QPushButton("Auto Resize Y Axis")
+        self.auto_y_btn.clicked.connect(self.auto_resize_y)
+        auto_resize_layout.addWidget(self.auto_y_btn)
+        auto_resize_layout.addStretch()
+        main_layout.addWidget(auto_resize_widget)
+        auto_resize_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
         # Overlay metrics widget on top of chart
         self.metrics_widget = MetricsWidget(self.chart)
@@ -834,6 +855,16 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
         self.train_btn.setEnabled(True)
         QMessageBox.critical(self, "Training Error", f"Training failed: {error_msg}")
+
+    def auto_resize_x(self):
+        vb = self.chart.getViewBox()
+        vb.enableAutoRange(axis=pg.ViewBox.XAxis, enable=True)
+        vb.enableAutoRange(axis=pg.ViewBox.XAxis, enable=False)
+
+    def auto_resize_y(self):
+        vb = self.chart.getViewBox()
+        vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=True)
+        vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False)
 
 def main():
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
