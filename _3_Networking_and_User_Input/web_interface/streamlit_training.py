@@ -342,17 +342,26 @@ def collect_trading_decision():
     return decision, confidence, reasoning
 
 def load_stock_data(symbol: str, days: int = 30):
-    """Load stock data using the same approach as local GUI"""
+    """Load stock data using random date range within the last 25 years"""
     try:
-        reference_date = datetime(2024, 12, 20, tzinfo=timezone.utc)  # December 20, 2024 - should have data
-        end_date = reference_date
-        start_date = end_date - timedelta(days=days)
+        # Import the date range utilities
+        import sys
+        from pathlib import Path
+        REPO_ROOT = Path(__file__).parent.parent.parent
+        ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+        sys.path.append(str(ORCHESTRATOR_PATH))
         
-        if start_date >= end_date:
-            st.error(f"Invalid date range: start_date {start_date.strftime('%Y-%m-%d')} >= end_date {end_date.strftime('%Y-%m-%d')}")
+        from date_range_utils import find_available_data_range, validate_date_range
+        
+        # Get random date range within the last 25 years
+        start_date, end_date = find_available_data_range(symbol, days, max_years_back=25)
+        
+        # Validate the date range
+        if not validate_date_range(start_date, end_date, symbol):
+            st.error(f"Invalid date range generated for {symbol}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
             return None, None
         
-        st.info(f"Fetching {days} days of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using 2024 reference date)")
+        st.info(f"Fetching {days} days of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
         
         ticker = yf.Ticker(symbol)
         df = ticker.history(start=start_date, end=end_date)
@@ -366,6 +375,10 @@ def load_stock_data(symbol: str, days: int = 30):
             df.index = df.index.tz_localize('UTC')
         else:
             df.index = df.index.tz_convert('UTC')
+        
+        # Check if we got the expected amount of data
+        if len(df) < days * 0.8:  # Allow 20% tolerance for weekends/holidays
+            st.warning(f"Got {len(df)} days of data for {symbol}, expected around {days} days")
         
         if df.index.max() > end_date:
             st.warning(f"Data for {symbol} contains dates newer than expected. This may indicate a system clock issue.")

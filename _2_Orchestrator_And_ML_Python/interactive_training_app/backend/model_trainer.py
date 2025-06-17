@@ -165,27 +165,54 @@ class ModelTrainer:
     
     def get_historical_stock_data(self, symbol: str, years_back: int = 25) -> pd.DataFrame:
         """
-        Fetch historical stock data going back up to 25 years
+        Fetch historical stock data going back up to 25 years with random date selection
         Addresses the insufficient data problem from your logs
         """
         try:
             if not ML_IMPORTS_AVAILABLE:
                 return self._generate_synthetic_historical_data(symbol, years_back)
             
-            # Use current date minus buffer to ensure we get real data
-            # Make timezone-aware to match yfinance data
-            current_date = datetime.now(timezone.utc)
-            end_date = current_date - timedelta(days=5)
-            start_date = end_date - timedelta(days=years_back * 365)
+            # Import the date range utilities
+            import sys
+            from pathlib import Path
+            REPO_ROOT = Path(__file__).parent.parent.parent
+            ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+            sys.path.append(str(ORCHESTRATOR_PATH))
             
-            if start_date >= end_date:
-                logger.error(f"Invalid date range: start_date {start_date} >= end_date {end_date}")
-                return self._generate_synthetic_historical_data(symbol, years_back)
+            from date_range_utils import find_available_data_range, validate_date_range
             
-            logger.info(f"Fetching {years_back} years of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using {current_date.year} reference date)")
+            # Calculate days needed (approximately years_back * 365)
+            days_needed = years_back * 365
+            
+            # Get random date range within the last years_back years
+            start_date, end_date = find_available_data_range(symbol, days_needed, max_years_back=years_back)
+            
+            # Validate the date range
+            if not validate_date_range(start_date, end_date, symbol):
+                logger.warning(f"Invalid date range generated for {symbol}, using synthetic data")
+                return self._generate_synthetic_historical_data(symbol, min(years_back, 2))
+            
+            logger.info(f"Fetching {years_back} years of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last {years_back} years)")
             
             ticker = yf.Ticker(symbol)
             
+            # Try to get data using the calculated date range
+            try:
+                data = ticker.history(start=start_date, end=end_date)
+                if not data.empty and len(data) > 30:
+                    # Ensure index is UTC-aware
+                    if data.index.tz is None:
+                        data.index = data.index.tz_localize('UTC')
+                    else:
+                        data.index = data.index.tz_convert('UTC')
+                    
+                    logger.info(f"Successfully fetched {len(data)} days of {symbol} data using date range")
+                    logger.info(f"Data range: {data.index.min().strftime('%Y-%m-%d')} to {data.index.max().strftime('%Y-%m-%d')}")
+                    return self._clean_and_enhance_data(data)
+            except Exception as e:
+                logger.warning(f"Date range fetch failed for {symbol}: {e}")
+            
+            # Fallback to period-based fetching if date range fails
             for period in ["5y", "2y", "1y", "6mo"]:
                 try:
                     data = ticker.history(period=period)
@@ -195,33 +222,21 @@ class ModelTrainer:
                             data.index = data.index.tz_localize('UTC')
                         else:
                             data.index = data.index.tz_convert('UTC')
-                        end_date_utc = pd.Timestamp(end_date).tz_localize('UTC') if pd.Timestamp(end_date).tzinfo is None else pd.Timestamp(end_date).tz_convert('UTC')
-                        filtered_data = data[data.index <= end_date_utc]
+                        
+                        # Filter to ensure we don't have future data
+                        current_date = datetime.now(timezone.utc)
+                        filtered_data = data[data.index <= current_date]
+                        
                         if not filtered_data.empty and len(filtered_data) > 30:
                             logger.info(f"Successfully fetched {len(filtered_data)} days of {symbol} data using period={period}")
                             logger.info(f"Data range: {filtered_data.index.min().strftime('%Y-%m-%d')} to {filtered_data.index.max().strftime('%Y-%m-%d')}")
                             return self._clean_and_enhance_data(filtered_data)
                         else:
-                            logger.warning(f"Data for {symbol} filtered to end_date is insufficient, trying next period")
+                            logger.warning(f"Data for {symbol} filtered to current date is insufficient, trying next period")
                             continue
                 except Exception as e:
                     logger.warning(f"Period {period} failed for {symbol}: {e}")
                     continue
-            
-            try:
-                safe_end_date = end_date
-                safe_start_date = safe_end_date - timedelta(days=min(years_back * 365, 730))
-                data = ticker.history(start=safe_start_date, end=safe_end_date)
-                if not data.empty:
-                    if data.index.tz is None:
-                        data.index = data.index.tz_localize('UTC')
-                    else:
-                        data.index = data.index.tz_convert('UTC')
-                    logger.info(f"Successfully fetched {len(data)} days of {symbol} data using date range")
-                    logger.info(f"Data range: {data.index.min().strftime('%Y-%m-%d')} to {data.index.max().strftime('%Y-%m-%d')}")
-                    return self._clean_and_enhance_data(data)
-            except Exception as e:
-                logger.warning(f"Date range fetch failed for {symbol}: {e}")
             
             logger.info(f"Using synthetic data for {symbol}")
             return self._generate_synthetic_historical_data(symbol, min(years_back, 2))
@@ -314,18 +329,29 @@ class ModelTrainer:
         return df
     
     def _generate_synthetic_historical_data(self, symbol: str, years: int) -> pd.DataFrame:
-        """Generate realistic synthetic historical data"""
+        """Generate realistic synthetic historical data with random date ranges"""
         logger.info(f"Generating {years} years of synthetic data for {symbol}")
         
-        # Create date range (business days only) - use recent dates
-        end_date = datetime.now() - timedelta(days=5)  # 5 days ago
-        start_date = end_date - timedelta(days=years * 365)
+        # Import the date range utilities for random date selection
+        import sys
+        from pathlib import Path
+        REPO_ROOT = Path(__file__).parent.parent.parent
+        ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+        sys.path.append(str(ORCHESTRATOR_PATH))
+        
+        from date_range_utils import get_random_date_range
+        
+        # Get random date range within the last 25 years
+        days_needed = years * 365
+        start_date, end_date = get_random_date_range(days_needed, max_years_back=25)
+        
+        # Create date range (business days only) using the random dates
         date_range = pd.bdate_range(start=start_date, end=end_date)
         
         if len(date_range) < 30:
             logger.warning(f"Generated date range too short ({len(date_range)} days), using 30 days")
-            end_date = datetime.now() - timedelta(days=5)
-            start_date = end_date - timedelta(days=30)
+            # Fallback to a shorter period if needed
+            end_date = start_date + timedelta(days=30)
             date_range = pd.bdate_range(start=start_date, end=end_date)
         
         # Generate realistic price movements with trends and cycles
@@ -395,7 +421,7 @@ class ModelTrainer:
             'Volume': volumes
         }, index=date_range)
         
-        logger.info(f"Generated synthetic data: {len(df)} days, price range: ${df['Low'].min():.2f} - ${df['High'].max():.2f}")
+        logger.info(f"Generated synthetic data: {len(df)} days, date range: {df.index.min().strftime('%Y-%m-%d')} to {df.index.max().strftime('%Y-%m-%d')}, price range: ${df['Low'].min():.2f} - ${df['High'].max():.2f}")
         return self._add_comprehensive_technical_indicators(df)
     
     def get_random_stock_data(self) -> Tuple[Dict, pd.DataFrame, str]:
