@@ -9,6 +9,12 @@ For troubleshooting, see docs/streamlit_cloud_troubleshooting.md
 import sys
 import os
 from pathlib import Path
+
+# Force project root into sys.path before any other imports
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import streamlit as st
 import platform
 import logging
@@ -20,6 +26,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
+import traceback
 
 # Load environment variables from .env file immediately
 try:
@@ -32,6 +39,31 @@ except Exception as e:
     print(f"Error loading .env file: {e}")
 
 print("PYTHONPATH:", sys.path)
+
+# Logging setup
+DEBUG_LOG = Path(__file__).parent / 'streamlit_import_debug.log'
+def log_debug(msg):
+    print(msg)
+    with open(DEBUG_LOG, 'a') as f:
+        f.write(str(msg) + '\n')
+
+log_debug('--- Streamlit App Debug Start ---')
+log_debug(f'Current working directory: {os.getcwd()}')
+log_debug(f'sys.path: {sys.path}')
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+log_debug(f'REPO_ROOT: {REPO_ROOT}')
+log_debug(f'Exists _2_Orchestrator_And_ML_Python: {os.path.isdir(REPO_ROOT / "_2_Orchestrator_And_ML_Python")}')
+log_debug(f'Exists model_trainer.py: {os.path.isfile(REPO_ROOT / "_2_Orchestrator_And_ML_Python" / "interactive_training_app" / "backend" / "model_trainer.py")}')
+
+# Try import and log errors
+try:
+    from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
+    log_debug('Successfully imported ModelTrainer')
+except Exception as e:
+    log_debug('ImportError for ModelTrainer:')
+    log_debug(traceback.format_exc())
+    ModelTrainer = None
 
 def is_streamlit_cloud() -> bool:
     """
