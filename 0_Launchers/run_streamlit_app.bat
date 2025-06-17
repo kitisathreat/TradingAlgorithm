@@ -59,6 +59,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Check if port 8501 is already in use before starting
+echo Checking if port 8501 is available...
+netstat -an | findstr ":8501" | findstr "LISTENING" >nul
+if not errorlevel 1 (
+    echo ❌ Error: Port 8501 is already in use
+    echo Please close any other applications using port 8501 and try again
+    echo.
+    echo To find what's using the port, run: netstat -ano | findstr :8501
+    echo.
+    pause
+    exit /b 1
+)
+
 :: Run the Neural Network Training Streamlit app
 echo.
 echo ════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -70,21 +83,32 @@ echo Press Ctrl+C to stop the server when done
 echo.
 
 streamlit run "..\_3_Networking_and_User_Input\web_interface\streamlit_app.py" --server.port 8501 --server.address localhost
-if errorlevel 1 (
+set STREAMLIT_EXIT_CODE=%errorlevel%
+
+:: Only show error message if it's not a normal interruption (Ctrl+C typically returns 2)
+if %STREAMLIT_EXIT_CODE% neq 0 (
+    if %STREAMLIT_EXIT_CODE% neq 2 (
+        echo.
+        echo ❌ Error: Failed to start Streamlit app (Exit code: %STREAMLIT_EXIT_CODE%)
+        echo Common issues:
+        echo - Port 8501 is already in use
+        echo - Streamlit installation is corrupted
+        echo - Virtual environment is not properly activated
+        echo.
+        echo Try these solutions:
+        echo 1. Close any other Streamlit apps
+        echo 2. Run setup_and_run.bat again
+        echo 3. Check if antivirus is blocking the connection
+        echo.
+        pause
+        exit /b 1
+    ) else (
+        echo.
+        echo ✓ Streamlit server stopped successfully
+    )
+) else (
     echo.
-    echo ❌ Error: Failed to start Streamlit app
-    echo Common issues:
-    echo - Port 8501 is already in use
-    echo - Streamlit installation is corrupted
-    echo - Virtual environment is not properly activated
-    echo.
-    echo Try these solutions:
-    echo 1. Close any other Streamlit apps
-    echo 2. Run setup_and_run.bat again
-    echo 3. Check if antivirus is blocking the connection
-    echo.
-    pause
-    exit /b 1
+    echo ✓ Streamlit server stopped successfully
 )
 
 endlocal 

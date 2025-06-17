@@ -242,18 +242,24 @@ class MainWindow(QMainWindow):
             stock = self.stock_combo.currentText()
             days = self.date_range.value()
             
-            # Use a reference date that yfinance should definitely have data for
-            # Since today is June 16, 2025, let's use a date from 2024 that we know exists
-            reference_date = datetime(2024, 12, 20, tzinfo=timezone.utc)  # December 20, 2024 - should have data
-            end_date = reference_date
-            start_date = end_date - timedelta(days=days)
+            # Import the date range utilities
+            import sys
+            from pathlib import Path
+            REPO_ROOT = Path(__file__).parent.parent.parent
+            ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+            sys.path.append(str(ORCHESTRATOR_PATH))
             
-            # Validate dates to prevent future date issues
-            if start_date >= end_date:
-                QMessageBox.critical(self, "Error", f"Invalid date range: start_date {start_date.strftime('%Y-%m-%d')} >= end_date {end_date.strftime('%Y-%m-%d')}")
+            from date_range_utils import find_available_data_range, validate_date_range
+            
+            # Get random date range within the last 25 years
+            start_date, end_date = find_available_data_range(stock, days, max_years_back=25)
+            
+            # Validate the date range
+            if not validate_date_range(start_date, end_date, stock):
+                QMessageBox.critical(self, "Error", f"Invalid date range generated for {stock}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 return
             
-            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using 2024 reference date)")
+            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
             
             ticker = yf.Ticker(stock)
             df = ticker.history(start=start_date, end=end_date)
@@ -267,6 +273,10 @@ class MainWindow(QMainWindow):
                 df.index = df.index.tz_localize('UTC')
             else:
                 df.index = df.index.tz_convert('UTC')
+            
+            # Check if we got the expected amount of data
+            if len(df) < days * 0.8:  # Allow 20% tolerance for weekends/holidays
+                print(f"Warning: Got {len(df)} days of data for {stock}, expected around {days} days")
             
             # Validate that data is not newer than our end_date
             if df.index.max() > end_date:
@@ -362,18 +372,24 @@ class MainWindow(QMainWindow):
     def get_prediction(self):
         stock = self.pred_stock_combo.currentText()
         try:
-            # Use a reference date that yfinance should definitely have data for
-            # Since today is June 16, 2025, let's use a date from 2024 that we know exists
-            reference_date = datetime(2024, 12, 20, tzinfo=timezone.utc)  # December 20, 2024 - should have data
-            end_date = reference_date
-            start_date = end_date - timedelta(days=30)  # Last 30 days from the reference date
+            # Import the date range utilities
+            import sys
+            from pathlib import Path
+            REPO_ROOT = Path(__file__).parent.parent.parent
+            ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+            sys.path.append(str(ORCHESTRATOR_PATH))
             
-            # Validate dates
-            if start_date >= end_date:
-                self.prediction_label.setText(f"Error: Invalid date range for {stock}")
+            from date_range_utils import find_available_data_range, validate_date_range
+            
+            # Get random date range within the last 25 years (30 days for prediction)
+            start_date, end_date = find_available_data_range(stock, 30, max_years_back=25)
+            
+            # Validate the date range
+            if not validate_date_range(start_date, end_date, stock):
+                self.prediction_label.setText(f"Error: Invalid date range generated for {stock}")
                 return
             
-            print(f"Fetching prediction data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (using 2024 reference date)")
+            print(f"Fetching prediction data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
             
             ticker = yf.Ticker(stock)
             df = ticker.history(start=start_date, end=end_date)
@@ -387,6 +403,10 @@ class MainWindow(QMainWindow):
                 df.index = df.index.tz_localize('UTC')
             else:
                 df.index = df.index.tz_convert('UTC')
+            
+            # Check if we got the expected amount of data
+            if len(df) < 24:  # Allow tolerance for weekends/holidays
+                print(f"Warning: Got {len(df)} days of data for {stock}, expected around 30 days")
             
             # Validate that data is not newer than our end_date
             if df.index.max() > end_date:
