@@ -226,6 +226,13 @@ def display_data_controls(trainer):
 def load_stock_data(trainer, symbol, days):
     """Load stock data using the same logic as local GUI with unlimited date range"""
     try:
+        # Validate symbol parameter
+        if symbol is None or not isinstance(symbol, str) or not symbol.strip():
+            st.error("Invalid stock symbol provided")
+            return None, None, None
+        
+        symbol = symbol.strip().upper()
+        
         # Import the date range utilities
         from date_range_utils import find_available_data_range, validate_date_range
         

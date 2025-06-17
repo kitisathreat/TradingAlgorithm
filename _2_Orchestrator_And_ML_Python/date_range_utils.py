@@ -85,6 +85,13 @@ def find_available_data_range(symbol: str, requested_days: int, max_years_back: 
     Returns:
         Tuple of (start_date, end_date) that should have available data
     """
+    # Validate symbol parameter
+    if symbol is None or not isinstance(symbol, str) or not symbol.strip():
+        logger.error(f"Invalid symbol provided: {symbol}")
+        return get_random_date_range(requested_days, max_years_back)
+    
+    symbol = symbol.strip().upper()
+    
     try:
         import yfinance as yf
         
@@ -147,26 +154,29 @@ def validate_date_range(start_date: datetime, end_date: datetime, symbol: str = 
     Returns:
         True if the date range is valid
     """
+    # Handle None symbol gracefully
+    symbol_display = symbol if symbol is not None else 'unknown'
+    
     current_date = datetime.now(timezone.utc)
     
     # Check if dates are in the future
     if start_date > current_date or end_date > current_date:
-        logger.warning(f"Date range contains future dates for {symbol or 'unknown'}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        logger.warning(f"Date range contains future dates for {symbol_display}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         return False
     
     # Check if start date is too far in the past (more than 150 years - reasonable for stock data)
     if start_date < current_date - timedelta(days=150 * 365):
-        logger.warning(f"Start date too far in the past for {symbol or 'unknown'}: {start_date.strftime('%Y-%m-%d')}")
+        logger.warning(f"Start date too far in the past for {symbol_display}: {start_date.strftime('%Y-%m-%d')}")
         return False
     
     # Check if date range is reasonable (not negative or too long)
     if start_date >= end_date:
-        logger.warning(f"Invalid date range for {symbol or 'unknown'}: start >= end")
+        logger.warning(f"Invalid date range for {symbol_display}: start >= end")
         return False
     
     # Allow longer date ranges since we're looking for specific lengths from anywhere in history
     if (end_date - start_date).days > 365 * 50:  # More than 50 years
-        logger.warning(f"Date range too long for {symbol or 'unknown'}: {(end_date - start_date).days} days")
+        logger.warning(f"Date range too long for {symbol_display}: {(end_date - start_date).days} days")
         return False
     
     return True 

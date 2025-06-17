@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QComboBox, QSpinBox,
     QTabWidget, QProgressBar, QMessageBox, QSplitter,
-    QSizePolicy, QFrame, QScrollArea, QGridLayout, QGroupBox
+    QSizePolicy, QFrame, QScrollArea, QGridLayout, QGroupBox, QLineEdit
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QMutex, QPoint
 from PyQt5.QtGui import QFont, QIcon, QPainter, QColor
@@ -19,6 +19,7 @@ from qt_material import apply_stylesheet
 from pyqtgraph import DateAxisItem
 import time
 from functools import lru_cache
+from custom_model_dialog import CustomModelDialog
 
 # Add parent directory to path to import from orchestrator
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -548,13 +549,24 @@ class TrainingThread(QThread):
         super().__init__()
         self.model_trainer = model_trainer
         self.epochs = epochs
-        
+    
     def run(self):
         try:
-            self.model_trainer.train_model(epochs=self.epochs, 
-                                         progress_callback=lambda x: self.progress.emit(x))
-            self.finished.emit()
+            print(f"Starting training with {self.epochs} epochs...")
+            print(f"Training data: {len(self.model_trainer.training_examples)} examples")
+            print(f"Model type: {self.model_trainer.model_type}")
+            
+            # Train the neural network
+            success = self.model_trainer.train_neural_network(epochs=self.epochs)
+            
+            if success:
+                print("Training completed successfully!")
+                self.finished.emit()
+            else:
+                self.error.emit("Training failed - check console for details")
+                
         except Exception as e:
+            print(f"Error in training thread: {e}")
             self.error.emit(str(e))
 
 class MainWindow(QMainWindow):
@@ -572,7 +584,19 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(10)
+        main_layout.setSpacing(0)
+        
+        # Create scrollable area for entire content
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Create content widget that will be inside the scroll area
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.content_layout.setContentsMargins(10, 10, 10, 10)
+        self.content_layout.setSpacing(10)
         
         # Controls (stock, date, get data)
         controls_widget = QWidget()
@@ -582,13 +606,51 @@ class MainWindow(QMainWindow):
         
         # Stock selection
         self.stock_combo = QComboBox()
-        self.stock_combo.addItems([
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 
-            'AMD', 'INTC', 'CRM', 'ADBE', 'PYPL', 'UBER', 'SHOP', 'SQ',
-            'SPY', 'QQQ', 'IWM', 'VTI'  # ETFs for more reliable data
-        ])
+        
+        # Import stock selection utilities
+        try:
+            import sys
+            from pathlib import Path
+            REPO_ROOT = Path(__file__).parent.parent.parent
+            ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+            sys.path.append(str(ORCHESTRATOR_PATH))
+            
+            from stock_selection_utils import StockSelectionManager
+            self.stock_manager = StockSelectionManager()
+            
+            # Add special options first
+            self.stock_combo.addItem("🎲 Random Pick", "random")
+            self.stock_combo.addItem("🚀 Optimized Pick", "optimized")
+            self.stock_combo.addItem("✏️ Custom Ticker", "custom")
+            self.stock_combo.insertSeparator(3)
+            
+            # Add S&P100 stocks sorted by market cap
+            stock_options = self.stock_manager.get_stock_options()
+            for option in stock_options[3:]:  # Skip the first 3 special options
+                display_name = f"{option['symbol']} - {option['description']}"
+                self.stock_combo.addItem(display_name, option['symbol'])
+                
+        except Exception as e:
+            print(f"Error loading stock selection utilities: {e}")
+            # Fallback to basic stocks
+            self.stock_combo.addItems([
+                'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 
+                'AMD', 'INTC', 'CRM', 'ADBE', 'PYPL', 'UBER', 'SHOP', 'SQ',
+                'SPY', 'QQQ', 'IWM', 'VTI'  # ETFs for more reliable data
+            ])
+            self.stock_manager = None
+        
         controls_layout.addWidget(QLabel("Stock:"))
         controls_layout.addWidget(self.stock_combo)
+        
+        # Custom ticker input (initially hidden)
+        self.custom_ticker_input = QLineEdit()
+        self.custom_ticker_input.setPlaceholderText("Enter ticker symbol...")
+        self.custom_ticker_input.setVisible(False)
+        controls_layout.addWidget(self.custom_ticker_input)
+        
+        # Connect stock selection change
+        self.stock_combo.currentTextChanged.connect(self.on_stock_selection_changed)
         
         # Date range selection
         controls_layout.addWidget(QLabel("Days of History:"))
@@ -613,13 +675,27 @@ class MainWindow(QMainWindow):
         self.loading_label.setVisible(False)
         controls_layout.addWidget(self.loading_label)
         
-        main_layout.addWidget(controls_widget)
+        self.content_layout.addWidget(controls_widget)
         controls_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
-        # Chart widget
+        # Create a splitter for the chart and controls area
+        self.main_splitter = QSplitter(Qt.Vertical)
+        self.main_splitter.setChildrenCollapsible(False)
+        self.main_splitter.setHandleWidth(8)
+        self.main_splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #cccccc;
+                border: 1px solid #999999;
+            }
+            QSplitter::handle:hover {
+                background-color: #aaaaaa;
+            }
+        """)
+        
+        # Chart widget (top part of splitter)
         self.chart = StockChartWidget()
-        main_layout.addWidget(self.chart, stretch=1)
-        self.chart.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.chart.setMinimumHeight(300)  # Minimum height for chart
+        self.main_splitter.addWidget(self.chart)
         
         # Auto Resize buttons below the chart
         auto_resize_widget = QWidget()
@@ -633,7 +709,24 @@ class MainWindow(QMainWindow):
         self.auto_y_btn.clicked.connect(self.auto_resize_y)
         auto_resize_layout.addWidget(self.auto_y_btn)
         auto_resize_layout.addStretch()
-        main_layout.addWidget(auto_resize_widget)
+        
+        # Add splitter control buttons
+        self.maximize_chart_btn = QPushButton("📈 Max Chart")
+        self.maximize_chart_btn.setToolTip("Maximize chart area (80% chart, 20% controls)")
+        self.maximize_chart_btn.clicked.connect(self.maximize_chart_area)
+        auto_resize_layout.addWidget(self.maximize_chart_btn)
+        
+        self.minimize_chart_btn = QPushButton("📊 Min Chart")
+        self.minimize_chart_btn.setToolTip("Minimize chart area (40% chart, 60% controls)")
+        self.minimize_chart_btn.clicked.connect(self.minimize_chart_area)
+        auto_resize_layout.addWidget(self.minimize_chart_btn)
+        
+        self.reset_splitter_btn = QPushButton("🔄 Reset")
+        self.reset_splitter_btn.setToolTip("Reset to default proportions (70% chart, 30% controls)")
+        self.reset_splitter_btn.clicked.connect(self.reset_splitter_proportions)
+        auto_resize_layout.addWidget(self.reset_splitter_btn)
+        
+        self.main_splitter.addWidget(auto_resize_widget)
         auto_resize_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
         # Overlay metrics widget on top of chart
@@ -641,10 +734,17 @@ class MainWindow(QMainWindow):
         self.metrics_widget.move(30, 30)
         self.metrics_widget.show()
         self.metrics_widget.raise_()
-        # Optionally, set a higher z-order if needed
-        # self.metrics_widget.setWindowFlags(self.metrics_widget.windowFlags() | Qt.WindowStaysOnTopHint)
         
-        # Trading decision controls (below chart)
+        # Add splitter to content layout
+        self.content_layout.addWidget(self.main_splitter, stretch=1)
+        
+        # Create a container for all the controls below the chart
+        controls_container = QWidget()
+        controls_container_layout = QVBoxLayout(controls_container)
+        controls_container_layout.setContentsMargins(0, 0, 0, 0)
+        controls_container_layout.setSpacing(10)
+        
+        # Trading decision controls
         decision_widget = QWidget()
         decision_layout = QVBoxLayout(decision_widget)
         decision_layout.setContentsMargins(0, 0, 0, 0)
@@ -669,6 +769,7 @@ class MainWindow(QMainWindow):
         decision_layout.addWidget(QLabel("Trading Reasoning:"))
         self.reasoning_input = QTextEdit()
         self.reasoning_input.setPlaceholderText("Explain your trading decision...")
+        self.reasoning_input.setMaximumHeight(100)  # Limit height for better layout
         decision_layout.addWidget(self.reasoning_input)
         
         # Submit button
@@ -676,18 +777,53 @@ class MainWindow(QMainWindow):
         self.submit_btn.clicked.connect(self.submit_decision)
         decision_layout.addWidget(self.submit_btn)
         
-        main_layout.addWidget(decision_widget)
+        controls_container_layout.addWidget(decision_widget)
         decision_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
-        # Training controls (below decision controls)
+        # Training controls
         training_widget = QWidget()
-        training_controls = QHBoxLayout(training_widget)
+        training_layout = QVBoxLayout(training_widget)
+        training_layout.setContentsMargins(0, 0, 0, 0)
+        training_layout.setSpacing(10)
+        
+        # Additive training info
+        additive_info = QLabel(f"📚 Additive Training Enabled: {len(self.model_trainer.training_examples)} examples from previous sessions")
+        additive_info.setStyleSheet("color: #2196F3; font-weight: bold; padding: 5px;")
+        training_layout.addWidget(additive_info)
+        
+        # Model selection section
+        model_selection_widget = QWidget()
+        model_layout = QHBoxLayout(model_selection_widget)
+        model_layout.setContentsMargins(0, 0, 0, 0)
+        model_layout.setSpacing(10)
+        
+        model_layout.addWidget(QLabel("Neural Network Model:"))
+        self.model_combo = QComboBox()
+        self.model_combo.addItems([
+            "Simple Model (32-16-3 layers)",
+            "Standard Model (128-64-32-3 layers)", 
+            "Deep Model (256-128-64-32-16-3 layers)",
+            "LSTM Model (Sequential patterns)",
+            "Ensemble Model (Multiple architectures)",
+            "➕ Create Your Own Model..."
+        ])
+        self.model_combo.setCurrentIndex(1)  # Default to standard
+        model_layout.addWidget(self.model_combo)
+        
+        self.change_model_btn = QPushButton("Change Model")
+        self.change_model_btn.clicked.connect(self.change_model)
+        model_layout.addWidget(self.change_model_btn)
+        
+        training_layout.addWidget(model_selection_widget)
+        
+        # Training parameters section
+        training_controls = QHBoxLayout()
         training_controls.setContentsMargins(0, 0, 0, 0)
         training_controls.setSpacing(10)
         
         self.epochs_spin = QSpinBox()
-        self.epochs_spin.setRange(1, 100)
-        self.epochs_spin.setValue(10)
+        self.epochs_spin.setRange(1, 500)
+        self.epochs_spin.setValue(50)
         training_controls.addWidget(QLabel("Training Epochs:"))
         training_controls.addWidget(self.epochs_spin)
         
@@ -699,8 +835,23 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
         training_controls.addWidget(self.progress_bar)
         
-        main_layout.addWidget(training_widget)
+        training_layout.addLayout(training_controls)
+        
+        controls_container_layout.addWidget(training_widget)
         training_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        
+        # Add controls container to main splitter
+        self.main_splitter.addWidget(controls_container)
+        
+        # Set initial splitter sizes (70% chart, 30% controls)
+        self.main_splitter.setSizes([700, 300])
+        
+        # Set the content widget as the scroll area's widget
+        self.scroll_area.setWidget(self.content_widget)
+        main_layout.addWidget(self.scroll_area)
+        
+        # Add a status bar to show scroll information
+        self.statusBar().showMessage("Use the splitter handle to resize the chart area. Scroll if content exceeds window bounds. F11: Fullscreen, F5: Refresh data.")
         
     def on_date_range_changed(self, value):
         if value == "Custom":
@@ -708,16 +859,87 @@ class MainWindow(QMainWindow):
         else:
             self.date_range_spin.setVisible(False)
     
+    def on_stock_selection_changed(self, text):
+        """Handle stock selection changes"""
+        try:
+            # Get the current data (symbol) from the combo box
+            current_data = self.stock_combo.currentData()
+            
+            if current_data == "random":
+                # Get random stock
+                if self.stock_manager:
+                    symbol, name = self.stock_manager.get_random_stock()
+                    # Update the combo box to show the selected stock
+                    for i in range(self.stock_combo.count()):
+                        if self.stock_combo.itemData(i) == symbol:
+                            self.stock_combo.setCurrentIndex(i)
+                            break
+                    QMessageBox.information(self, "Random Pick", f"🎲 Random pick: {symbol} ({name})")
+                self.custom_ticker_input.setVisible(False)
+                
+            elif current_data == "optimized":
+                # Get optimized pick
+                if self.stock_manager:
+                    symbol, name = self.stock_manager.get_optimized_pick()
+                    # Update the combo box to show the selected stock
+                    for i in range(self.stock_combo.count()):
+                        if self.stock_combo.itemData(i) == symbol:
+                            self.stock_combo.setCurrentIndex(i)
+                            break
+                    QMessageBox.information(self, "Optimized Pick", f"🚀 Optimized pick: {symbol} ({name})")
+                self.custom_ticker_input.setVisible(False)
+                
+            elif current_data == "custom":
+                # Show custom ticker input
+                self.custom_ticker_input.setVisible(True)
+                self.custom_ticker_input.setFocus()
+                
+            else:
+                # Regular stock selected
+                self.custom_ticker_input.setVisible(False)
+                
+        except Exception as e:
+            print(f"Error in stock selection change: {e}")
+            self.custom_ticker_input.setVisible(False)
+
     def load_stock_data(self):
         try:
-            stock = self.stock_combo.currentText()
+            # Get the selected stock symbol
+            stock_data = self.stock_combo.currentData()
+            
+            # Validate stock_data
+            if stock_data is None:
+                QMessageBox.warning(self, "Warning", "Please select a valid stock")
+                return
+            
+            # Handle special cases
+            if stock_data == "custom":
+                stock = self.custom_ticker_input.text().strip().upper()
+                if not stock:
+                    QMessageBox.warning(self, "Warning", "Please enter a ticker symbol")
+                    return
+                
+                # Validate custom ticker
+                if self.stock_manager:
+                    is_valid, message, company_name = self.stock_manager.validate_custom_ticker(stock)
+                    if not is_valid:
+                        QMessageBox.warning(self, "Invalid Ticker", message)
+                        return
+            else:
+                stock = stock_data
+            
+            # Additional validation for stock symbol
+            if not stock or not isinstance(stock, str) or not stock.strip():
+                QMessageBox.warning(self, "Warning", "Invalid stock symbol")
+                return
+            
             # Get days from combo or spinbox
             if hasattr(self, 'date_range_combo') and self.date_range_combo.currentText() == "Custom":
                 days = self.date_range_spin.value()
             elif hasattr(self, 'date_range_combo'):
                 days = int(self.date_range_combo.currentText())
             else:
-                days = 30
+                days = 30  # Default fallback
             
             # Import the date range utilities
             import sys
@@ -728,59 +950,56 @@ class MainWindow(QMainWindow):
             
             from date_range_utils import find_available_data_range, validate_date_range
             
-            # Get random date range with no limit on how far back we can look
-            start_date, end_date = find_available_data_range(stock, days, max_years_back=None)
+            # Get random date range within the last 25 years
+            start_date, end_date = find_available_data_range(stock, days, max_years_back=25)
             
             # Validate the date range
             if not validate_date_range(start_date, end_date, stock):
                 QMessageBox.critical(self, "Error", f"Invalid date range generated for {stock}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 return
             
-            # Show loading indicator
-            self.get_data_btn.setEnabled(False)
-            self.loading_label.setText("Loading data...")
-            self.loading_label.setVisible(True)
+            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
             
-            # Start data loading in background thread
-            self.data_thread = DataLoadingThread(stock, days, start_date, end_date)
-            self.data_thread.data_loaded.connect(self.on_data_loaded)
-            self.data_thread.error.connect(self.on_data_error)
-            self.data_thread.start()
+            ticker = yf.Ticker(stock)
+            df = ticker.history(start=start_date, end=end_date)
             
-        except Exception as e:
-            print(f"Error loading data: {str(e)}")
-            QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}\n\nTry:\n- Different stock symbol\n- Fewer days of history\n- Check internet connection\n- Check system clock")
-    
-    def on_data_loaded(self, df, stock, date_range_str):
-        try:
-            # Hide loading indicator
-            self.get_data_btn.setEnabled(True)
-            self.loading_label.setVisible(False)
+            if df.empty:
+                QMessageBox.warning(self, "Error", f"No data found for {stock}. Please try a different stock or fewer days.")
+                return
             
+            # Ensure df.index is timezone-aware (UTC)
+            if df.index.tz is None:
+                df.index = df.index.tz_localize('UTC')
+            else:
+                df.index = df.index.tz_convert('UTC')
+            
+            # Check if we got the expected amount of data
+            if len(df) < days * 0.8:  # Allow 20% tolerance for weekends/holidays
+                print(f"Warning: Got {len(df)} days of data for {stock}, expected around {days} days")
+            
+            # Validate that data is not newer than our end_date
+            if df.index.max() > end_date:
+                QMessageBox.warning(self, "Warning", f"Data for {stock} contains dates newer than expected. This may indicate a system clock issue.")
+                # Filter out dates newer than our end_date
+                df = df[df.index <= end_date]
+                if df.empty:
+                    QMessageBox.warning(self, "Error", f"No valid data found for {stock} after filtering dates.")
+                    return
+                
             print(f"Successfully loaded {len(df)} days of data for {stock}")
-            print(f"Data range: {date_range_str}")
-            
+            print(f"Data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
+                
             # Plot data
             self.chart.plot_stock_data(df)
-            
-            # Update metrics
-            self.metrics_widget.update_metrics(df)
             
             # Store data for training
             self.current_data = df
             
-            QMessageBox.information(self, "Success", f"Loaded {len(df)} days of data for {stock}\nDate range: {date_range_str}")
+            QMessageBox.information(self, "Success", f"Loaded {len(df)} days of data for {stock}\nDate range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
             
         except Exception as e:
-            print(f"Error processing loaded data: {str(e)}")
-            QMessageBox.critical(self, "Error", f"Failed to process data: {str(e)}")
-    
-    def on_data_error(self, error_msg):
-        # Hide loading indicator
-        self.get_data_btn.setEnabled(True)
-        self.loading_label.setVisible(False)
-        
-        QMessageBox.critical(self, "Error", error_msg)
+            print(f"Error loading data: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}\n\nTry:\n- Different stock symbol\n- Fewer days of history\n- Check internet connection\n- Check system clock")
     
     def make_decision(self, decision):
         # Highlight the selected button
@@ -818,23 +1037,32 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", f"Failed to submit decision: {str(e)}")
     
     def start_training(self):
-        if not hasattr(self, 'current_data'):
-            QMessageBox.warning(self, "Error", "Please load stock data first")
-            return
+        """Start neural network training with selected model"""
+        try:
+            if not hasattr(self, 'model_trainer') or not self.model_trainer.training_examples:
+                QMessageBox.warning(self, "Warning", "No training examples available. Please add some training examples first.")
+                return
             
-        epochs = self.epochs_spin.value()
-        
-        # Show progress bar
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
-        self.train_btn.setEnabled(False)
-        
-        # Start training in background thread
-        self.training_thread = TrainingThread(self.model_trainer, epochs)
-        self.training_thread.progress.connect(self.update_progress)
-        self.training_thread.finished.connect(self.training_finished)
-        self.training_thread.error.connect(self.training_error)
-        self.training_thread.start()
+            epochs = self.epochs_spin.value()
+            
+            # Show progress bar
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setRange(0, epochs)
+            self.progress_bar.setValue(0)
+            self.train_btn.setEnabled(False)
+            
+            # Start training in background thread
+            self.training_thread = TrainingThread(self.model_trainer, epochs)
+            self.training_thread.progress.connect(self.update_progress)
+            self.training_thread.finished.connect(self.training_finished)
+            self.training_thread.error.connect(self.training_error)
+            self.training_thread.start()
+            
+        except Exception as e:
+            print(f"Error starting training: {e}")
+            QMessageBox.critical(self, "Error", f"Error starting training: {e}")
+            self.progress_bar.setVisible(False)
+            self.train_btn.setEnabled(True)
     
     def update_progress(self, value):
         self.progress_bar.setValue(value)
@@ -858,6 +1086,106 @@ class MainWindow(QMainWindow):
         vb = self.chart.getViewBox()
         vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=True)
         vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False)
+
+    def change_model(self):
+        """Change the neural network model type or open custom model dialog"""
+        try:
+            selected_index = self.model_combo.currentIndex()
+            if selected_index == self.model_combo.count() - 1:  # 'Create Your Own Model...'
+                dialog = CustomModelDialog(self)
+                if dialog.exec_() == dialog.Accepted:
+                    config = dialog.get_model_config()
+                    custom_label = f"{config['model_name']} (Custom)"
+                    # Insert before the last item (so 'Create Your Own Model...' stays last)
+                    self.model_combo.insertItem(self.model_combo.count() - 1, custom_label)
+                    self.model_combo.setCurrentIndex(self.model_combo.count() - 2)
+                    # Store config for later use (could be a dict or list)
+                    if not hasattr(self, 'custom_models'):
+                        self.custom_models = {}
+                    self.custom_models[custom_label] = config
+                    QMessageBox.information(self, "Success", f"Custom model '{config['model_name']}' added and selected.")
+                return
+            model_mapping = {
+                0: "simple",
+                1: "standard", 
+                2: "deep",
+                3: "lstm",
+                4: "ensemble"
+            }
+            new_model_type = model_mapping.get(selected_index, "standard")
+            if self.model_trainer.change_model_type(new_model_type):
+                QMessageBox.information(self, "Success", f"Model changed to {self.model_combo.currentText()}")
+            else:
+                QMessageBox.warning(self, "Error", "Failed to change model")
+        except Exception as e:
+            print(f"Error changing model: {e}")
+            QMessageBox.critical(self, "Error", f"Error changing model: {e}")
+
+    def resizeEvent(self, event):
+        """Handle window resize events to maintain proper splitter proportions"""
+        super().resizeEvent(event)
+        # Update status bar with current window size and scroll info
+        width = self.width()
+        height = self.height()
+        scroll_info = ""
+        
+        if hasattr(self, 'scroll_area'):
+            scroll_area = self.scroll_area
+            if scroll_area.verticalScrollBar().isVisible():
+                scroll_info = " (Vertical scroll available)"
+            elif scroll_area.horizontalScrollBar().isVisible():
+                scroll_info = " (Horizontal scroll available)"
+        
+        self.statusBar().showMessage(
+            f"Window: {width}x{height} | "
+            f"Chart area: {self.chart.width()}x{self.chart.height()} | "
+            f"Use splitter handle to resize chart area{scroll_info}"
+        )
+
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts for better user experience"""
+        if event.key() == Qt.Key_F11:
+            # Toggle fullscreen
+            if self.isFullScreen():
+                self.showNormal()
+            else:
+                self.showFullScreen()
+        elif event.key() == Qt.Key_F5:
+            # Refresh data
+            if hasattr(self, 'current_data'):
+                self.load_stock_data()
+        elif event.key() == Qt.Key_Escape:
+            # Exit fullscreen
+            if self.isFullScreen():
+                self.showNormal()
+        else:
+            super().keyPressEvent(event)
+
+    def maximize_chart_area(self):
+        """Maximize the chart area by minimizing controls"""
+        if hasattr(self, 'main_splitter'):
+            total_height = self.main_splitter.height()
+            # Give 80% to chart, 20% to controls
+            chart_height = int(total_height * 0.8)
+            controls_height = total_height - chart_height
+            self.main_splitter.setSizes([chart_height, controls_height])
+
+    def minimize_chart_area(self):
+        """Minimize the chart area to show more controls"""
+        if hasattr(self, 'main_splitter'):
+            total_height = self.main_splitter.height()
+            # Give 40% to chart, 60% to controls
+            chart_height = int(total_height * 0.4)
+            controls_height = total_height - chart_height
+            self.main_splitter.setSizes([chart_height, controls_height])
+
+    def reset_splitter_proportions(self):
+        """Reset splitter to default proportions (70% chart, 30% controls)"""
+        if hasattr(self, 'main_splitter'):
+            total_height = self.main_splitter.height()
+            chart_height = int(total_height * 0.7)
+            controls_height = total_height - chart_height
+            self.main_splitter.setSizes([chart_height, controls_height])
 
 def main():
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
