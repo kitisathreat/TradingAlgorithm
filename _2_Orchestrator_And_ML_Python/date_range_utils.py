@@ -11,6 +11,36 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def calculate_trading_days(start_date: datetime, end_date: datetime) -> int:
+    """
+    Calculate the number of trading days (weekdays) between two dates.
+    This accounts for weekends but not holidays (which is reasonable for comparison).
+    
+    Args:
+        start_date: Start date
+        end_date: End date
+    
+    Returns:
+        Number of trading days (weekdays) in the range
+    """
+    if start_date > end_date:
+        return 0
+    
+    # Convert to date objects for easier calculation
+    start = start_date.date()
+    end = end_date.date()
+    
+    trading_days = 0
+    current = start
+    
+    while current <= end:
+        # Monday = 0, Sunday = 6, so weekdays are 0-4
+        if current.weekday() < 5:  # Monday to Friday
+            trading_days += 1
+        current += timedelta(days=1)
+    
+    return trading_days
+
 def get_random_date_range(days: int, max_years_back: int = None) -> Tuple[datetime, datetime]:
     """
     Generate a random date range of the specified number of days.

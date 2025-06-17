@@ -1,5 +1,8 @@
-# Streamlit Cloud Requirements with Websockets Override
-# This file handles the alpaca-trade-api/websockets conflict
+# Streamlit Cloud Requirements with Aggressive Websockets Override
+# This file handles the alpaca-trade-api/websockets conflict by forcing versions
+
+# Force websockets to 13+ FIRST (before anything else)
+websockets>=13.0 --force-reinstall
 
 # Core ML and Data Processing
 tensorflow==2.13.0
@@ -15,9 +18,9 @@ python-dotenv==1.0.0
 requests==2.31.0
 httpx==0.24.0
 
-# Trading and Market Data - Install in specific order to override dependencies
-websockets==13.0
-alpaca-trade-api==3.2.0
+# Trading and Market Data - Install alpaca with --no-deps to ignore websocket constraint
+# Note: This line will be processed by setup script to use --no-deps
+alpaca-trade-api==3.2.0 --no-deps --force-reinstall
 yfinance==0.2.63
 lxml==4.9.1
 tqdm==4.65.0
@@ -44,4 +47,5 @@ streamlit-plotly-events==0.0.6
 streamlit-option-menu==0.3.12
 streamlit-extras==0.3.5
 
-# Note: Development dependencies (pytest, pybind11) are excluded as they're not needed in production 
+# Note: The setup script will handle the alpaca-trade-api installation with --no-deps
+# to bypass the websocket version constraint 

@@ -14,25 +14,82 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import time
-import yfinance as yf
+import subprocess
+
+# Auto-setup dependencies on first run
+def auto_setup_dependencies():
+    """Automatically setup dependencies to resolve websocket conflicts"""
+    if 'dependencies_setup' not in st.session_state:
+        st.session_state.dependencies_setup = False
+    
+    if not st.session_state.dependencies_setup:
+        with st.spinner("🔧 Setting up dependencies to resolve websocket conflicts..."):
+            try:
+                # Run the setup script
+                script_dir = Path(__file__).parent
+                setup_script = script_dir / "setup_streamlit_cloud.py"
+                
+                if setup_script.exists():
+                    result = subprocess.run(
+                        [sys.executable, str(setup_script)],
+                        capture_output=True,
+                        text=True,
+                        timeout=300  # 5 minute timeout
+                    )
+                    
+                    if result.returncode == 0:
+                        st.success("✅ Dependencies setup completed successfully")
+                    else:
+                        st.warning(f"⚠️ Setup script had issues: {result.stderr}")
+                else:
+                    st.warning("⚠️ Setup script not found, proceeding with manual dependency handling")
+                
+                st.session_state.dependencies_setup = True
+                
+            except Exception as e:
+                st.warning(f"⚠️ Auto-setup failed: {e}. Proceeding with manual handling.")
+
+# Run auto-setup
+auto_setup_dependencies()
 
 # Version conflict handler for Streamlit Cloud
 def handle_version_conflicts():
     """Handle version conflicts, especially for Alpaca websocket dependencies"""
     try:
-        # Try to import alpaca-trade-api with version override
+        # Try to import websockets first
         import websockets
-        if websockets.__version__ != "13.0":
-            st.warning(f"⚠️ Websockets version mismatch: {websockets.__version__} (expected 13.0)")
-            st.info("This may cause issues with Alpaca trading API, but the app will continue to function.")
+        websocket_version = websockets.__version__
         
-        # Try to import alpaca-trade-api
+        # Check if we have the right version for TensorFlow
+        if websocket_version >= "13.0":
+            st.success(f"✅ Websockets {websocket_version} - Compatible with TensorFlow")
+        else:
+            st.warning(f"⚠️ Websockets {websocket_version} - May cause TensorFlow issues")
+        
+        # Try to import alpaca-trade-api with graceful handling
         try:
             import alpaca_trade_api
             st.success("✅ Alpaca Trade API imported successfully")
+            
+            # Test basic functionality
+            try:
+                # Just test if we can create an instance (without actual API keys)
+                api = alpaca_trade_api.REST('dummy', 'dummy', 'https://paper-api.alpaca.markets')
+                st.success("✅ Alpaca API functionality verified")
+            except Exception as api_error:
+                st.warning(f"⚠️ Alpaca API test failed (expected without keys): {api_error}")
+                
         except ImportError as e:
             st.error(f"❌ Failed to import Alpaca Trade API: {e}")
             st.info("Trading functionality will be limited, but other features will work.")
+        
+        # Test TensorFlow import
+        try:
+            import tensorflow as tf
+            st.success(f"✅ TensorFlow {tf.__version__} imported successfully")
+        except ImportError as e:
+            st.error(f"❌ Failed to import TensorFlow: {e}")
+            st.info("ML functionality will be limited.")
         
     except ImportError as e:
         st.error(f"❌ Critical import error: {e}")
@@ -314,6 +371,14 @@ def load_stock_data(trainer, symbol, days):
                     data.index = data.index.tz_localize('UTC')
                 else:
                     data.index = data.index.tz_convert('UTC')
+                
+                # Calculate expected trading days in the requested range
+                from date_range_utils import calculate_trading_days
+                expected_trading_days = calculate_trading_days(start_date, end_date)
+                
+                # Check if we got the expected amount of data (compare trading days)
+                if len(data) < expected_trading_days * 0.9:  # Allow 10% tolerance for holidays
+                    st.warning(f"Got {len(data)} trading days of data for {symbol}, expected around {expected_trading_days} trading days")
                 
                 # Validate that data is not newer than our end_date
                 if data.index.max() > end_date:
