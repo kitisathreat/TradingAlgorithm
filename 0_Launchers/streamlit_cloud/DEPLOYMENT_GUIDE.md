@@ -1,130 +1,101 @@
-# Streamlit Cloud Deployment Guide - Alpaca Websocket Version Fix
+# Streamlit Cloud Deployment Guide
 
-## Problem Description
-Streamlit Cloud deployment fails due to Alpaca websocket version dependency conflicts. The `alpaca-trade-api==3.2.0` package requires specific websocket versions that conflict with other dependencies.
+## Overview
+This guide explains how to deploy the Advanced Neural Network Trading System to Streamlit Cloud while resolving the websocket dependency conflict between TensorFlow and Alpaca Trade API.
 
-## Solutions Available
+## The Problem
+- **TensorFlow 2.13.0** requires `websockets >= 13.0`
+- **Alpaca Trade API 3.2.0** requires `websockets <= 11.0`
+- This creates a dependency conflict that prevents both from working together
 
-### Solution 1: Use Custom Installation Script (Recommended)
-1. **File**: `install_requirements.py`
-2. **How to use**: 
-   - Add this script to your Streamlit Cloud repository
-   - Run it manually during deployment or as a pre-deployment step
-   - It installs packages with `--no-deps` flag to avoid conflicts
+## The Solution
+We've implemented a multi-layered approach to resolve this conflict:
 
-### Solution 2: Use Modified Requirements File
-1. **File**: `streamlit_requirements_override.txt`
-2. **How to use**:
-   - Rename this to `requirements.txt` in your Streamlit Cloud directory
-   - Contains `--no-deps` flags for problematic packages
-   - Forces websocket version to 13.0
+### 1. Automatic Setup Script
+The `streamlit_app.py` automatically runs `setup_streamlit_cloud.py` on first load to:
+- Force install `websockets >= 13.0` first
+- Install `alpaca-trade-api` with `--no-deps` to ignore the websocket constraint
+- Install all other dependencies
 
-### Solution 3: Use Setup Script
-1. **File**: `setup_streamlit_cloud.py`
-2. **How to use**:
-   - Run this script during Streamlit Cloud deployment
-   - Automatically handles version conflicts
-   - Provides detailed logging
+### 2. Graceful Error Handling
+The app includes robust error handling that:
+- Continues to function even if some dependencies fail
+- Shows clear status messages about what's working
+- Provides fallback functionality
 
-### Solution 4: Version Conflict Handler (Already Implemented)
-1. **File**: `streamlit_app.py` (lines 18-35)
-2. **How to use**: 
-   - Automatically runs when the app starts
-   - Detects version mismatches
-   - Provides user-friendly error messages
-   - Allows app to continue functioning
+### 3. Manual Installation Script
+You can also run `install_requirements.py` manually if needed.
 
-## Step-by-Step Deployment Instructions
+## Deployment Steps
 
-### Option A: Automatic Fix (Recommended)
-1. **Deploy normally** with existing files
-2. **The version conflict handler** will automatically detect issues
-3. **App will continue to function** with limited trading features
-4. **User will see clear status messages** about what's working
+### Step 1: Prepare Your Repository
+1. Ensure all files in `0_Launchers/streamlit_cloud/` are committed to your repository
+2. The main file for Streamlit Cloud is: **`streamlit_app.py`**
 
-### Option B: Manual Fix with Custom Installation
-1. **Add `install_requirements.py`** to your repository
-2. **Run the script** during deployment:
-   ```bash
-   python install_requirements.py
-   ```
-3. **Deploy normally** after script completion
+### Step 2: Deploy to Streamlit Cloud
+1. Go to [share.streamlit.io](https://share.streamlit.io)
+2. Connect your GitHub repository
+3. Set the main file path to: `0_Launchers/streamlit_cloud/streamlit_app.py`
+4. Set Python version to: `3.9`
+5. Deploy
 
-### Option C: Use Modified Requirements
-1. **Replace** `streamlit_requirements.txt` with `streamlit_requirements_override.txt`
-2. **Rename** the override file to `streamlit_requirements.txt`
-3. **Deploy normally**
+### Step 3: Monitor the Deployment
+The app will automatically:
+1. Run the setup script to resolve dependencies
+2. Show status messages about what's working
+3. Continue to function even if some dependencies have issues
 
-## What Each Solution Does
-
-### Version Conflict Handler
-- ✅ **Detects** websocket version mismatches
-- ✅ **Provides** clear user feedback
-- ✅ **Allows** app to continue functioning
-- ✅ **No deployment changes** required
-
-### Custom Installation Script
-- ✅ **Forces** specific websocket version (13.0)
-- ✅ **Installs** Alpaca without dependencies
-- ✅ **Handles** all package conflicts
-- ✅ **Provides** detailed logging
-
-### Modified Requirements
-- ✅ **Uses** pip's `--no-deps` flag
-- ✅ **Forces** websocket version first
-- ✅ **Simplifies** deployment process
-
-## Expected Behavior After Fix
-
-### With Successful Fix:
-- ✅ Alpaca Trade API imports successfully
-- ✅ All trading features work normally
-- ✅ No version conflict warnings
-- ✅ Full functionality available
-
-### With Partial Fix (Version Handler):
-- ⚠️ Version mismatch warnings displayed
-- ✅ App continues to function
-- ⚠️ Some trading features may be limited
-- ✅ Core features (data analysis, training) work
-
-### Without Fix:
-- ❌ Import errors during startup
-- ❌ App may fail to load
-- ❌ No trading functionality
-- ❌ Poor user experience
+## File Structure
+```
+0_Launchers/streamlit_cloud/
+├── streamlit_app.py              # Main Streamlit app (entry point)
+├── setup_streamlit_cloud.py      # Automatic dependency setup
+├── install_requirements.py       # Manual installation script
+├── streamlit_requirements.txt    # Requirements with conflict resolution
+├── streamlit_requirements_override.txt  # Alternative requirements
+├── constraints.txt               # Version constraints
+├── packages.txt                  # System packages
+├── runtime.txt                   # Python version
+└── DEPLOYMENT_GUIDE.md          # This file
+```
 
 ## Troubleshooting
 
-### If App Still Fails:
-1. **Check Streamlit Cloud logs** for specific error messages
-2. **Verify Python version** is set to 3.9.13
-3. **Ensure all files** are committed to repository
-4. **Try running** `setup_streamlit_cloud.py` manually
+### If Dependencies Fail to Install
+1. Check the Streamlit Cloud logs for error messages
+2. The app will show warnings but continue to function
+3. Most features will work even with partial dependency installation
 
-### If Trading Features Don't Work:
-1. **Check** if Alpaca API keys are configured
-2. **Verify** websocket version is 13.0
-3. **Test** with synthetic data first
-4. **Check** network connectivity
+### If Alpaca API Doesn't Work
+- The app will show a warning but continue to function
+- You can still use the ML training and prediction features
+- Stock data loading via yfinance will still work
 
-### If You See Version Warnings:
-1. **This is normal** - the app will still function
-2. **Trading features** may be limited
-3. **Core features** (data analysis, training) will work
-4. **Consider** using one of the manual fix options
+### If TensorFlow Doesn't Work
+- The app will show a warning but continue to function
+- You can still use the data analysis and visualization features
+- The training interface will be limited
 
-## Files Summary
+## Expected Behavior
+On first load, you should see:
+1. 🔧 Setting up dependencies to resolve websocket conflicts...
+2. ✅ Dependencies setup completed successfully (or warnings)
+3. ✅ Websockets X.X.X - Compatible with TensorFlow
+4. ✅ Alpaca Trade API imported successfully
+5. ✅ TensorFlow X.X.X imported successfully
 
-| File | Purpose | When to Use |
-|------|---------|-------------|
-| `streamlit_app.py` | Main app with version handler | Always (automatic) |
-| `install_requirements.py` | Custom installation script | Manual deployment fix |
-| `streamlit_requirements_override.txt` | Modified requirements | Alternative requirements file |
-| `setup_streamlit_cloud.py` | Setup script | Pre-deployment setup |
-| `DEPLOYMENT_GUIDE.md` | This guide | Reference |
+## Performance Notes
+- The setup script runs only once per session
+- Subsequent loads will be faster
+- The app caches the setup status in session state
 
-## Quick Start
-1. **Deploy normally** - the version handler will work automatically
-2. **If issues persist**, use `install_requirements.py`
-3. **For best results**, combine automatic handler with manual fix 
+## Security Notes
+- No API keys are required for basic functionality
+- The app uses dummy keys for testing Alpaca API functionality
+- All sensitive operations require user-provided credentials
+
+## Support
+If you encounter issues:
+1. Check the Streamlit Cloud logs
+2. Look for error messages in the app interface
+3. The app provides detailed status information about what's working 
