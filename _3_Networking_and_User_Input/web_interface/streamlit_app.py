@@ -27,6 +27,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.express as px
 import traceback
+from _2_Orchestrator_And_ML_Python.date_range_utils import find_available_data_range, validate_date_range
 
 # Load environment variables from .env file immediately
 try:
@@ -299,25 +300,23 @@ def check_model_availability():
         return False, None
 
 def load_stock_data(symbol: str, days: int = 30):
-    """Load stock data and calculate features"""
+    """Load stock data and calculate features using a random date range"""
     try:
         # Fetch data from yfinance
         stock = yf.Ticker(symbol)
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
-        
+        # Use random date range utility
+        start_date, end_date = find_available_data_range(symbol, days, max_years_back=25)
+        if not validate_date_range(start_date, end_date, symbol):
+            st.error(f"Invalid date range generated for {symbol}: {start_date} to {end_date}")
+            return None, None
         # Get historical data
         df = stock.history(start=start_date, end=end_date)
-        
         if df.empty:
-            st.error(f"No data available for {symbol}")
+            st.error(f"No data available for {symbol} in range {start_date.date()} to {end_date.date()}")
             return None, None
-        
         # Calculate technical indicators
         features = calculate_technical_features(df, symbol)
-        
         return features, df
-        
     except Exception as e:
         st.error(f"Error loading data for {symbol}: {e}")
         return None, None
