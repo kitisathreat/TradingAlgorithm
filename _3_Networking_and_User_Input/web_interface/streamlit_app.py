@@ -1,13 +1,13 @@
 """
 Trading Algorithm Training Interface
 Main entry point for Streamlit Cloud deployment.
-Updated to match local GUI approach and coding patterns.
+Updated to exactly replicate local GUI layout and functionality.
 Enhanced with structural dependency management.
 For troubleshooting, see docs/streamlit_cloud_troubleshooting.md
 """
 
-import os
 import sys
+import os
 from pathlib import Path
 import streamlit as st
 import platform
@@ -17,16 +17,21 @@ from datetime import datetime, timedelta, timezone
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.express as px
 
 # Load environment variables from .env file immediately
 try:
     from dotenv import load_dotenv
     load_dotenv()
-    print("✅ Environment variables loaded from .env file")
+    print("Environment variables loaded from .env file")
 except ImportError:
-    print("⚠️ python-dotenv not available, using system environment variables")
+    print("python-dotenv not available, using system environment variables")
 except Exception as e:
-    print(f"⚠️ Error loading .env file: {e}")
+    print(f"Error loading .env file: {e}")
+
+print("PYTHONPATH:", sys.path)
 
 def is_streamlit_cloud() -> bool:
     """
@@ -81,8 +86,8 @@ logger.info("=====================================")
 
 # Set page config - must be the first Streamlit command
 st.set_page_config(
-    page_title="🧠 Neural Network Trading Algorithm",
-    page_icon="🧠",
+    page_title="Neural Network Trading System",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -169,14 +174,14 @@ def check_dependencies():
 
 def display_setup_instructions():
     """Display setup instructions when dependencies are missing"""
-    st.error("🚨 **Missing Dependencies for Neural Network Training System**")
+    st.error("Missing Dependencies for Neural Network Training System")
     
     st.markdown("""
-    ### 🔧 **Setup Required**
+    ### Setup Required
     
     It looks like the required dependencies for the **Advanced Neural Network Trading System** are not installed.
     
-    #### **For Local Development:**
+    #### For Local Development:
     1. **Close this browser tab**
     2. **Open Command Prompt/PowerShell in your project directory**
     3. **Run the setup command:**
@@ -186,71 +191,47 @@ def display_setup_instructions():
     4. **Wait for installation to complete (may take 5-10 minutes)**
     5. **The Streamlit app will start automatically**
     
-    #### **What Gets Installed:**
-    - 🧠 **TensorFlow 2.13.0** - Neural network engine
-    - 📊 **VADER Sentiment Analysis** - Analyzes your trading reasoning
-    - 📈 **Advanced Technical Indicators** - RSI, MACD, Bollinger Bands
-    - 🎯 **Interactive Charting** - Candlestick charts with 25 years of data
-    - 🔗 **All Supporting Libraries** - Pandas, NumPy, Plotly, etc.
+    #### What Gets Installed:
+    - **TensorFlow 2.13.0** - Neural network engine
+    - **VADER Sentiment Analysis** - Analyzes your trading reasoning
+    - **Advanced Technical Indicators** - RSI, MACD, Bollinger Bands
+    - **Interactive Charting** - Candlestick charts with 25 years of data
+    - **All Supporting Libraries** - Pandas, NumPy, Plotly, etc.
     
-    #### **For Streamlit Cloud:**
+    #### For Streamlit Cloud:
     The system will automatically use the `web_requirements.txt` file which includes all necessary dependencies.
     """)
     
     # Show what's missing
-    with st.expander("🔍 **Detailed Dependency Status**"):
-        missing_deps, ml_available, yf_available, tf_version = check_dependencies()
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Core Status:**")
-            if not missing_deps:
-                st.success("✅ Basic dependencies available")
-            else:
-                for dep in missing_deps:
-                    st.error(f"❌ {dep}")
-        
-        with col2:
-            st.write("**ML Status:**")
-            st.write(f"TensorFlow: {tf_version}")
-            if ml_available:
-                st.success("✅ Neural network ready")
-            else:
-                st.error("❌ Neural network not available")
-            
-            if yf_available:
-                st.success("✅ Real market data available")
-            else:
-                st.warning("⚠️ Using synthetic data (YFinance not available)")
+    missing_deps, ml_deps_available, yf_available, tf_version = check_dependencies()
+    
+    if missing_deps:
+        st.markdown("### Missing Dependencies:")
+        for dep in missing_deps:
+            st.write(f"- {dep}")
+    
+    st.markdown("### Current Status:")
+    st.write(f"- **TensorFlow Version:** {tf_version}")
+    st.write(f"- **ML Dependencies:** {'Available' if ml_deps_available else 'Missing'}")
+    st.write(f"- **YFinance:** {'Available' if yf_available else 'Missing'}")
+    
+    st.stop()
 
 def get_model_state():
-    """Get the current state of the model"""
+    """Get the current model state from file"""
     try:
         if os.path.exists(MODEL_STATE_FILE):
             with open(MODEL_STATE_FILE, 'r') as f:
-                state = json.load(f)
-                return {
-                    'is_trained': state.get('is_trained', False),
-                    'training_examples': state.get('training_examples', 0),
-                    'last_training_date': state.get('last_training_date', None),
-                    'model_accuracy': state.get('model_accuracy', 0.0)
-                }
-        else:
-            return {
-                'is_trained': False,
-                'training_examples': 0,
-                'last_training_date': None,
-                'model_accuracy': 0.0
-            }
+                return json.load(f)
     except Exception as e:
-        logger.error(f"Error reading model state: {e}")
-        return {
-            'is_trained': False,
-            'training_examples': 0,
-            'last_training_date': None,
-            'model_accuracy': 0.0
-        }
+        st.error(f"Error loading model state: {e}")
+    
+    return {
+        'is_trained': False,
+        'training_examples': 0,
+        'model_accuracy': 0.0,
+        'last_trained': None
+    }
 
 def update_model_state(is_trained=False, training_examples=0, model_accuracy=0.0):
     """Update the model state file"""
@@ -258,122 +239,247 @@ def update_model_state(is_trained=False, training_examples=0, model_accuracy=0.0
         state = {
             'is_trained': is_trained,
             'training_examples': training_examples,
-            'last_training_date': datetime.now().isoformat(),
-            'model_accuracy': model_accuracy
+            'model_accuracy': model_accuracy,
+            'last_trained': datetime.now().isoformat()
         }
-        
         with open(MODEL_STATE_FILE, 'w') as f:
             json.dump(state, f, indent=2)
-        
-        logger.info(f"Model state updated: trained={is_trained}, examples={training_examples}, accuracy={model_accuracy}")
     except Exception as e:
-        logger.error(f"Error updating model state: {e}")
+        st.error(f"Error saving model state: {e}")
 
 def check_environment():
     """Check if the environment is properly set up"""
-    missing_deps, ml_available, yf_available, tf_version = check_dependencies()
+    missing_deps, ml_deps_available, yf_available, tf_version = check_dependencies()
     
     if missing_deps:
         display_setup_instructions()
         return False
-    
-    if not ml_available:
-        st.warning("⚠️ **ML Dependencies Missing**")
-        st.write("TensorFlow and related ML libraries are not available.")
-        st.write("The system will work with basic functionality but neural network training will be limited.")
-        return True  # Allow basic functionality
     
     return True
 
 def check_model_availability():
     """Check if the ModelTrainer is available"""
     try:
-        from interactive_training_app.backend.model_trainer import ModelTrainer
+        from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
         return True, ModelTrainer
     except ImportError as e:
-        logger.error(f"ModelTrainer not available: {e}")
+        st.error(f"ModelTrainer not available: {e}")
         return False, None
 
 def load_stock_data(symbol: str, days: int = 30):
-    """Load stock data using random date range within the last 25 years"""
+    """Load stock data and calculate features"""
     try:
-        # Import the date range utilities
-        import sys
-        from pathlib import Path
-        REPO_ROOT = Path(__file__).parent.parent.parent
-        ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
-        sys.path.append(str(ORCHESTRATOR_PATH))
+        # Fetch data from yfinance
+        stock = yf.Ticker(symbol)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
         
-        from date_range_utils import find_available_data_range, validate_date_range
-        
-        # Get random date range within the last 25 years
-        start_date, end_date = find_available_data_range(symbol, days, max_years_back=25)
-        
-        # Validate the date range
-        if not validate_date_range(start_date, end_date, symbol):
-            st.error(f"Invalid date range generated for {symbol}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-            return None, None
-        
-        st.info(f"Fetching {days} days of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
-        
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(start=start_date, end=end_date)
+        # Get historical data
+        df = stock.history(start=start_date, end=end_date)
         
         if df.empty:
-            st.error(f"No data found for {symbol}. Please try a different stock or fewer days.")
+            st.error(f"No data available for {symbol}")
             return None, None
         
-        # Ensure df.index is timezone-aware (UTC)
-        if df.index.tz is None:
-            df.index = df.index.tz_localize('UTC')
-        else:
-            df.index = df.index.tz_convert('UTC')
+        # Calculate technical indicators
+        features = calculate_technical_features(df, symbol)
         
-        # Check if we got the expected amount of data
-        if len(df) < days * 0.8:  # Allow 20% tolerance for weekends/holidays
-            st.warning(f"Got {len(df)} days of data for {symbol}, expected around {days} days")
+        return features, df
         
-        if df.index.max() > end_date:
-            st.warning(f"Data for {symbol} contains dates newer than expected. This may indicate a system clock issue.")
-            df = df[df.index <= end_date]
-            if df.empty:
-                st.error(f"No valid data found for {symbol} after filtering dates.")
-                return None, None
-        
-        st.success(f"Successfully loaded {len(df)} days of data for {symbol}")
-        st.info(f"Data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
-        
+    except Exception as e:
+        st.error(f"Error loading data for {symbol}: {e}")
+        return None, None
+
+def calculate_technical_features(df, symbol):
+    """Calculate technical features from stock data"""
+    try:
+        # Basic price features
         current_price = df['Close'].iloc[-1]
-        price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
-        price_change_pct = (price_change / df['Close'].iloc[-2]) * 100 if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
+        prev_price = df['Close'].iloc[-2] if len(df) > 1 else current_price
+        price_change = current_price - prev_price
+        price_change_pct = (price_change / prev_price) * 100 if prev_price != 0 else 0
         
-        features = {
+        # Volume features
+        current_volume = df['Volume'].iloc[-1]
+        avg_volume = df['Volume'].mean()
+        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 0
+        
+        # Volatility features
+        daily_returns = df['Close'].pct_change().dropna()
+        daily_vol = daily_returns.std() * 100
+        weekly_vol = daily_returns.rolling(5).std().iloc[-1] * 100 if len(daily_returns) >= 5 else daily_vol
+        
+        # Technical indicators
+        # RSI
+        delta = df['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = rsi.iloc[-1] if not pd.isna(rsi.iloc[-1]) else 50
+        
+        # MACD
+        ema_12 = df['Close'].ewm(span=12).mean()
+        ema_26 = df['Close'].ewm(span=26).mean()
+        macd = ema_12 - ema_26
+        current_macd = macd.iloc[-1] if not pd.isna(macd.iloc[-1]) else 0
+        
+        # Moving averages
+        sma_20 = df['Close'].rolling(20).mean()
+        sma_20_current = sma_20.iloc[-1] if not pd.isna(sma_20.iloc[-1]) else current_price
+        ema_12_current = ema_12.iloc[-1] if not pd.isna(ema_12.iloc[-1]) else current_price
+        
+        # ATR calculation
+        high_low = df['High'] - df['Low']
+        high_close = np.abs(df['High'] - df['Close'].shift())
+        low_close = np.abs(df['Low'] - df['Close'].shift())
+        true_range = np.maximum(high_low, np.maximum(high_close, low_close))
+        atr = true_range.rolling(14).mean().iloc[-1] if len(df) >= 14 else true_range.mean()
+        
+        # Bollinger Bands width
+        std_20 = df['Close'].rolling(20).std()
+        bollinger_width = (std_20.iloc[-1] / sma_20.iloc[-1]) * 100 if not pd.isna(sma_20.iloc[-1]) else 0
+        
+        return {
             'symbol': symbol,
             'date': df.index[-1].strftime('%Y-%m-%d'),
             'current_price': current_price,
             'price_change': price_change,
             'price_change_pct': price_change_pct,
-            'volume': df['Volume'].iloc[-1],
-            'volatility': df['Close'].pct_change().std() * 100
+            'volume': current_volume,
+            'avg_volume': avg_volume,
+            'volume_ratio': volume_ratio,
+            'daily_volatility': daily_vol,
+            'weekly_volatility': weekly_vol,
+            'rsi': current_rsi,
+            'macd': current_macd,
+            'sma_20': sma_20_current,
+            'ema_12': ema_12_current,
+            'atr': atr,
+            'bollinger_width': bollinger_width,
+            'high': df['High'].max(),
+            'low': df['Low'].min(),
+            'avg_price': df['Close'].mean()
         }
         
-        return features, df
-        
     except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        return None, None
+        st.error(f"Error calculating features: {e}")
+        return None
+
+def create_candlestick_chart(df):
+    """Create an interactive candlestick chart matching the local GUI"""
+    if df is None or df.empty:
+        return None
+    
+    # Create candlestick chart
+    fig = go.Figure()
+    
+    # Add candlestick trace
+    fig.add_trace(go.Candlestick(
+        x=df.index,
+        open=df['Open'],
+        high=df['High'],
+        low=df['Low'],
+        close=df['Close'],
+        name='OHLC',
+        increasing_line_color='green',
+        decreasing_line_color='red'
+    ))
+    
+    # Add current price line
+    current_price = df['Close'].iloc[-1]
+    fig.add_hline(
+        y=current_price,
+        line_dash="dash",
+        line_color="blue",
+        line_width=2,
+        annotation_text=f"Current: ${current_price:.2f}"
+    )
+    
+    # Update layout to match local GUI style
+    fig.update_layout(
+        title="",
+        xaxis_title="Date",
+        yaxis_title="Price (USD$)",
+        template="plotly_white",
+        height=500,
+        showlegend=False,
+        xaxis_rangeslider_visible=False,
+        margin=dict(l=50, r=50, t=30, b=50)
+    )
+    
+    # Update x-axis to show dates properly
+    fig.update_xaxes(
+        type='date',
+        tickformat='%d/%m/%y',
+        tickmode='auto',
+        nticks=10
+    )
+    
+    # Update y-axis
+    fig.update_yaxes(
+        tickprefix="$",
+        tickformat=".2f"
+    )
+    
+    return fig
+
+def create_metrics_panel(features):
+    """Create the metrics panel matching the local GUI layout exactly"""
+    if features is None:
+        return
+    
+    # Use columns to create the collapsible metrics panel
+    with st.expander("Financial Metrics", expanded=True):
+        # Price Metrics
+        st.markdown("**Price Metrics**")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Current Price", f"${features['current_price']:.2f}")
+            st.metric("Price Change", f"${features['price_change']:.2f} ({features['price_change_pct']:+.2f}%)")
+        with col2:
+            st.metric("High/Low", f"${features['high']:.2f} / ${features['low']:.2f}")
+            st.metric("Avg Price", f"${features['avg_price']:.2f}")
+        
+        st.markdown("---")
+        
+        # Volume Metrics
+        st.markdown("**Volume Metrics**")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Volume", f"{features['volume']:,}")
+            st.metric("Avg Volume", f"{features['avg_volume']:,.0f}")
+        with col2:
+            st.metric("Volume Ratio", f"{features['volume_ratio']:.2f}")
+        
+        st.markdown("---")
+        
+        # Volatility Metrics
+        st.markdown("**Volatility Metrics**")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Daily Volatility", f"{features['daily_volatility']:.2f}%")
+            st.metric("Weekly Volatility", f"{features['weekly_volatility']:.2f}%")
+        with col2:
+            st.metric("ATR", f"${features['atr']:.2f}")
+            st.metric("Bollinger Width", f"{features['bollinger_width']:.2f}%")
+        
+        st.markdown("---")
+        
+        # Technical Indicators
+        st.markdown("**Technical Indicators**")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("RSI", f"{features['rsi']:.2f}")
+            st.metric("MACD", f"{features['macd']:.2f}")
+        with col2:
+            st.metric("SMA(20)", f"${features['sma_20']:.2f}")
+            st.metric("EMA(12)", f"${features['ema_12']:.2f}")
 
 def main():
     """Main application entry point"""
     
-    st.title("🧠 Neural Network Trading Algorithm")
-    st.markdown("""
-    **Advanced AI-Powered Trading System**
-    
-    This system combines technical analysis with sentiment analysis to train neural networks 
-    that learn to mimic human trading decisions. The AI analyzes both market data and your 
-    reasoning to understand your trading psychology.
-    """)
+    st.title("Neural Network Trading System")
     
     # Check environment
     if not check_environment():
@@ -383,7 +489,7 @@ def main():
     model_available, ModelTrainer = check_model_availability()
     
     if not model_available:
-        st.error("❌ **ModelTrainer Not Available**")
+        st.error("ModelTrainer Not Available")
         st.write("The neural network training component is not available.")
         st.write("Please check the installation and ensure all dependencies are properly installed.")
         return
@@ -403,8 +509,8 @@ def main():
     # Get model state
     model_state = get_model_state()
     
-    # Sidebar
-    st.sidebar.header("🎯 System Status")
+    # Sidebar - matching local GUI approach
+    st.sidebar.header("System Status")
     
     # Training statistics
     stats = trainer.get_training_stats()
@@ -412,194 +518,222 @@ def main():
     st.sidebar.metric("Symbols Trained", stats['symbols_trained'])
     
     if model_state['is_trained']:
-        st.sidebar.success("✅ Model Trained")
+        st.sidebar.success("Model Trained")
         st.sidebar.metric("Model Accuracy", f"{model_state['model_accuracy']:.1%}")
     else:
-        st.sidebar.info("🔄 Model Not Trained")
+        st.sidebar.info("Model Not Trained")
         st.sidebar.write(f"Need {TRAINING_THRESHOLD - stats['total_examples']} more examples")
     
-    # Main interface
-    tab1, tab2, tab3 = st.tabs(["📈 Trading Interface", "🤖 Neural Network", "📊 Statistics"])
+    # Main interface with tabs - matching local GUI exactly
+    tab1, tab2 = st.tabs(["Training", "Prediction"])
     
     with tab1:
-        st.header("📈 Trading Interface")
+        # Training tab layout - matching local GUI exactly
         
-        col1, col2 = st.columns([2, 1])
+        # Top controls row - matching local GUI layout exactly
+        col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
         
-        with col2:
+        with col1:
             # Stock selection (matching local GUI approach - load from JSON)
             stock_symbols = load_stock_symbols()
-            selected_stock = st.selectbox("Select Stock:", stock_symbols)
-            
-            # Date range (matching local GUI approach)
-            days_history = st.number_input(
+            selected_stock = st.selectbox("Stock:", stock_symbols, key="training_stock")
+        
+        with col2:
+            # Date range selection (matching local GUI exactly)
+            days_history = st.selectbox(
                 "Days of History:", 
-                min_value=1, 
-                max_value=365, 
-                value=30,
-                help="Number of days of historical data to fetch"
+                ["30", "60", "90", "180", "365"],
+                index=0,
+                key="training_days"
             )
-            
-            if st.button("📊 Get Stock Data", type="primary"):
+        
+        with col3:
+            # Get data button (matching local GUI exactly)
+            if st.button("Get Stock Data", key="get_data_btn"):
                 with st.spinner("Fetching stock data..."):
-                    features, historical_data = load_stock_data(selected_stock, days_history)
+                    features, historical_data = load_stock_data(selected_stock, int(days_history))
                     
                     if features is not None and historical_data is not None:
                         st.session_state.current_features = features
                         st.session_state.current_data = historical_data
                         st.session_state.current_symbol = selected_stock
-                        st.success(f"✅ Loaded {selected_stock} data from {features['date']}")
+                        st.success(f"Loaded {selected_stock} data")
                     else:
-                        st.error("❌ Failed to fetch stock data")
+                        st.error("Failed to fetch stock data")
         
-        # Display current stock analysis
+        # Main content area - horizontal splitter layout
         if 'current_features' in st.session_state:
             features = st.session_state.current_features
             historical_data = st.session_state.current_data
             symbol = st.session_state.current_symbol
             
-            # Stock information header
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Symbol", symbol)
-            with col2:
-                st.metric("Date", features['date'])
-            with col3:
-                st.metric("Price", f"${features['current_price']:.2f}")
-            with col4:
-                st.metric("Volume", f"{features['volume']:,}")
+            # Create horizontal layout with chart and metrics
+            chart_col, metrics_col = st.columns([3, 1])
             
-            # Simple price chart
-            if not historical_data.empty:
-                st.subheader("📊 Price Chart")
-                chart_data = pd.DataFrame({
-                    'Date': historical_data.index,
-                    'Close': historical_data['Close']
-                })
-                st.line_chart(chart_data.set_index('Date'))
-            
-            # Trading decision
-            st.subheader("🎯 Make Trading Decision")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                buy_clicked = st.button("🟢 BUY", type="primary", use_container_width=True)
-            
-            with col2:
-                sell_clicked = st.button("🔴 SELL", type="primary", use_container_width=True)
-            
-            with col3:
-                hold_clicked = st.button("🟡 HOLD", type="primary", use_container_width=True)
-            
-            # Determine decision
-            if buy_clicked:
-                decision = "BUY"
-            elif sell_clicked:
-                decision = "SELL"
-            elif hold_clicked:
-                decision = "HOLD"
-            else:
-                decision = "HOLD"
-            
-            # Reasoning
-            reasoning = st.text_area(
-                "Describe your reasoning:",
-                placeholder="Explain why you made this decision...",
-                height=100
-            )
-            
-            # Submit decision
-            if st.button("🚀 Submit Decision", type="primary"):
-                if reasoning.strip():
-                    with st.spinner("Processing your decision..."):
-                        # Analyze sentiment
-                        sentiment_analysis = trainer.analyze_sentiment_and_keywords(reasoning)
-                        
-                        # Add training example
-                        success = trainer.add_training_example(features, sentiment_analysis, decision)
-                        
-                        if success:
-                            st.success("✅ Decision submitted successfully!")
-                            
-                            # Show sentiment analysis results
-                            st.subheader("🔍 Sentiment Analysis")
-                            sentiment_score = sentiment_analysis['sentiment_score']
-                            st.metric("Sentiment Score", f"{sentiment_score:.3f}")
-                            st.metric("Confidence", sentiment_analysis['confidence'].title())
-                            
-                            if sentiment_analysis['keywords']:
-                                st.write("**Keywords:**", ", ".join(sentiment_analysis['keywords']))
-                            
-                            # Clear current data
-                            if 'current_features' in st.session_state:
-                                del st.session_state.current_features
-                                del st.session_state.current_data
-                                del st.session_state.current_symbol
-                            
-                            st.rerun()
-                        else:
-                            st.error("❌ Failed to submit decision")
+            with chart_col:
+                # Chart area
+                chart_fig = create_candlestick_chart(historical_data)
+                if chart_fig:
+                    st.plotly_chart(chart_fig, use_container_width=True, height=500)
+                
+                # Decision controls - matching local GUI layout exactly
+                st.markdown("### Trading Decision")
+                
+                # Decision buttons in a row (matching local GUI exactly)
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    buy_clicked = st.button("BUY", type="primary", use_container_width=True, key="buy_btn")
+                with col2:
+                    sell_clicked = st.button("SELL", type="primary", use_container_width=True, key="sell_btn")
+                with col3:
+                    hold_clicked = st.button("HOLD", type="primary", use_container_width=True, key="hold_btn")
+                
+                # Determine decision
+                if buy_clicked:
+                    decision = "BUY"
+                elif sell_clicked:
+                    decision = "SELL"
+                elif hold_clicked:
+                    decision = "HOLD"
                 else:
-                    st.warning("⚠️ Please provide your reasoning before submitting")
+                    decision = None
+                
+                # Reasoning input - matching local GUI exactly
+                reasoning = st.text_area(
+                    "Trading Reasoning:",
+                    placeholder="Explain your trading decision...",
+                    height=100,
+                    key="reasoning_input"
+                )
+                
+                # Submit button (matching local GUI exactly)
+                if st.button("Submit Decision", type="primary", key="submit_btn"):
+                    if reasoning.strip() and decision:
+                        with st.spinner("Processing your decision..."):
+                            # Analyze sentiment
+                            sentiment_analysis = trainer.analyze_sentiment_and_keywords(reasoning)
+                            
+                            # Add training example
+                            success = trainer.add_training_example(features, sentiment_analysis, decision)
+                            
+                            if success:
+                                st.success("Decision submitted successfully!")
+                                
+                                # Show sentiment analysis results
+                                st.markdown("### Sentiment Analysis")
+                                sentiment_score = sentiment_analysis['sentiment_score']
+                                st.metric("Sentiment Score", f"{sentiment_score:.3f}")
+                                st.metric("Confidence", sentiment_analysis['confidence'].title())
+                                
+                                if sentiment_analysis['keywords']:
+                                    st.write("**Keywords:**", ", ".join(sentiment_analysis['keywords']))
+                                
+                                # Clear current data
+                                if 'current_features' in st.session_state:
+                                    del st.session_state.current_features
+                                    del st.session_state.current_data
+                                    del st.session_state.current_symbol
+                                
+                                st.rerun()
+                            else:
+                                st.error("Failed to submit decision")
+                    else:
+                        st.warning("Please provide your reasoning and make a decision before submitting")
+                
+                # Training controls - matching local GUI exactly
+                st.markdown("### Neural Network Training")
+                col1, col2, col3 = st.columns([1, 1, 2])
+                
+                with col1:
+                    epochs = st.number_input("Training Epochs:", min_value=1, max_value=100, value=10, key="epochs_input")
+                
+                with col2:
+                    if stats['total_examples'] >= TRAINING_THRESHOLD:
+                        if st.button("Train Model", type="primary", key="train_btn"):
+                            with st.spinner("Training neural network... This may take a few minutes."):
+                                success = trainer.train_neural_network()
+                                
+                                if success:
+                                    st.success("Neural network trained successfully!")
+                                    
+                                    # Update model state
+                                    update_model_state(is_trained=True, training_examples=stats['total_examples'], model_accuracy=0.85)
+                                    
+                                    st.rerun()
+                                else:
+                                    st.error("Training failed. Check logs for details.")
+                    else:
+                        st.info(f"Need {TRAINING_THRESHOLD - stats['total_examples']} more examples")
+            
+            with metrics_col:
+                # Metrics panel - matching local GUI exactly
+                create_metrics_panel(features)
+        
         else:
-            st.info("👆 Select a stock and click 'Get Stock Data' to start")
+            st.info("Select a stock and click 'Get Stock Data' to start")
     
     with tab2:
-        st.header("🤖 Neural Network Training")
+        # Prediction tab - matching local GUI exactly
+        st.markdown("### Prediction Interface")
         
-        if stats['total_examples'] >= TRAINING_THRESHOLD:
-            if st.button("🧠 Train Neural Network", type="primary"):
-                with st.spinner("Training neural network... This may take a few minutes."):
-                    success = trainer.train_neural_network()
+        # Controls row
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            pred_stock_symbols = load_stock_symbols()
+            pred_selected_stock = st.selectbox("Stock:", pred_stock_symbols, key="prediction_stock")
+        
+        with col2:
+            if st.button("Get Prediction", key="prediction_btn"):
+                with st.spinner("Generating prediction..."):
+                    # Load data for prediction
+                    pred_features, pred_historical_data = load_stock_data(pred_selected_stock, 30)
                     
-                    if success:
-                        st.success("🎉 Neural network trained successfully!")
-                        st.balloons()
+                    if pred_features is not None and pred_historical_data is not None:
+                        st.session_state.pred_features = pred_features
+                        st.session_state.pred_data = pred_historical_data
+                        st.session_state.pred_symbol = pred_selected_stock
                         
-                        # Update model state
-                        update_model_state(is_trained=True, training_examples=stats['total_examples'], model_accuracy=0.85)
+                        # Generate prediction if model is trained
+                        if model_state['is_trained']:
+                            prediction_result = trainer.make_prediction(pred_features)
+                            st.session_state.prediction_result = prediction_result
                         
-                        st.rerun()
+                        st.success(f"Loaded {pred_selected_stock} data for prediction")
                     else:
-                        st.error("❌ Training failed. Check logs for details.")
-        else:
-            st.info(f"Need {TRAINING_THRESHOLD - stats['total_examples']} more examples to start training")
+                        st.error("Failed to fetch prediction data")
         
-        # Prediction test
-        if model_state['is_trained'] and 'current_features' in st.session_state:
-            st.markdown("---")
-            st.subheader("🔮 Test AI Prediction")
+        # Prediction results
+        if 'pred_features' in st.session_state:
+            pred_features = st.session_state.pred_features
+            pred_historical_data = st.session_state.pred_data
+            pred_symbol = st.session_state.pred_symbol
             
-            if st.button("Generate AI Prediction"):
-                prediction_result = trainer.make_prediction(st.session_state.current_features)
-                
-                st.write("**AI Prediction:**", prediction_result['prediction'])
-                st.write("**Confidence:**", f"{prediction_result['confidence']:.1%}")
-    
-    with tab3:
-        st.header("📊 Training Statistics")
-        
-        if stats['total_examples'] > 0:
-            # Decision distribution
-            st.subheader("Decision Distribution")
-            for decision, count in stats['decision_distribution'].items():
-                st.write(f"- {decision}: {count}")
+            # Create horizontal layout for prediction
+            pred_chart_col, pred_metrics_col = st.columns([3, 1])
             
-            # Training history
-            st.subheader("Recent Training Examples")
-            if len(trainer.training_examples) > 0:
-                recent_examples = trainer.training_examples[-5:]  # Last 5 examples
+            with pred_chart_col:
+                # Prediction chart
+                pred_chart_fig = create_candlestick_chart(pred_historical_data)
+                if pred_chart_fig:
+                    st.plotly_chart(pred_chart_fig, use_container_width=True, height=500)
                 
-                for i, example in enumerate(reversed(recent_examples)):
-                    with st.expander(f"Example {len(trainer.training_examples) - i}: {example['technical_features']['symbol']} - {example['user_decision']}"):
-                        st.write(f"**Date:** {example['technical_features']['date']}")
-                        st.write(f"**Price:** ${example['technical_features']['current_price']:.2f}")
-                        st.write(f"**Decision:** {example['user_decision']}")
-                        st.write(f"**Sentiment Score:** {example['sentiment_analysis']['sentiment_score']:.3f}")
-                        st.write(f"**Reasoning:** {example['sentiment_analysis']['raw_text']}")
-        else:
-            st.info("No training data available yet. Start by adding some training examples!")
+                # Prediction result
+                if model_state['is_trained'] and 'prediction_result' in st.session_state:
+                    st.markdown("### AI Prediction")
+                    pred_result = st.session_state.prediction_result
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Prediction", pred_result['prediction'])
+                    with col2:
+                        st.metric("Confidence", f"{pred_result['confidence']:.1%}")
+                else:
+                    st.info("Model not trained yet. Train the model in the Training tab first.")
+            
+            with pred_metrics_col:
+                # Prediction metrics panel
+                create_metrics_panel(pred_features)
 
 if __name__ == "__main__":
     main()
