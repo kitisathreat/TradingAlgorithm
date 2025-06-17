@@ -184,8 +184,8 @@ class ModelTrainer:
             # Calculate days needed (approximately years_back * 365)
             days_needed = years_back * 365
             
-            # Get random date range within the last years_back years
-            start_date, end_date = find_available_data_range(symbol, days_needed, max_years_back=years_back)
+            # Get random date range with no limit on how far back we can look
+            start_date, end_date = find_available_data_range(symbol, days_needed, max_years_back=None)
             
             # Validate the date range
             if not validate_date_range(start_date, end_date, symbol):
@@ -341,9 +341,8 @@ class ModelTrainer:
         
         from date_range_utils import get_random_date_range
         
-        # Get random date range within the last 25 years
-        days_needed = years * 365
-        start_date, end_date = get_random_date_range(days_needed, max_years_back=25)
+        # Get random date range with no limit on how far back we can look
+        start_date, end_date = get_random_date_range(days_needed, max_years_back=None)
         
         # Create date range (business days only) using the random dates
         date_range = pd.bdate_range(start=start_date, end=end_date)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Advanced Neural Network Trading System - Streamlit Interface
-Main entry point for both local and Streamlit Cloud deployment
+Advanced Neural Network Trading System - Streamlit Cloud Interface
+Main entry point for Streamlit Cloud deployment with unlimited date range support
 """
 
 import streamlit as st
@@ -17,7 +17,7 @@ import time
 import yfinance as yf
 
 # Add the orchestrator path to sys.path
-REPO_ROOT = Path(__file__).parent
+REPO_ROOT = Path(__file__).parent.parent.parent
 ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
 sys.path.append(str(ORCHESTRATOR_PATH))
 
@@ -199,11 +199,10 @@ def display_data_controls(trainer):
     return None, None
 
 def load_stock_data(trainer, symbol, days):
-    """Load stock data using the same logic as local GUI"""
+    """Load stock data using the same logic as local GUI with unlimited date range"""
     try:
         # Import the date range utilities
         from date_range_utils import find_available_data_range, validate_date_range
-        import yfinance as yf
         
         # Get random date range with no limit on how far back we can look
         start_date, end_date = find_available_data_range(symbol, days, max_years_back=None)
