@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
         
         # Date range
         self.date_range = QSpinBox()
-        self.date_range.setRange(1, 365)
+        self.date_range.setRange(1, 365*50)  # Allow up to 50 years
         self.date_range.setValue(30)
         controls_layout.addWidget(QLabel("Days of History:"))
         controls_layout.addWidget(self.date_range)
@@ -494,15 +494,15 @@ class MainWindow(QMainWindow):
             
             from date_range_utils import find_available_data_range, validate_date_range
             
-            # Get random date range within the last 25 years
-            start_date, end_date = find_available_data_range(stock, days, max_years_back=25)
+            # Get random date range with no limit on how far back we can look
+            start_date, end_date = find_available_data_range(stock, days, max_years_back=None)
             
             # Validate the date range
             if not validate_date_range(start_date, end_date, stock):
                 QMessageBox.critical(self, "Error", f"Invalid date range generated for {stock}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 return
             
-            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
+            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range from available historical data)")
             
             ticker = yf.Ticker(stock)
             df = ticker.history(start=start_date, end=end_date)
@@ -714,7 +714,7 @@ class MainWindow(QMainWindow):
             from date_range_utils import find_available_data_range, validate_date_range
             
             # Get recent data for prediction (last 30 days)
-            start_date, end_date = find_available_data_range(stock, 30, max_years_back=25)
+            start_date, end_date = find_available_data_range(stock, 30, max_years_back=None)
             
             # Validate the date range
             if not validate_date_range(start_date, end_date, stock):

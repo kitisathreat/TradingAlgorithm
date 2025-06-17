@@ -182,23 +182,77 @@ def display_data_controls(trainer):
     """Display data loading controls similar to local GUI"""
     if trainer is None:
         st.error("Model trainer not available")
-        return
+        return None, None
     
     st.subheader("📈 Stock Data Controls")
     
     with st.container():
         st.markdown('<div class="control-panel">', unsafe_allow_html=True)
         
+        # Initialize stock selection manager
+        try:
+            from stock_selection_utils import StockSelectionManager
+            stock_manager = StockSelectionManager()
+        except Exception as e:
+            st.error(f"Failed to initialize stock selection manager: {e}")
+            return None, None
+        
         # Stock selection
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            stock_symbols = [
-                'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 
-                'AMD', 'INTC', 'CRM', 'ADBE', 'PYPL', 'UBER', 'SHOP', 'SQ',
-                'SPY', 'QQQ', 'IWM', 'VTI'  # ETFs for more reliable data
-            ]
-            selected_stock = st.selectbox("Stock Symbol:", stock_symbols, index=0)
+            # Get stock options for dropdown
+            stock_options = stock_manager.get_stock_options()
+            stock_display_names = [option['name'] for option in stock_options]
+            
+            selected_stock_index = st.selectbox(
+                "Stock Selection:", 
+                range(len(stock_display_names)),
+                format_func=lambda x: stock_display_names[x],
+                help="Select from S&P100 stocks, random pick, optimized pick, or custom ticker"
+            )
+            
+            selected_stock_option = stock_options[selected_stock_index]
+            selected_stock_symbol = selected_stock_option['symbol']
+            
+            # Show description
+            st.caption(f"ℹ️ {selected_stock_option['description']}")
+            
+            # Handle special stock selection cases
+            if selected_stock_symbol == "random":
+                if st.button("🎲 Get Random Stock", type="secondary"):
+                    symbol, name = stock_manager.get_random_stock()
+                    st.success(f"🎲 Random pick: {symbol} ({name})")
+                    selected_stock_symbol = symbol
+                    
+            elif selected_stock_symbol == "optimized":
+                if st.button("🚀 Get Optimized Pick", type="secondary"):
+                    symbol, name = stock_manager.get_optimized_pick(trainer)
+                    st.success(f"🚀 Optimized pick: {symbol} ({name})")
+                    selected_stock_symbol = symbol
+                    
+            elif selected_stock_symbol == "custom":
+                # Custom ticker input
+                custom_ticker = st.text_input(
+                    "Enter Stock Ticker:",
+                    placeholder="e.g., AAPL, TSLA, GOOGL",
+                    help="Enter any valid stock ticker symbol"
+                )
+                
+                if custom_ticker:
+                    # Validate the custom ticker
+                    is_valid, message, company_name = stock_manager.validate_custom_ticker(custom_ticker)
+                    
+                    if is_valid:
+                        st.success(message)
+                        selected_stock_symbol = custom_ticker.upper()
+                    else:
+                        st.error(message)
+                        selected_stock_symbol = None
+                        
+                    # Show validation result
+                    if company_name:
+                        st.info(f"Company: {company_name}")
         
         with col2:
             # Date range selection
@@ -208,7 +262,7 @@ def display_data_controls(trainer):
         with col3:
             # Custom days input (only visible when "Custom" is selected)
             if selected_date_range == "Custom":
-                custom_days = st.number_input("Custom Days:", min_value=1, max_value=365, value=30)
+                custom_days = st.number_input("Custom Days:", min_value=1, max_value=365*50, value=30, help="Enter custom number of days (up to 50 years)")
                 days_to_fetch = custom_days
             else:
                 days_to_fetch = int(selected_date_range)
@@ -217,7 +271,12 @@ def display_data_controls(trainer):
         with col4:
             st.write("")  # Spacer
             if st.button("📊 Get Stock Data", type="primary"):
-                return selected_stock, days_to_fetch
+                # Validate that we have a valid symbol
+                if selected_stock_symbol and selected_stock_symbol not in ["random", "optimized", "custom"]:
+                    return selected_stock_symbol, days_to_fetch
+                else:
+                    st.error("Please select a valid stock symbol first")
+                    return None, None
         
         st.markdown('</div>', unsafe_allow_html=True)
     
@@ -566,8 +625,8 @@ def main():
         # Data controls
         stock_symbol, days = display_data_controls(trainer)
         
-        # Load data if requested
-        if stock_symbol and days:
+        # Load data if requested and we have a valid symbol
+        if stock_symbol and days and stock_symbol not in ["random", "optimized", "custom"]:
             stock_info, stock_data, symbol = load_stock_data(trainer, stock_symbol, days)
             if stock_info and stock_data is not None:
                 # Store in session state

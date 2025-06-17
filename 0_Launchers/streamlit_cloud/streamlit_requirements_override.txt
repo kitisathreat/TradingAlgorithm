@@ -1,50 +1,36 @@
-# Streamlit Cloud Requirements - Final Override Version
-# This file should be used as the main requirements.txt for Streamlit Cloud deployment
+# Override requirements to resolve websocket dependency conflict
+# This file is used to force specific versions and installation methods
 
-# Install websockets 13.0 FIRST to establish the version
-websockets==13.0
+# Force websockets to 13+ first
+websockets>=13.0
 
-# Core ML and Data Processing
+# Install alpaca-trade-api with --no-deps to ignore websocket constraint
+# Note: This requires manual installation with --no-deps flag
+alpaca-trade-api==3.2.0 --no-deps
+
+# Rest of the requirements (excluding alpaca since it's handled separately)
 tensorflow==2.13.0
 numpy==1.24.3
 pandas==2.0.3
 scikit-learn==1.3.0
 joblib==1.3.0
-
-# Web Framework and API
 streamlit==1.31.0
 fastapi==0.100.0
 python-dotenv==1.0.0
 requests==2.31.0
 httpx==0.24.0
-
-# Trading and Market Data - Install alpaca-trade-api after websockets is established
-alpaca-trade-api==3.2.0
 yfinance==0.2.63
 lxml==4.9.1
 tqdm==4.65.0
-
-# Visualization
 plotly==5.18.0
 matplotlib==3.7.0
 seaborn==0.12.0
-
-# ML Model Serving
 onnxruntime==1.15.0
 opencv-python-headless==4.7.0.72
-
-# Sentiment Analysis
 vaderSentiment==3.3.2
 textblob==0.17.1
-
-# System and Performance
 psutil==5.9.0
 tenacity==8.2.2
-
-# Streamlit Extras
 streamlit-plotly-events==0.0.6
 streamlit-option-menu==0.3.12
-streamlit-extras==0.3.5
-
-# Force websockets to stay at version 13.0
-websockets==13.0 
+streamlit-extras==0.3.5 
