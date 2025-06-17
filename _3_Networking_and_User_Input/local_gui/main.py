@@ -443,36 +443,29 @@ Volume: {row['Volume']:,}
         # Clear previous plot items
         self.plot_items = []
         
-        # Draw candlesticks using line segments for wicks and rectangles for bodies
+        # Draw candlesticks using BarGraphItem for filled bodies and lines for wicks
         opens = df['Open'].values
         highs = df['High'].values
         lows = df['Low'].values
         closes = df['Close'].values
         
+        body_width = 1.2e4  # Width for BarGraphItem
+        bar_items = []
         # Draw wicks (vertical lines)
         for i in range(len(df)):
             color = 'g' if closes[i] >= opens[i] else 'r'
             wick = pg.PlotDataItem([x_vals[i], x_vals[i]], [lows[i], highs[i]], pen=pg.mkPen(color=color, width=1))
             self.addItem(wick)
             self.plot_items.append(wick)
-        
-        # Draw bodies (rectangles)
-        body_width = 1.2e4  # Increased width
+        # Draw filled bodies
         for i in range(len(df)):
             color = 'g' if closes[i] >= opens[i] else 'r'
-            left = x_vals[i] - body_width
-            right = x_vals[i] + body_width
-            top = max(opens[i], closes[i])
-            bottom = min(opens[i], closes[i])
-            # Draw as a filled polygon (rectangle)
-            body = pg.PlotDataItem(
-                [left, right, right, left, left],
-                [top, top, bottom, bottom, top],
-                pen=pg.mkPen(color=color, width=1),
-                brush=pg.mkBrush(color)
-            )
-            self.addItem(body)
-            self.plot_items.append(body)
+            x = x_vals[i]
+            y = min(opens[i], closes[i])
+            height = abs(opens[i] - closes[i])
+            bar = pg.BarGraphItem(x=[x], height=[height], width=body_width*2, y=[y], brush=color, pen=pg.mkPen(color=color, width=1))
+            self.addItem(bar)
+            self.plot_items.append(bar)
         
         min_price = df['Low'].min()
         max_price = df['High'].max()
