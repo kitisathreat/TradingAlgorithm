@@ -15,6 +15,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import time
 import subprocess
+import yfinance as yf
 
 # Auto-setup dependencies on first run
 def auto_setup_dependencies():
