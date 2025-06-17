@@ -728,8 +728,8 @@ class MainWindow(QMainWindow):
             
             from date_range_utils import find_available_data_range, validate_date_range
             
-            # Get random date range within the last 25 years
-            start_date, end_date = find_available_data_range(stock, days, max_years_back=25)
+            # Get random date range with no limit on how far back we can look
+            start_date, end_date = find_available_data_range(stock, days, max_years_back=None)
             
             # Validate the date range
             if not validate_date_range(start_date, end_date, stock):

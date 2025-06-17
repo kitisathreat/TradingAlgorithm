@@ -1,7 +1,7 @@
 """
 Date Range Utilities for Trading Algorithm
-Provides functions to randomly select date ranges within the last 25 years
-with intelligent fallback to find the closest available data.
+Provides functions to randomly select date ranges with intelligent fallback to find the closest available data.
+No longer limited to 25 years - can find data from anywhere in history.
 """
 
 import random
@@ -11,13 +11,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def get_random_date_range(days: int, max_years_back: int = 25) -> Tuple[datetime, datetime]:
+def get_random_date_range(days: int, max_years_back: int = None) -> Tuple[datetime, datetime]:
     """
-    Generate a random date range within the last max_years_back years.
+    Generate a random date range of the specified number of days.
+    If max_years_back is None, will look as far back as needed to find data.
     
     Args:
         days: Number of days of data requested
-        max_years_back: Maximum years to look back (default 25)
+        max_years_back: Maximum years to look back (None = no limit)
     
     Returns:
         Tuple of (start_date, end_date) in UTC timezone
@@ -25,8 +26,12 @@ def get_random_date_range(days: int, max_years_back: int = 25) -> Tuple[datetime
     # Get current date in UTC
     current_date = datetime.now(timezone.utc)
     
-    # Calculate the earliest possible start date (max_years_back years ago)
-    earliest_start = current_date - timedelta(days=max_years_back * 365)
+    # Calculate the earliest possible start date
+    if max_years_back is not None:
+        earliest_start = current_date - timedelta(days=max_years_back * 365)
+    else:
+        # No limit - go back to 1900 for stocks (reasonable historical limit)
+        earliest_start = datetime(1900, 1, 1, tzinfo=timezone.utc)
     
     # Calculate the latest possible end date (current date minus buffer for data availability)
     # Use a 5-day buffer to ensure we get real data
@@ -67,14 +72,15 @@ def get_random_date_range(days: int, max_years_back: int = 25) -> Tuple[datetime
     
     return start_date, end_date
 
-def find_available_data_range(symbol: str, requested_days: int, max_years_back: int = 25) -> Tuple[datetime, datetime]:
+def find_available_data_range(symbol: str, requested_days: int, max_years_back: int = None) -> Tuple[datetime, datetime]:
     """
     Find an available data range for a given symbol, with fallback logic.
+    No longer limited to 25 years - can find data from anywhere in history.
     
     Args:
         symbol: Stock symbol
         requested_days: Number of days of data requested
-        max_years_back: Maximum years to look back (default 25)
+        max_years_back: Maximum years to look back (None = no limit)
     
     Returns:
         Tuple of (start_date, end_date) that should have available data
@@ -85,8 +91,8 @@ def find_available_data_range(symbol: str, requested_days: int, max_years_back: 
         # First, try to get the actual data range available for this symbol
         ticker = yf.Ticker(symbol)
         
-        # Try different periods to find available data
-        for period in ["max", "5y", "2y", "1y"]:
+        # Try different periods to find available data, starting with max to get full history
+        for period in ["max", "10y", "5y", "2y", "1y"]:
             try:
                 data = ticker.history(period=period)
                 if not data.empty and len(data) >= requested_days:
@@ -101,13 +107,16 @@ def find_available_data_range(symbol: str, requested_days: int, max_years_back: 
                         actual_end = actual_end.tz_localize('UTC')
                     
                     # Calculate a random start date within the available range
+                    # We want to find a window of requested_days within the available data
                     available_days = (actual_end - actual_start).days
                     if available_days >= requested_days:
-                        random_offset = random.randint(0, available_days - requested_days)
+                        # Find a random start point that allows for requested_days of data
+                        max_start_offset = available_days - requested_days
+                        random_offset = random.randint(0, max_start_offset)
                         start_date = actual_start + timedelta(days=random_offset)
                         end_date = start_date + timedelta(days=requested_days)
                         
-                        logger.info(f"Found available data for {symbol}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+                        logger.info(f"Found available data for {symbol}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} ({requested_days} days)")
                         return start_date, end_date
                     
             except Exception as e:
@@ -128,6 +137,7 @@ def find_available_data_range(symbol: str, requested_days: int, max_years_back: 
 def validate_date_range(start_date: datetime, end_date: datetime, symbol: str = None) -> bool:
     """
     Validate that a date range is reasonable and should have data.
+    Updated to allow much older data (no longer limited to 25 years).
     
     Args:
         start_date: Start date
@@ -144,8 +154,8 @@ def validate_date_range(start_date: datetime, end_date: datetime, symbol: str = 
         logger.warning(f"Date range contains future dates for {symbol or 'unknown'}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         return False
     
-    # Check if start date is too far in the past (more than 50 years)
-    if start_date < current_date - timedelta(days=50 * 365):
+    # Check if start date is too far in the past (more than 150 years - reasonable for stock data)
+    if start_date < current_date - timedelta(days=150 * 365):
         logger.warning(f"Start date too far in the past for {symbol or 'unknown'}: {start_date.strftime('%Y-%m-%d')}")
         return False
     
@@ -154,7 +164,8 @@ def validate_date_range(start_date: datetime, end_date: datetime, symbol: str = 
         logger.warning(f"Invalid date range for {symbol or 'unknown'}: start >= end")
         return False
     
-    if (end_date - start_date).days > 365 * 10:  # More than 10 years
+    # Allow longer date ranges since we're looking for specific lengths from anywhere in history
+    if (end_date - start_date).days > 365 * 50:  # More than 50 years
         logger.warning(f"Date range too long for {symbol or 'unknown'}: {(end_date - start_date).days} days")
         return False
     
