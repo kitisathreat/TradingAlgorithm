@@ -1,6 +1,5 @@
-# Streamlit Cloud specific requirements
+# Streamlit Cloud Requirements - Simplified Version
 # This file is specifically for Streamlit Cloud deployment
-# Based on root_requirements.txt but with Streamlit Cloud specific adjustments
 
 # Core ML and Data Processing
 tensorflow==2.15.0  # Updated for Python 3.13 compatibility
@@ -15,14 +14,12 @@ fastapi==0.100.0
 python-dotenv==1.0.0
 requests==2.31.0
 httpx==0.24.0
-# aiohttp not specified - let pip resolve compatible version
 
-# Trading and Market Data
-# Force websockets 13+ first, then install alpaca with --no-deps
-websockets>=13.0  # Force newer version for yfinance compatibility
-alpaca-trade-api==3.2.0  # Uncommented - needed for trading functionality
+# Trading and Market Data - Force websockets 13+ first
+websockets>=13.0
+alpaca-trade-api==3.2.0
 yfinance==0.2.63
-lxml==4.9.1  # Pinned version for stability
+lxml==4.9.1
 tqdm==4.65.0
 
 # Visualization
@@ -32,7 +29,7 @@ seaborn==0.12.0
 
 # ML Model Serving
 onnxruntime==1.15.0
-opencv-python-headless==4.7.0.72  # Using headless version for cloud deployment
+opencv-python-headless==4.7.0.72
 
 # Sentiment Analysis
 vaderSentiment==3.3.2
@@ -47,4 +44,4 @@ streamlit-plotly-events==0.0.6
 streamlit-option-menu==0.3.12
 streamlit-extras==0.3.5
 
-# Note: Development dependencies (pytest, pybind11) are excluded as they're not needed in production 
+# Note: This file is used by Streamlit Cloud instead of the root requirements.txt 
