@@ -237,7 +237,7 @@ def launch_gui(venv_path):
     
     # Path to main.py
     script_dir = Path(__file__).parent
-    main_py = script_dir.parent / "_3_Networking_and_User_Input" / "local_gui" / "main.py"
+    main_py = script_dir.parent.parent / "_3_Networking_and_User_Input" / "local_gui" / "main.py"
     
     if not main_py.exists():
         print()

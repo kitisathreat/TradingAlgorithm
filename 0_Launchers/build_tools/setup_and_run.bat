@@ -119,7 +119,7 @@ echo [OK] Environment setup completed successfully
 echo.
 echo [4/4] Launching Neural Network Training Interface...
 echo.
-call "%~dp0run_streamlit_app.bat"
+call "%~dp0..\streamlit_local\run_streamlit_app.bat"
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start Streamlit interface

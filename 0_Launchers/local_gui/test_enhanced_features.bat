@@ -8,7 +8,7 @@ echo - Financial indicators calculation
 echo.
 
 cd /d "%~dp0"
-cd "_3_Networking_and_User_Input\local_gui"
+cd "..\..\_3_Networking_and_User_Input\local_gui"
 
 echo Running test...
 python test_enhanced_gui.py

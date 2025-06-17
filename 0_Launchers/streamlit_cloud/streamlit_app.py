@@ -16,6 +16,31 @@ from datetime import datetime, timedelta
 import time
 import yfinance as yf
 
+# Version conflict handler for Streamlit Cloud
+def handle_version_conflicts():
+    """Handle version conflicts, especially for Alpaca websocket dependencies"""
+    try:
+        # Try to import alpaca-trade-api with version override
+        import websockets
+        if websockets.__version__ != "13.0":
+            st.warning(f"⚠️ Websockets version mismatch: {websockets.__version__} (expected 13.0)")
+            st.info("This may cause issues with Alpaca trading API, but the app will continue to function.")
+        
+        # Try to import alpaca-trade-api
+        try:
+            import alpaca_trade_api
+            st.success("✅ Alpaca Trade API imported successfully")
+        except ImportError as e:
+            st.error(f"❌ Failed to import Alpaca Trade API: {e}")
+            st.info("Trading functionality will be limited, but other features will work.")
+        
+    except ImportError as e:
+        st.error(f"❌ Critical import error: {e}")
+        st.info("Some features may not be available.")
+
+# Handle version conflicts before other imports
+handle_version_conflicts()
+
 # Add the orchestrator path to sys.path
 REPO_ROOT = Path(__file__).parent.parent.parent
 ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
