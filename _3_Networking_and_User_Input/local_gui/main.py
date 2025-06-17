@@ -659,7 +659,7 @@ class MainWindow(QMainWindow):
         self.date_range_combo.setCurrentIndex(0)
         controls_layout.addWidget(self.date_range_combo)
         self.date_range_spin = QSpinBox()
-        self.date_range_spin.setRange(1, 365)
+        self.date_range_spin.setRange(1, 365*50)  # Allow up to 50 years
         self.date_range_spin.setValue(30)
         self.date_range_spin.setVisible(False)
         controls_layout.addWidget(self.date_range_spin)
@@ -927,6 +927,24 @@ class MainWindow(QMainWindow):
                     if not is_valid:
                         QMessageBox.warning(self, "Invalid Ticker", message)
                         return
+            elif stock_data == "random":
+                # Get a random stock
+                if self.stock_manager:
+                    symbol, name = self.stock_manager.get_random_stock()
+                    stock = symbol
+                    print(f"Random stock selected: {stock} ({name})")
+                else:
+                    QMessageBox.warning(self, "Warning", "Stock manager not available")
+                    return
+            elif stock_data == "optimized":
+                # Get an optimized stock
+                if self.stock_manager:
+                    symbol, name = self.stock_manager.get_optimized_pick()
+                    stock = symbol
+                    print(f"Optimized stock selected: {stock} ({name})")
+                else:
+                    QMessageBox.warning(self, "Warning", "Stock manager not available")
+                    return
             else:
                 stock = stock_data
             
@@ -952,15 +970,15 @@ class MainWindow(QMainWindow):
             
             from date_range_utils import find_available_data_range, validate_date_range
             
-            # Get random date range within the last 25 years
-            start_date, end_date = find_available_data_range(stock, days, max_years_back=25)
+            # Get random date range with no limit on how far back we can look
+            start_date, end_date = find_available_data_range(stock, days, max_years_back=None)
             
             # Validate the date range
             if not validate_date_range(start_date, end_date, stock):
                 QMessageBox.critical(self, "Error", f"Invalid date range generated for {stock}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 return
             
-            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
+            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range from available historical data)")
             
             ticker = yf.Ticker(stock)
             df = ticker.history(start=start_date, end=end_date)

@@ -19,28 +19,20 @@ def test_date_range_utils():
     try:
         from date_range_utils import get_random_date_range, find_available_data_range, validate_date_range
         
-        # Test 1: Basic random date range generation
-        print("\n📅 Test 1: Basic random date range generation")
-        start_date, end_date = get_random_date_range(30, max_years_back=25)
-        print(f"   Generated range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-        print(f"   Days: {(end_date - start_date).days}")
-        print(f"   Valid: {validate_date_range(start_date, end_date)}")
+        # Test get_random_date_range with different parameters
+        print("Testing get_random_date_range...")
+        start_date, end_date = get_random_date_range(30, max_years_back=None)
+        print(f"30 days, no limit: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
-        # Test 2: Different day ranges
-        print("\n📅 Test 2: Different day ranges")
+        # Test with different day ranges
         for days in [7, 30, 90, 365]:
-            start_date, end_date = get_random_date_range(days, max_years_back=25)
-            actual_days = (end_date - start_date).days
-            print(f"   Requested {days} days: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} ({actual_days} actual days)")
+            start_date, end_date = get_random_date_range(days, max_years_back=None)
+            print(f"{days} days, no limit: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
-        # Test 3: Available data range for a real symbol
-        print("\n📅 Test 3: Available data range for real symbol")
-        try:
-            start_date, end_date = find_available_data_range("AAPL", 30, max_years_back=25)
-            print(f"   AAPL 30 days: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-            print(f"   Valid: {validate_date_range(start_date, end_date, 'AAPL')}")
-        except Exception as e:
-            print(f"   Error testing AAPL: {e}")
+        # Test find_available_data_range
+        print("\nTesting find_available_data_range...")
+        start_date, end_date = find_available_data_range("AAPL", 30, max_years_back=None)
+        print(f"AAPL 30 days, no limit: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
         
         # Test 4: Validation tests
         print("\n📅 Test 4: Date range validation")
@@ -86,7 +78,7 @@ def test_data_fetching():
         from date_range_utils import find_available_data_range, validate_date_range
         
         # Get random date range
-        start_date, end_date = find_available_data_range(symbol, days, max_years_back=25)
+        start_date, end_date = find_available_data_range(symbol, days, max_years_back=None)
         
         if not validate_date_range(start_date, end_date, symbol):
             print(f"❌ Invalid date range generated for {symbol}")

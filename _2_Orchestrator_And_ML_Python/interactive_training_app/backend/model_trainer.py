@@ -551,7 +551,7 @@ class ModelTrainer:
     
     def get_historical_stock_data(self, symbol: str, years_back: int = 25) -> pd.DataFrame:
         """
-        Fetch historical stock data going back up to 25 years with random date selection
+        Fetch historical stock data with unlimited date range and random date selection
         Addresses the insufficient data problem from your logs
         """
         try:
@@ -578,7 +578,7 @@ class ModelTrainer:
                 logger.warning(f"Invalid date range generated for {symbol}, using synthetic data")
                 return self._generate_synthetic_historical_data(symbol, min(years_back, 2))
             
-            logger.info(f"Fetching {years_back} years of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last {years_back} years)")
+            logger.info(f"Fetching {years_back} years of data for {symbol} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range from available historical data)")
             
             ticker = yf.Ticker(symbol)
             

@@ -331,7 +331,7 @@ def display_data_controls(trainer):
         with col3:
             # Custom days input (only visible when "Custom" is selected)
             if selected_date_range == "Custom":
-                custom_days = st.number_input("Custom Days:", min_value=1, max_value=365, value=30, help="Enter custom number of days")
+                custom_days = st.number_input("Custom Days:", min_value=1, max_value=365*50, value=30, help="Enter custom number of days (up to 50 years)")
                 days_to_fetch = custom_days
             else:
                 days_to_fetch = int(selected_date_range)
