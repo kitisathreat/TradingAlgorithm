@@ -12,6 +12,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def force_install_websockets() -> bool:
+    """Force install websockets 13+ to resolve dependency conflict."""
+    try:
+        logger.info("Force installing websockets>=13.0 to resolve dependency conflict...")
+        cmd = [sys.executable, "-m", "pip", "install", "websockets>=13.0", "--force-reinstall"]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        logger.info("Successfully installed websockets>=13.0")
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to install websockets: {e.stderr}")
+        return False
+
+def force_install_alpaca_no_deps() -> bool:
+    """Install alpaca-trade-api with --no-deps to ignore websocket constraint."""
+    try:
+        logger.info("Installing alpaca-trade-api with --no-deps to bypass websocket constraint...")
+        cmd = [sys.executable, "-m", "pip", "install", "alpaca-trade-api==3.2.0", "--no-deps"]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        logger.info("Successfully installed alpaca-trade-api with --no-deps")
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to install alpaca-trade-api: {e.stderr}")
+        return False
+
 def install_requirements() -> None:
     """Install requirements using the package manager for Streamlit Cloud."""
     # Get the directory of this script
@@ -32,6 +56,18 @@ def install_requirements() -> None:
         sys.exit(1)
 
     logger.info(f"Installing Streamlit Cloud requirements from {cloud_reqs}")
+    
+    # First, force install websockets 13+ to resolve the dependency conflict
+    if not force_install_websockets():
+        logger.error("Failed to install websockets>=13.0")
+        sys.exit(1)
+    
+    # Then install alpaca-trade-api with --no-deps
+    if not force_install_alpaca_no_deps():
+        logger.error("Failed to install alpaca-trade-api with --no-deps")
+        sys.exit(1)
+    
+    # Now install the rest of the requirements (excluding alpaca-trade-api since we already installed it)
     failed = manager.install_requirements(str(cloud_reqs))
     if failed:
         logger.error(f"Failed to install some requirements: {failed}")
