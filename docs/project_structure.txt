@@ -41,4 +41,10 @@ TradingAlgorithm/
 └── TradingAlgo.sln                    # VS solution
 
 # Environment: Python 3.9.x, TensorFlow 2.13.0, C++17+
-# Excluded: __pycache__/, .git/, venv/, .env, logs, data files 
+# Excluded: __pycache__/, .git/, venv/, .env, logs, data files
+
+# New directories
+│   ├── local_gui/           # Launchers for the local PyQt GUI
+│   ├── streamlit_local/     # Launchers for running Streamlit app locally
+│   ├── streamlit_cloud/     # Setup scripts for Streamlit Cloud deployment
+│   └── build_tools/         # Build and environment setup scripts 

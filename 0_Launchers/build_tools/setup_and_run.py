@@ -41,7 +41,7 @@ def run_streamlit_app() -> None:
     """Launch the Streamlit app in Streamlit Cloud."""
     # Get the path to the Streamlit app
     project_root = Path(__file__).parent.parent
-    app_path = project_root / "_3_Networking_and_User_Input" / "web_interface" / "streamlit_app.py"
+    app_path = project_root / "streamlit_app.py"
 
     if not app_path.exists():
         raise FileNotFoundError(f"Streamlit app not found at {app_path}")
