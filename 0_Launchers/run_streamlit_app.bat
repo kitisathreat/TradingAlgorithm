@@ -59,6 +59,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Change to project root directory
+cd /d "%~dp0.."
+
 :: Check if port 8501 is already in use before starting
 echo Checking if port 8501 is available...
 netstat -an | findstr ":8501" | findstr "LISTENING" >nul
@@ -82,7 +85,7 @@ echo.
 echo Press Ctrl+C to stop the server when done
 echo.
 
-streamlit run "..\_3_Networking_and_User_Input\web_interface\streamlit_app.py" --server.port 8501 --server.address localhost
+streamlit run "_3_Networking_and_User_Input/web_interface/streamlit_app.py" --server.port 8501 --server.address localhost
 set STREAMLIT_EXIT_CODE=%errorlevel%
 
 :: Only show error message if it's not a normal interruption (Ctrl+C typically returns 2)

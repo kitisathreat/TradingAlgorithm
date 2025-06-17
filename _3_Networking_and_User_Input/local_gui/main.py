@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QTabWidget, QProgressBar, QMessageBox, QSplitter,
     QSizePolicy, QFrame, QScrollArea, QGridLayout, QGroupBox
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QMutex, QPoint
 from PyQt5.QtGui import QFont, QIcon, QPainter, QColor
 import pyqtgraph as pg
 import pandas as pd
@@ -17,6 +17,8 @@ import yfinance as yf
 import numpy as np
 from qt_material import apply_stylesheet
 from pyqtgraph import DateAxisItem
+import time
+from functools import lru_cache
 
 # Add parent directory to path to import from orchestrator
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -46,56 +48,25 @@ class CustomDateAxisItem(DateAxisItem):
 class MetricsWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMaximumWidth(300)
+        self.display_level = 'medium'  # 'min', 'medium', 'full'
+        self.is_dragging = False
+        self.drag_offset = QPoint(0, 0)
+        self.setWindowFlags(Qt.Widget | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(self._get_style())
         self.setMinimumWidth(250)
-        self.is_expanded = True
+        self.setMaximumWidth(350)
+        self.setMinimumHeight(40)
+        self.setMaximumHeight(600)
         self.setup_ui()
-        
-    def setup_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(5)
-        
-        # Header with toggle button
-        header_layout = QHBoxLayout()
-        self.toggle_btn = QPushButton("▼")
-        self.toggle_btn.setMaximumWidth(20)
-        self.toggle_btn.clicked.connect(self.toggle_expansion)
-        header_layout.addWidget(self.toggle_btn)
-        
-        title_label = QLabel("Financial Metrics")
-        title_label.setStyleSheet("font-weight: bold; font-size: 12px;")
-        header_layout.addWidget(title_label)
-        header_layout.addStretch()
-        
-        layout.addLayout(header_layout)
-        
-        # Scrollable content area
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        
-        self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout(self.content_widget)
-        self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(5)
-        
-        # Create metric groups
-        self.create_price_metrics()
-        self.create_volume_metrics()
-        self.create_volatility_metrics()
-        self.create_technical_metrics()
-        
-        self.scroll_area.setWidget(self.content_widget)
-        layout.addWidget(self.scroll_area)
-        
-        # Style the widget
-        self.setStyleSheet("""
+        self.update_display_level('medium')
+
+    def _get_style(self):
+        return """
             QWidget {
                 background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 5px;
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
             }
             QGroupBox {
                 font-weight: bold;
@@ -112,8 +83,118 @@ class MetricsWidget(QWidget):
             QLabel {
                 font-size: 10px;
             }
-        """)
-        
+        """
+
+    def setup_ui(self):
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setSpacing(5)
+
+        # Header with drag and display level buttons
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(5)
+        self.header = QWidget(self)
+        self.header.setLayout(header_layout)
+        self.header.setFixedHeight(32)
+        self.header.setStyleSheet("background: #e9ecef; border-radius: 6px;")
+        self.header.mousePressEvent = self.mousePressEvent
+        self.header.mouseMoveEvent = self.mouseMoveEvent
+        self.header.mouseReleaseEvent = self.mouseReleaseEvent
+
+        self.title_label = QLabel("Financial Metrics", self)
+        self.title_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        header_layout.addWidget(self.title_label)
+        header_layout.addStretch()
+
+        self.min_btn = QPushButton("_", self)
+        self.min_btn.setFixedSize(24, 24)
+        self.min_btn.clicked.connect(lambda: self.update_display_level('min'))
+        header_layout.addWidget(self.min_btn)
+
+        self.med_btn = QPushButton("□", self)
+        self.med_btn.setFixedSize(24, 24)
+        self.med_btn.clicked.connect(lambda: self.update_display_level('medium'))
+        header_layout.addWidget(self.med_btn)
+
+        self.full_btn = QPushButton("⬜", self)
+        self.full_btn.setFixedSize(24, 24)
+        self.full_btn.clicked.connect(lambda: self.update_display_level('full'))
+        header_layout.addWidget(self.full_btn)
+
+        self.layout.addWidget(self.header)
+
+        # Scrollable content area
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(5)
+        self.create_price_metrics()
+        self.create_volume_metrics()
+        self.create_volatility_metrics()
+        self.create_technical_metrics()
+        self.scroll_area.setWidget(self.content_widget)
+        self.layout.addWidget(self.scroll_area)
+
+    def update_display_level(self, level):
+        self.display_level = level
+        if level == 'min':
+            self.scroll_area.setVisible(False)
+            self.setFixedHeight(self.header.height())
+            self.setMaximumWidth(200)
+        elif level == 'medium':
+            self.scroll_area.setVisible(True)
+            self.setMaximumWidth(350)
+            self.setMinimumWidth(250)
+            self.setFixedHeight(320)
+        elif level == 'full':
+            self.scroll_area.setVisible(True)
+            parent = self.parentWidget()
+            if parent:
+                self.setFixedHeight(parent.height() - 20)
+            else:
+                self.setFixedHeight(600)
+            self.setMaximumWidth(400)
+            self.setMinimumWidth(300)
+        self.updateGeometry()
+
+    # --- Draggable overlay logic ---
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            # Only start drag if click is in header area
+            if event.pos().y() <= self.header.height():
+                self.is_dragging = True
+                self.drag_offset = event.globalPos() - self.frameGeometry().topLeft()
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
+    def mouseMoveEvent(self, event):
+        if self.is_dragging:
+            new_pos = event.globalPos() - self.drag_offset
+            parent = self.parentWidget()
+            if parent:
+                # Clamp to parent (chart) area
+                parent_top_left = parent.mapToGlobal(QPoint(0, 0))
+                x = max(0, min(new_pos.x() - parent_top_left.x(), parent.width() - self.width()))
+                y = max(0, min(new_pos.y() - parent_top_left.y(), parent.height() - self.height()))
+                self.move(x, y)
+            else:
+                self.move(new_pos)
+            event.accept()
+        else:
+            event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        self.is_dragging = False
+        event.accept()
+
     def create_price_metrics(self):
         group = QGroupBox("Price Metrics")
         layout = QGridLayout(group)
@@ -176,15 +257,6 @@ class MetricsWidget(QWidget):
         
         self.content_layout.addWidget(group)
         
-    def toggle_expansion(self):
-        self.is_expanded = not self.is_expanded
-        if self.is_expanded:
-            self.toggle_btn.setText("▼")
-            self.scroll_area.show()
-        else:
-            self.toggle_btn.setText("▶")
-            self.scroll_area.hide()
-            
     def update_metrics(self, df):
         if df is None or df.empty:
             return
@@ -205,14 +277,6 @@ class MetricsWidget(QWidget):
             self.high_low_label.setText(f"High/Low: ${high_price:.2f} / ${low_price:.2f}")
             self.avg_price_label.setText(f"Avg Price: ${avg_price:.2f}")
             
-            # Color coding for price change
-            if price_change > 0:
-                self.price_change_label.setStyleSheet("color: green; font-weight: bold;")
-            elif price_change < 0:
-                self.price_change_label.setStyleSheet("color: red; font-weight: bold;")
-            else:
-                self.price_change_label.setStyleSheet("color: black;")
-            
             # Volume metrics
             current_volume = df['Volume'].iloc[-1]
             avg_volume = df['Volume'].mean()
@@ -224,23 +288,20 @@ class MetricsWidget(QWidget):
             
             # Volatility metrics
             daily_returns = df['Close'].pct_change().dropna()
-            daily_vol = daily_returns.std() * 100 if len(daily_returns) > 0 else 0
+            daily_vol = daily_returns.std() * 100
+            weekly_vol = daily_returns.rolling(5).std().iloc[-1] * 100 if len(daily_returns) >= 5 else daily_vol
             
-            # Weekly volatility (5-day rolling)
-            weekly_returns = df['Close'].pct_change(5).dropna()
-            weekly_vol = weekly_returns.std() * 100 if len(weekly_returns) > 0 else 0
-            
-            # Average True Range (ATR)
+            # ATR calculation
             high_low = df['High'] - df['Low']
             high_close = np.abs(df['High'] - df['Close'].shift())
             low_close = np.abs(df['Low'] - df['Close'].shift())
-            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-            atr = true_range.rolling(14).mean().iloc[-1] if len(true_range) >= 14 else true_range.mean()
+            true_range = np.maximum(high_low, np.maximum(high_close, low_close))
+            atr = true_range.rolling(14).mean().iloc[-1] if len(df) >= 14 else true_range.mean()
             
             # Bollinger Bands width
             sma_20 = df['Close'].rolling(20).mean()
             std_20 = df['Close'].rolling(20).std()
-            bollinger_width = (2 * std_20 / sma_20 * 100).iloc[-1] if len(sma_20) >= 20 else 0
+            bollinger_width = (std_20.iloc[-1] / sma_20.iloc[-1]) * 100 if not pd.isna(sma_20.iloc[-1]) else 0
             
             self.daily_vol_label.setText(f"Daily Volatility: {daily_vol:.2f}%")
             self.weekly_vol_label.setText(f"Weekly Volatility: {weekly_vol:.2f}%")
@@ -250,34 +311,29 @@ class MetricsWidget(QWidget):
             # Technical indicators
             # RSI
             delta = df['Close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
-            rsi_value = rsi.iloc[-1] if len(rsi) > 0 and not pd.isna(rsi.iloc[-1]) else 50
+            current_rsi = rsi.iloc[-1] if not pd.isna(rsi.iloc[-1]) else 50
             
             # MACD
             ema_12 = df['Close'].ewm(span=12).mean()
             ema_26 = df['Close'].ewm(span=26).mean()
             macd = ema_12 - ema_26
-            macd_value = macd.iloc[-1] if len(macd) > 0 else 0
+            current_macd = macd.iloc[-1] if not pd.isna(macd.iloc[-1]) else 0
             
             # Moving averages
-            sma_20_current = df['Close'].rolling(20).mean().iloc[-1] if len(df) >= 20 else df['Close'].mean()
-            ema_12_current = df['Close'].ewm(span=12).mean().iloc[-1] if len(df) >= 12 else df['Close'].mean()
+            sma_20_current = sma_20.iloc[-1] if not pd.isna(sma_20.iloc[-1]) else current_price
+            ema_12_current = ema_12.iloc[-1] if not pd.isna(ema_12.iloc[-1]) else current_price
             
-            self.rsi_label.setText(f"RSI: {rsi_value:.2f}")
-            self.macd_label.setText(f"MACD: {macd_value:.2f}")
+            self.rsi_label.setText(f"RSI: {current_rsi:.2f}")
+            self.macd_label.setText(f"MACD: {current_macd:.2f}")
             self.sma_20_label.setText(f"SMA(20): ${sma_20_current:.2f}")
             self.ema_12_label.setText(f"EMA(12): ${ema_12_current:.2f}")
             
         except Exception as e:
             print(f"Error updating metrics: {str(e)}")
-            # Set default values on error
-            self.current_price_label.setText("Current Price: Error")
-            self.price_change_label.setText("Price Change: Error")
-            self.high_low_label.setText("High/Low: Error")
-            self.avg_price_label.setText("Avg Price: Error")
 
 class StockChartWidget(pg.PlotWidget):
     def __init__(self, parent=None):
@@ -299,12 +355,16 @@ class StockChartWidget(pg.PlotWidget):
         
         # Store data for tooltips
         self.df = None
-        self.candlestick_items = []
+        self.plot_items = []
         
         # Create tooltip
         self.tooltip = pg.TextItem(text='', anchor=(0, 1))
         self.tooltip.setVisible(False)
         self.addItem(self.tooltip)
+        
+        # Throttle mouse events to improve performance
+        self.last_mouse_update = 0
+        self.mouse_update_threshold = 0.1  # 100ms between updates
         
         # Connect mouse events
         self.scene().sigMouseMoved.connect(self.mouse_moved)
@@ -313,6 +373,12 @@ class StockChartWidget(pg.PlotWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
     def mouse_moved(self, pos):
+        # Throttle mouse updates for better performance
+        current_time = time.time()
+        if current_time - self.last_mouse_update < self.mouse_update_threshold:
+            return
+        self.last_mouse_update = current_time
+        
         if self.df is None or self.df.empty:
             return
             
@@ -348,9 +414,8 @@ Volume: {row['Volume']:,}
             self.tooltip.setPos(x_vals[closest_idx], row['High'])
             self.tooltip.setVisible(True)
             
-            # Style the tooltip
-            self.tooltip.setDefaultTextColor(pg.mkColor('black'))
-            self.tooltip.setHtml(f'<div style="background-color: white; border: 1px solid black; padding: 5px; border-radius: 3px;">{tooltip_text.replace(chr(10), "<br>")}</div>')
+            # Style the tooltip (HTML only)
+            self.tooltip.setHtml(f'<div style="background-color: white; border: 1px solid black; padding: 5px; border-radius: 3px; color: black;">{tooltip_text.replace(chr(10), "<br>")}</div>')
         else:
             self.tooltip.setVisible(False)
         
@@ -362,33 +427,45 @@ Volume: {row['Volume']:,}
             
         self.df = df  # Store for tooltips
         print(f"Plotting {len(df)} data points")
+        
+        # Convert dates to timestamps
         dates = pd.to_datetime(df.index)
-        x_vals = dates.astype('int64') // 10**9  # Convert to seconds since epoch (fix for pandas error)
+        x_vals = dates.astype('int64') // 10**9
         
-        self.candlestick_items = []  # Clear previous items
+        # Clear previous plot items
+        self.plot_items = []
         
+        # Draw candlesticks using line segments for wicks and rectangles for bodies
+        opens = df['Open'].values
+        highs = df['High'].values
+        lows = df['Low'].values
+        closes = df['Close'].values
+        
+        # Draw wicks (vertical lines)
         for i in range(len(df)):
-            x = x_vals[i]
-            open_price = df['Open'].iloc[i]
-            close_price = df['Close'].iloc[i]
-            high_price = df['High'].iloc[i]
-            low_price = df['Low'].iloc[i]
-            color = 'g' if close_price >= open_price else 'r'
-            
-            # Create wick (high-low line)
-            wick = self.plot([x, x], [low_price, high_price], 
-                           pen=pg.mkPen(color=color, width=1))
-            
-            # Create body (open-close rectangle)
-            body_width = 0.5e4  # Adjust for better visibility
-            body = self.plot([x-body_width, x+body_width, x+body_width, x-body_width, x-body_width],
-                           [open_price, open_price, close_price, close_price, open_price],
-                           pen=pg.mkPen(color=color, width=1),
-                           fillLevel=0,
-                           brush=pg.mkBrush(color))
-            
-            self.candlestick_items.extend([wick, body])
-            
+            color = 'g' if closes[i] >= opens[i] else 'r'
+            wick = pg.PlotDataItem([x_vals[i], x_vals[i]], [lows[i], highs[i]], pen=pg.mkPen(color=color, width=1))
+            self.addItem(wick)
+            self.plot_items.append(wick)
+        
+        # Draw bodies (rectangles)
+        body_width = 0.35e4
+        for i in range(len(df)):
+            color = 'g' if closes[i] >= opens[i] else 'r'
+            left = x_vals[i] - body_width
+            right = x_vals[i] + body_width
+            top = max(opens[i], closes[i])
+            bottom = min(opens[i], closes[i])
+            # Draw as a filled polygon (rectangle)
+            body = pg.PlotDataItem(
+                [left, right, right, left, left],
+                [top, top, bottom, bottom, top],
+                pen=pg.mkPen(color=color, width=1),
+                brush=pg.mkBrush(color)
+            )
+            self.addItem(body)
+            self.plot_items.append(body)
+        
         min_price = df['Low'].min()
         max_price = df['High'].max()
         current_price = df['Close'].iloc[-1]
@@ -418,6 +495,47 @@ Volume: {row['Volume']:,}
         self.addItem(self.tooltip)
         
         print(f"Chart updated - Price range: ${min_price:.2f} to ${max_price:.2f}, Current: ${current_price:.2f}")
+
+class DataLoadingThread(QThread):
+    data_loaded = pyqtSignal(object, str, str)  # df, stock, date_range
+    error = pyqtSignal(str)
+    
+    def __init__(self, stock, days, start_date, end_date):
+        super().__init__()
+        self.stock = stock
+        self.days = days
+        self.start_date = start_date
+        self.end_date = end_date
+        
+    def run(self):
+        try:
+            print(f"Fetching {self.days} days of data for {self.stock} from {self.start_date.strftime('%Y-%m-%d')} to {self.end_date.strftime('%Y-%m-%d')}")
+            
+            ticker = yf.Ticker(self.stock)
+            df = ticker.history(start=self.start_date, end=self.end_date)
+            
+            if df.empty:
+                self.error.emit(f"No data found for {self.stock}")
+                return
+            
+            # Ensure df.index is timezone-aware (UTC)
+            if df.index.tz is None:
+                df.index = df.index.tz_localize('UTC')
+            else:
+                df.index = df.index.tz_convert('UTC')
+            
+            # Validate that data is not newer than our end_date
+            if df.index.max() > self.end_date:
+                df = df[df.index <= self.end_date]
+                if df.empty:
+                    self.error.emit(f"No valid data found for {self.stock} after filtering dates")
+                    return
+            
+            date_range_str = f"{df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}"
+            self.data_loaded.emit(df, self.stock, date_range_str)
+            
+        except Exception as e:
+            self.error.emit(f"Failed to load data: {str(e)}")
 
 class TrainingThread(QThread):
     progress = pyqtSignal(int)
@@ -450,32 +568,15 @@ class MainWindow(QMainWindow):
         # Create main widget and layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
+        main_layout = QVBoxLayout(main_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(10)
         
-        # Create tab widget
-        tabs = QTabWidget()
-        layout.addWidget(tabs)
-        
-        # Create training tab
-        training_tab = QWidget()
-        tabs.addTab(training_tab, "Training")
-        self.setup_training_tab(training_tab)
-        
-        # Create prediction tab
-        prediction_tab = QWidget()
-        tabs.addTab(prediction_tab, "Prediction")
-        self.setup_prediction_tab(prediction_tab)
-        
-        # Apply material design theme
-        apply_stylesheet(self, theme='light_blue.xml')
-        
-    def setup_training_tab(self, tab):
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        controls_layout = QHBoxLayout()
+        # Controls (stock, date, get data)
+        controls_widget = QWidget()
+        controls_layout = QHBoxLayout(controls_widget)
         controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.setSpacing(0)
+        controls_layout.setSpacing(10)
         
         # Stock selection
         self.stock_combo = QComboBox()
@@ -505,29 +606,28 @@ class MainWindow(QMainWindow):
         self.get_data_btn.clicked.connect(self.load_stock_data)
         controls_layout.addWidget(self.get_data_btn)
         
-        layout.addLayout(controls_layout)
+        # Loading indicator
+        self.loading_label = QLabel("")
+        self.loading_label.setVisible(False)
+        controls_layout.addWidget(self.loading_label)
         
-        # Main horizontal splitter for chart and metrics
-        main_splitter = QSplitter(Qt.Horizontal)
-        main_splitter.setChildrenCollapsible(False)
-        layout.addWidget(main_splitter)
+        main_layout.addWidget(controls_widget)
+        controls_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
         # Chart widget
         self.chart = StockChartWidget()
-        main_splitter.addWidget(self.chart)
+        main_layout.addWidget(self.chart, stretch=1)
+        self.chart.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # Metrics widget
-        self.metrics_widget = MetricsWidget()
-        main_splitter.addWidget(self.metrics_widget)
+        # Overlay metrics widget on top of chart
+        self.metrics_widget = MetricsWidget(self.chart)
+        self.metrics_widget.move(30, 30)
+        self.metrics_widget.show()
+        self.metrics_widget.raise_()
+        # Optionally, set a higher z-order if needed
+        # self.metrics_widget.setWindowFlags(self.metrics_widget.windowFlags() | Qt.WindowStaysOnTopHint)
         
-        # Set splitter proportions (chart gets more space)
-        main_splitter.setSizes([800, 300])
-        
-        # Vertical splitter for chart and controls
-        chart_splitter = QSplitter(Qt.Vertical)
-        chart_splitter.setChildrenCollapsible(False)
-        
-        # Trading decision controls
+        # Trading decision controls (below chart)
         decision_widget = QWidget()
         decision_layout = QVBoxLayout(decision_widget)
         decision_layout.setContentsMargins(0, 0, 0, 0)
@@ -559,12 +659,14 @@ class MainWindow(QMainWindow):
         self.submit_btn.clicked.connect(self.submit_decision)
         decision_layout.addWidget(self.submit_btn)
         
-        chart_splitter.addWidget(decision_widget)
+        main_layout.addWidget(decision_widget)
+        decision_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
-        # Training controls
-        training_controls = QHBoxLayout()
+        # Training controls (below decision controls)
+        training_widget = QWidget()
+        training_controls = QHBoxLayout(training_widget)
         training_controls.setContentsMargins(0, 0, 0, 0)
-        training_controls.setSpacing(0)
+        training_controls.setSpacing(10)
         
         self.epochs_spin = QSpinBox()
         self.epochs_spin.setRange(1, 100)
@@ -580,61 +682,8 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
         training_controls.addWidget(self.progress_bar)
         
-        # Create a widget to hold training controls
-        training_widget = QWidget()
-        training_widget.setLayout(training_controls)
-        chart_splitter.addWidget(training_widget)
-        
-        # Add the chart splitter to the main splitter
-        main_splitter.insertWidget(0, chart_splitter)
-        
-        # Set the chart splitter to take up the remaining space
-        main_splitter.setSizes([1100, 300])
-        
-    def setup_prediction_tab(self, tab):
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        controls_layout = QHBoxLayout()
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.setSpacing(0)
-        
-        self.pred_stock_combo = QComboBox()
-        self.pred_stock_combo.addItems([
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 
-            'AMD', 'INTC', 'CRM', 'ADBE', 'PYPL', 'UBER', 'SHOP', 'SQ',
-            'SPY', 'QQQ', 'IWM', 'VTI'  # ETFs for more reliable data
-        ])
-        controls_layout.addWidget(QLabel("Stock:"))
-        controls_layout.addWidget(self.pred_stock_combo)
-        
-        self.pred_btn = QPushButton("Get Prediction")
-        self.pred_btn.clicked.connect(self.get_prediction)
-        controls_layout.addWidget(self.pred_btn)
-        
-        layout.addLayout(controls_layout)
-        
-        # Main horizontal splitter for chart and metrics
-        main_splitter = QSplitter(Qt.Horizontal)
-        main_splitter.setChildrenCollapsible(False)
-        layout.addWidget(main_splitter)
-        
-        # Chart widget for prediction
-        self.pred_chart = StockChartWidget()
-        main_splitter.addWidget(self.pred_chart)
-        
-        # Metrics widget for prediction
-        self.pred_metrics_widget = MetricsWidget()
-        main_splitter.addWidget(self.pred_metrics_widget)
-        
-        # Set splitter proportions (chart gets more space)
-        main_splitter.setSizes([800, 300])
-        
-        # Prediction result
-        self.prediction_label = QLabel("Prediction will appear here...")
-        self.prediction_label.setAlignment(Qt.AlignCenter)
-        self.prediction_label.setStyleSheet("font-size: 18px; padding: 20px;")
-        layout.addWidget(self.prediction_label)
+        main_layout.addWidget(training_widget)
+        training_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
     def on_date_range_changed(self, value):
         if value == "Custom":
@@ -670,36 +719,29 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", f"Invalid date range generated for {stock}: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
                 return
             
-            print(f"Fetching {days} days of data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
+            # Show loading indicator
+            self.get_data_btn.setEnabled(False)
+            self.loading_label.setText("Loading data...")
+            self.loading_label.setVisible(True)
             
-            ticker = yf.Ticker(stock)
-            df = ticker.history(start=start_date, end=end_date)
+            # Start data loading in background thread
+            self.data_thread = DataLoadingThread(stock, days, start_date, end_date)
+            self.data_thread.data_loaded.connect(self.on_data_loaded)
+            self.data_thread.error.connect(self.on_data_error)
+            self.data_thread.start()
             
-            if df.empty:
-                QMessageBox.warning(self, "Error", f"No data found for {stock}. Please try a different stock or fewer days.")
-                return
+        except Exception as e:
+            print(f"Error loading data: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}\n\nTry:\n- Different stock symbol\n- Fewer days of history\n- Check internet connection\n- Check system clock")
+    
+    def on_data_loaded(self, df, stock, date_range_str):
+        try:
+            # Hide loading indicator
+            self.get_data_btn.setEnabled(True)
+            self.loading_label.setVisible(False)
             
-            # Ensure df.index is timezone-aware (UTC)
-            if df.index.tz is None:
-                df.index = df.index.tz_localize('UTC')
-            else:
-                df.index = df.index.tz_convert('UTC')
-            
-            # Check if we got the expected amount of data
-            if len(df) < days * 0.8:  # Allow 20% tolerance for weekends/holidays
-                print(f"Warning: Got {len(df)} days of data for {stock}, expected around {days} days")
-            
-            # Validate that data is not newer than our end_date
-            if df.index.max() > end_date:
-                QMessageBox.warning(self, "Warning", f"Data for {stock} contains dates newer than expected. This may indicate a system clock issue.")
-                # Filter out dates newer than our end_date
-                df = df[df.index <= end_date]
-                if df.empty:
-                    QMessageBox.warning(self, "Error", f"No valid data found for {stock} after filtering dates.")
-                    return
-                
             print(f"Successfully loaded {len(df)} days of data for {stock}")
-            print(f"Data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
+            print(f"Data range: {date_range_str}")
             
             # Plot data
             self.chart.plot_stock_data(df)
@@ -710,11 +752,18 @@ class MainWindow(QMainWindow):
             # Store data for training
             self.current_data = df
             
-            QMessageBox.information(self, "Success", f"Loaded {len(df)} days of data for {stock}\nDate range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
+            QMessageBox.information(self, "Success", f"Loaded {len(df)} days of data for {stock}\nDate range: {date_range_str}")
             
         except Exception as e:
-            print(f"Error loading data: {str(e)}")
-            QMessageBox.critical(self, "Error", f"Failed to load data: {str(e)}\n\nTry:\n- Different stock symbol\n- Fewer days of history\n- Check internet connection\n- Check system clock")
+            print(f"Error processing loaded data: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to process data: {str(e)}")
+    
+    def on_data_error(self, error_msg):
+        # Hide loading indicator
+        self.get_data_btn.setEnabled(True)
+        self.loading_label.setVisible(False)
+        
+        QMessageBox.critical(self, "Error", error_msg)
     
     def make_decision(self, decision):
         # Highlight the selected button
@@ -782,92 +831,6 @@ class MainWindow(QMainWindow):
         self.progress_bar.setVisible(False)
         self.train_btn.setEnabled(True)
         QMessageBox.critical(self, "Training Error", f"Training failed: {error_msg}")
-    
-    def get_prediction(self):
-        stock = self.pred_stock_combo.currentText()
-        try:
-            # Import the date range utilities
-            import sys
-            from pathlib import Path
-            REPO_ROOT = Path(__file__).parent.parent.parent
-            ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
-            sys.path.append(str(ORCHESTRATOR_PATH))
-            
-            from date_range_utils import find_available_data_range, validate_date_range
-            
-            # Get random date range within the last 25 years (30 days for prediction)
-            start_date, end_date = find_available_data_range(stock, 30, max_years_back=25)
-            
-            # Validate the date range
-            if not validate_date_range(start_date, end_date, stock):
-                self.prediction_label.setText(f"Error: Invalid date range generated for {stock}")
-                return
-            
-            print(f"Fetching prediction data for {stock} from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')} (random range within last 25 years)")
-            
-            ticker = yf.Ticker(stock)
-            df = ticker.history(start=start_date, end=end_date)
-            
-            if df.empty:
-                self.prediction_label.setText(f"No data available for {stock}")
-                return
-            
-            # Ensure df.index is timezone-aware (UTC)
-            if df.index.tz is None:
-                df.index = df.index.tz_localize('UTC')
-            else:
-                df.index = df.index.tz_convert('UTC')
-            
-            # Check if we got the expected amount of data
-            if len(df) < 24:  # Allow tolerance for weekends/holidays
-                print(f"Warning: Got {len(df)} days of data for {stock}, expected around 30 days")
-            
-            # Validate that data is not newer than our end_date
-            if df.index.max() > end_date:
-                print(f"Warning: Data for {stock} contains dates newer than expected, filtering...")
-                df = df[df.index <= end_date]
-                if df.empty:
-                    self.prediction_label.setText(f"No valid data found for {stock} after filtering dates")
-                    return
-                
-            print(f"Prediction data range: {df.index[0].strftime('%Y-%m-%d')} to {df.index[-1].strftime('%Y-%m-%d')}")
-            
-            # Plot data
-            self.pred_chart.plot_stock_data(df)
-            
-            # Update metrics
-            self.pred_metrics_widget.update_metrics(df)
-                
-            # Calculate some basic metrics
-            current_price = df['Close'].iloc[-1]
-            price_change = df['Close'].iloc[-1] - df['Close'].iloc[-2] if len(df) > 1 else 0
-            price_change_pct = (price_change / df['Close'].iloc[-2]) * 100 if len(df) > 1 and df['Close'].iloc[-2] != 0 else 0
-            
-            # Simple prediction logic (you can enhance this later)
-            if price_change > 0:
-                signal = "BUY"
-                confidence = min(0.8, 0.5 + abs(price_change_pct) / 100)
-            elif price_change < 0:
-                signal = "SELL" 
-                confidence = min(0.8, 0.5 + abs(price_change_pct) / 100)
-            else:
-                signal = "HOLD"
-                confidence = 0.5
-                
-            # Format prediction result
-            prediction_text = f"""
-Prediction for {stock}:
-Signal: {signal}
-Confidence: {confidence:.1%}
-Current Price: ${current_price:.2f}
-Price Change: ${price_change:.2f} ({price_change_pct:+.2f}%)
-            """.strip()
-            
-            self.prediction_label.setText(prediction_text)
-            
-        except Exception as e:
-            print(f"Error getting prediction: {str(e)}")
-            self.prediction_label.setText(f"Error: {str(e)}")
 
 def main():
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
