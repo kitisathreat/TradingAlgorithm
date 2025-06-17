@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QComboBox, QSpinBox,
     QTabWidget, QProgressBar, QMessageBox, QSplitter,
-    QSizePolicy, QFrame, QScrollArea, QGridLayout, QGroupBox, QLineEdit
+    QSizePolicy, QFrame, QScrollArea, QGridLayout, QGroupBox, QLineEdit, QDialog
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QMutex, QPoint
 from PyQt5.QtGui import QFont, QIcon, QPainter, QColor
@@ -809,6 +809,8 @@ class MainWindow(QMainWindow):
         ])
         self.model_combo.setCurrentIndex(1)  # Default to standard
         model_layout.addWidget(self.model_combo)
+        self.model_combo.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.model_combo.customContextMenuRequested.connect(self.show_model_context_menu)
         
         self.change_model_btn = QPushButton("Change Model")
         self.change_model_btn.clicked.connect(self.change_model)
@@ -1186,6 +1188,47 @@ class MainWindow(QMainWindow):
             chart_height = int(total_height * 0.7)
             controls_height = total_height - chart_height
             self.main_splitter.setSizes([chart_height, controls_height])
+
+    def show_model_context_menu(self, pos):
+        index = self.model_combo.view().indexAt(pos)
+        if not index.isValid():
+            return
+        item_text = self.model_combo.itemText(index.row())
+        if not item_text.endswith("(Custom)"):
+            return
+        menu = QMenu(self)
+        edit_action = menu.addAction("Edit Custom Model")
+        delete_action = menu.addAction("Delete Custom Model")
+        action = menu.exec_(self.model_combo.mapToGlobal(pos))
+        if action == edit_action:
+            self.edit_custom_model(index.row())
+        elif action == delete_action:
+            self.delete_custom_model(index.row())
+
+    def edit_custom_model(self, row):
+        label = self.model_combo.itemText(row)
+        config = self.custom_models.get(label)
+        if not config:
+            QMessageBox.warning(self, "Error", "Custom model config not found.")
+            return
+        dialog = CustomModelDialog(self, config)
+        if dialog.exec_() == dialog.Accepted:
+            new_config = dialog.get_model_config()
+            new_label = f"{new_config['model_name']} (Custom)"
+            self.model_combo.setItemText(row, new_label)
+            self.custom_models.pop(label)
+            self.custom_models[new_label] = new_config
+            self.model_combo.setCurrentIndex(row)
+            QMessageBox.information(self, "Success", f"Custom model updated.")
+
+    def delete_custom_model(self, row):
+        label = self.model_combo.itemText(row)
+        if label in self.custom_models:
+            self.custom_models.pop(label)
+        self.model_combo.removeItem(row)
+        # Select previous or first model
+        if self.model_combo.count() > 1:
+            self.model_combo.setCurrentIndex(max(0, row - 1))
 
 def main():
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
