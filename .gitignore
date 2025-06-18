@@ -54,3 +54,71 @@ sp500_historical_data_*.csv
 # Wheel files
 *.whl
 wheels/
+
+# --- LARGE FILES TO IGNORE ---
+# Deployment and build artifacts
+deployment.zip
+*.zip
+*.tar.gz
+
+# Large model files
+*.h5
+*.pb
+*.onnx
+*.pkl
+*.model
+*.weights
+*.saved_model
+
+# Large data files
+*.parquet
+*.feather
+*.hdf5
+*.hdf
+
+# Large log files (keep small ones for debugging)
+*.log
+logs/*.log
+
+# Large image files
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.tif
+
+# Large video files
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+
+# Large audio files
+*.mp3
+*.wav
+*.flac
+*.aac
+
+# Large document files
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+
+# Large archive files
+*.7z
+*.rar
+*.bz2
+*.gz
+
+# Large database files
+*.db
+*.sqlite
+*.sqlite3
+*.mdb
+*.accdb

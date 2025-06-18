@@ -68,7 +68,24 @@ except ImportError:
     async_mode = 'threading'
     print("[INFO] Using threading async mode")
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode=async_mode, logger=True, engineio_logger=True, ping_timeout=60, ping_interval=25)
+# Enhanced SocketIO configuration for better WebSocket handling
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode=async_mode, 
+    logger=True, 
+    engineio_logger=True, 
+    ping_timeout=60, 
+    ping_interval=25,
+    max_http_buffer_size=1e8,  # 100MB buffer for large messages
+    allow_upgrades=True,  # Allow WebSocket upgrades
+    transports=['polling', 'websocket'],  # Support both transports
+    always_connect=True,  # Always try to connect
+    reconnection=True,  # Enable reconnection
+    reconnection_attempts=5,
+    reconnection_delay=1000,
+    reconnection_delay_max=5000
+)
 
 # Global variables
 model_trainer = None
@@ -306,7 +323,24 @@ def get_stock_options():
         
         # Add S&P100 stocks sorted by market cap
         try:
-            sp100_file = Path(__file__).parent.parent.parent / "_2_Orchestrator_And_ML_Python" / "sp100_symbols_with_market_cap.json"
+            # Try multiple possible paths for the S&P100 data file
+            sp100_paths = [
+                Path(__file__).parent.parent.parent / "_2_Orchestrator_And_ML_Python" / "sp100_symbols_with_market_cap.json",
+                Path(__file__).parent / "_2_Orchestrator_And_ML_Python" / "sp100_symbols_with_market_cap.json",
+                Path("/var/app/current/_2_Orchestrator_And_ML_Python/sp100_symbols_with_market_cap.json"),
+                Path("/var/_2_Orchestrator_And_ML_Python/sp100_symbols_with_market_cap.json")
+            ]
+            
+            sp100_file = None
+            for path in sp100_paths:
+                if path.exists():
+                    sp100_file = path
+                    break
+            
+            if sp100_file is None:
+                raise FileNotFoundError("S&P100 data file not found in any expected location")
+            
+            logger.info(f"Loading S&P100 data from: {sp100_file}")
             with open(sp100_file, 'r') as f:
                 sp100_data = json.load(f)
             
@@ -596,26 +630,81 @@ def get_model_status():
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection"""
-    logger.info(f"Client connected: {request.sid}")
     try:
+        client_id = request.sid
+        logger.info(f"Client connected: {client_id}")
+        
+        # Send connection confirmation
         emit('connected', {
             'message': 'Connected to trading system',
             'model_available': model_trainer is not None,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'client_id': client_id
         })
+        
+        # Log connection details
+        logger.info(f"Connection established - Client ID: {client_id}, Model Available: {model_trainer is not None}")
+        
     except Exception as e:
         logger.error(f"Error in connect handler: {e}")
+        # Try to emit error to client
+        try:
+            emit('error', {
+                'message': 'Connection error occurred',
+                'error': str(e)
+            })
+        except:
+            pass
 
 @socketio.on('disconnect')
 def handle_disconnect():
     """Handle client disconnection"""
-    logger.info(f"Client disconnected: {request.sid}")
+    try:
+        client_id = request.sid
+        logger.info(f"Client disconnected: {client_id}")
+    except Exception as e:
+        logger.error(f"Error in disconnect handler: {e}")
 
 @socketio.on_error()
 def error_handler(e):
     """Handle SocketIO errors"""
-    logger.error(f"SocketIO error: {e}")
-    emit('error', {'message': 'An error occurred'})
+    try:
+        client_id = request.sid if hasattr(request, 'sid') else 'unknown'
+        logger.error(f"SocketIO error for client {client_id}: {e}")
+        
+        # Try to emit error to client
+        try:
+            emit('error', {
+                'message': 'An error occurred in the connection',
+                'error': str(e)
+            })
+        except:
+            pass
+            
+    except Exception as error:
+        logger.error(f"Error in error handler: {error}")
+
+@socketio.on('ping')
+def handle_ping():
+    """Handle ping from client"""
+    try:
+        emit('pong', {'timestamp': datetime.now().isoformat()})
+    except Exception as e:
+        logger.error(f"Error handling ping: {e}")
+
+@socketio.on('get_status')
+def handle_get_status():
+    """Handle status request from client"""
+    try:
+        emit('status_update', {
+            'model_available': model_trainer is not None,
+            'training_active': training_active,
+            'training_progress': training_progress,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error handling status request: {e}")
+        emit('error', {'message': 'Failed to get status'})
 
 def main():
     """Main function"""
