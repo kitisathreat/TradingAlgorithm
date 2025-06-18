@@ -36,6 +36,14 @@ eventlet==0.33.3
 # =============================================================================
 lxml>=4.9.1
 tqdm==4.65.0
+websockets==13.0  # Required for yfinance, compatible with alpaca-trade-api
+
+# =============================================================================
+# ALPACA TRADING (Uncomment when ready to add paper trading functionality)
+# =============================================================================
+# alpaca-trade-api==3.2.0  # Paper trading execution
+# Note: Install with --no-deps if dependency conflicts occur:
+# pip install alpaca-trade-api==3.2.0 --no-deps
 
 # =============================================================================
 # VISUALIZATION

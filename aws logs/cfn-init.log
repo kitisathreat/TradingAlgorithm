@@ -1,0 +1,186 @@
+2025-06-18 18:13:41,114 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:13:41,132 [INFO] Running configSets: _OnInstanceBoot
+2025-06-18 18:13:41,135 [INFO] Running configSet _OnInstanceBoot
+2025-06-18 18:13:41,139 [INFO] Running config AWSEBBaseConfig
+2025-06-18 18:13:41,523 [INFO] Command clearbackupfiles succeeded
+2025-06-18 18:13:41,527 [INFO] Running config AWSEBCfnHupEndpointOverride
+2025-06-18 18:13:41,544 [INFO] Command clearbackupfiles succeeded
+2025-06-18 18:13:41,546 [INFO] ConfigSets completed
+2025-06-18 18:13:41,546 [INFO] -----------------------Build complete-----------------------
+2025-06-18 18:14:50,841 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:14:50,846 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 18:14:50,848 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 18:14:50,849 [INFO] ConfigSets completed
+2025-06-18 18:14:50,849 [INFO] -----------------------Build complete-----------------------
+2025-06-18 18:22:19,205 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:22:19,211 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 18:22:19,213 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 18:22:19,213 [INFO] ConfigSets completed
+2025-06-18 18:22:19,213 [INFO] -----------------------Build complete-----------------------
+2025-06-18 18:23:32,714 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:23:32,719 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2025-06-18 18:23:32,722 [INFO] Running configSet Infra-EmbeddedPostBuild
+2025-06-18 18:23:32,724 [INFO] Running config postbuild_0_TradingAlgorithm
+2025-06-18 18:23:38,201 [INFO] Command 01_install_system_dependencies succeeded
+2025-06-18 18:24:09,088 [ERROR] Command 02_install_python_dependencies (pip install -r requirements.txt) failed
+2025-06-18 18:24:09,088 [ERROR] Error encountered during build of postbuild_0_TradingAlgorithm: Command 02_install_python_dependencies failed
+Traceback (most recent call last):
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 277, in build
+    changes['commands'] = CommandTool().apply(
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_install_python_dependencies failed
+2025-06-18 18:24:09,090 [ERROR] -----------------------BUILD FAILED!------------------------
+2025-06-18 18:24:09,090 [ERROR] Unhandled exception during build: Command 02_install_python_dependencies failed
+Traceback (most recent call last):
+  File "/opt/aws/bin/cfn-init", line 181, in <module>
+    worklog.build(metadata, configSets, strict_mode)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 137, in build
+    Contractor(metadata, strict_mode).build(configSets, self)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 567, in build
+    self.run_config(config, worklog)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 277, in build
+    changes['commands'] = CommandTool().apply(
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_install_python_dependencies failed
+2025-06-18 18:27:19,563 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:27:19,568 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 18:27:19,570 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 18:27:19,570 [INFO] ConfigSets completed
+2025-06-18 18:27:19,570 [INFO] -----------------------Build complete-----------------------
+2025-06-18 18:27:22,215 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:27:22,220 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2025-06-18 18:27:22,222 [INFO] Running configSet Infra-EmbeddedPostBuild
+2025-06-18 18:27:22,224 [INFO] Running config postbuild_0_TradingAlgorithm
+2025-06-18 18:27:22,749 [INFO] Command 01_install_system_dependencies succeeded
+2025-06-18 18:27:27,748 [ERROR] Command 02_install_python_dependencies (pip install -r requirements.txt) failed
+2025-06-18 18:27:27,748 [ERROR] Error encountered during build of postbuild_0_TradingAlgorithm: Command 02_install_python_dependencies failed
+Traceback (most recent call last):
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 277, in build
+    changes['commands'] = CommandTool().apply(
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_install_python_dependencies failed
+2025-06-18 18:27:27,749 [ERROR] -----------------------BUILD FAILED!------------------------
+2025-06-18 18:27:27,749 [ERROR] Unhandled exception during build: Command 02_install_python_dependencies failed
+Traceback (most recent call last):
+  File "/opt/aws/bin/cfn-init", line 181, in <module>
+    worklog.build(metadata, configSets, strict_mode)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 137, in build
+    Contractor(metadata, strict_mode).build(configSets, self)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 567, in build
+    self.run_config(config, worklog)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 579, in run_config
+    CloudFormationCarpenter(config, self._auth_config, self.strict_mode).build(worklog)
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/construction.py", line 277, in build
+    changes['commands'] = CommandTool().apply(
+  File "/usr/lib/python3.9/site-packages/cfnbootstrap/command_tool.py", line 127, in apply
+    raise ToolError(u"Command %s failed" % name)
+cfnbootstrap.construction_errors.ToolError: Command 02_install_python_dependencies failed
+2025-06-18 18:36:19,218 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:36:19,223 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 18:36:19,225 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 18:36:19,225 [INFO] ConfigSets completed
+2025-06-18 18:36:19,225 [INFO] -----------------------Build complete-----------------------
+2025-06-18 18:36:21,926 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:36:21,931 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2025-06-18 18:36:21,934 [INFO] Running configSet Infra-EmbeddedPostBuild
+2025-06-18 18:36:21,936 [INFO] Running config postbuild_0_TradingAlgorithm
+2025-06-18 18:36:22,423 [INFO] Command 01_install_system_dependencies succeeded
+2025-06-18 18:37:07,708 [INFO] Command 02_install_python_dependencies succeeded
+2025-06-18 18:37:07,732 [INFO] Command 03_create_directories succeeded
+2025-06-18 18:37:07,754 [INFO] Command 04_set_permissions succeeded
+2025-06-18 18:37:07,757 [INFO] ConfigSets completed
+2025-06-18 18:37:07,757 [INFO] -----------------------Build complete-----------------------
+2025-06-18 18:40:44,739 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:40:44,744 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 18:40:44,746 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 18:40:44,746 [INFO] ConfigSets completed
+2025-06-18 18:40:44,746 [INFO] -----------------------Build complete-----------------------
+2025-06-18 18:40:47,434 [INFO] -----------------------Starting build-----------------------
+2025-06-18 18:40:47,439 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2025-06-18 18:40:47,442 [INFO] Running configSet Infra-EmbeddedPostBuild
+2025-06-18 18:40:47,444 [INFO] Running config postbuild_0_TradingAlgorithm
+2025-06-18 18:40:47,988 [INFO] Command 01_install_system_dependencies succeeded
+2025-06-18 18:41:34,613 [INFO] Command 02_install_python_dependencies succeeded
+2025-06-18 18:41:34,641 [INFO] Command 03_create_directories succeeded
+2025-06-18 18:41:34,655 [INFO] Command 04_set_permissions succeeded
+2025-06-18 18:41:34,657 [INFO] ConfigSets completed
+2025-06-18 18:41:34,657 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:06:44,659 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:06:44,664 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 19:06:44,666 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 19:06:44,666 [INFO] ConfigSets completed
+2025-06-18 19:06:44,666 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:08:47,307 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:08:47,314 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 19:08:47,316 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 19:08:47,316 [INFO] ConfigSets completed
+2025-06-18 19:08:47,316 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:15:58,053 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:15:58,060 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 19:15:58,062 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 19:15:58,063 [INFO] ConfigSets completed
+2025-06-18 19:15:58,063 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:16:02,513 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:16:02,519 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2025-06-18 19:16:02,521 [INFO] Running configSet Infra-EmbeddedPostBuild
+2025-06-18 19:16:02,524 [INFO] Running config postbuild_0_TradingAlgorithm
+2025-06-18 19:16:03,785 [INFO] Command 01_install_system_dependencies succeeded
+2025-06-18 19:16:56,813 [INFO] Command 02_install_python_dependencies succeeded
+2025-06-18 19:16:56,832 [INFO] Command 03_create_directories succeeded
+2025-06-18 19:16:56,845 [INFO] Command 04_set_permissions succeeded
+2025-06-18 19:16:57,704 [INFO] Command 05_install_alpaca succeeded
+2025-06-18 19:16:57,707 [INFO] Running config postbuild_1_TradingAlgorithm
+2025-06-18 19:16:58,407 [INFO] Command 01_install_websockets_first succeeded
+2025-06-18 19:16:58,853 [INFO] Command 02_install_yfinance_no_deps succeeded
+2025-06-18 19:17:49,267 [INFO] Command 03_install_remaining_deps succeeded
+2025-06-18 19:17:49,270 [INFO] ConfigSets completed
+2025-06-18 19:17:49,270 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:27:26,343 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:27:26,348 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 19:27:26,351 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 19:27:26,351 [INFO] ConfigSets completed
+2025-06-18 19:27:26,351 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:27:29,464 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:27:29,469 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2025-06-18 19:27:29,471 [INFO] Running configSet Infra-EmbeddedPostBuild
+2025-06-18 19:27:29,474 [INFO] Running config postbuild_0_TradingAlgorithm
+2025-06-18 19:27:30,453 [INFO] Command 01_install_system_dependencies succeeded
+2025-06-18 19:28:20,648 [INFO] Command 02_install_python_dependencies succeeded
+2025-06-18 19:28:20,666 [INFO] Command 03_create_directories succeeded
+2025-06-18 19:28:20,679 [INFO] Command 04_set_permissions succeeded
+2025-06-18 19:28:21,155 [INFO] Command 05_install_alpaca succeeded
+2025-06-18 19:28:21,159 [INFO] Running config postbuild_1_TradingAlgorithm
+2025-06-18 19:28:21,880 [INFO] Command 01_install_websockets_first succeeded
+2025-06-18 19:28:22,325 [INFO] Command 02_install_yfinance_no_deps succeeded
+2025-06-18 19:29:12,470 [INFO] Command 03_install_remaining_deps succeeded
+2025-06-18 19:29:12,472 [INFO] ConfigSets completed
+2025-06-18 19:29:12,473 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:31:32,273 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:31:32,278 [INFO] Running configSets: Infra-EmbeddedPreBuild
+2025-06-18 19:31:32,280 [INFO] Running configSet Infra-EmbeddedPreBuild
+2025-06-18 19:31:32,280 [INFO] ConfigSets completed
+2025-06-18 19:31:32,280 [INFO] -----------------------Build complete-----------------------
+2025-06-18 19:31:35,481 [INFO] -----------------------Starting build-----------------------
+2025-06-18 19:31:35,487 [INFO] Running configSets: Infra-EmbeddedPostBuild
+2025-06-18 19:31:35,489 [INFO] Running configSet Infra-EmbeddedPostBuild
+2025-06-18 19:31:35,491 [INFO] Running config postbuild_0_TradingAlgorithm
+2025-06-18 19:31:36,574 [INFO] Command 01_install_system_dependencies succeeded
+2025-06-18 19:32:26,640 [INFO] Command 02_install_python_dependencies succeeded
+2025-06-18 19:32:26,662 [INFO] Command 03_create_directories succeeded
+2025-06-18 19:32:26,676 [INFO] Command 04_set_permissions succeeded
+2025-06-18 19:32:27,148 [INFO] Command 05_install_alpaca succeeded
+2025-06-18 19:32:27,152 [INFO] Running config postbuild_1_TradingAlgorithm
+2025-06-18 19:32:27,824 [INFO] Command 01_install_websockets_first succeeded
+2025-06-18 19:32:28,279 [INFO] Command 02_install_yfinance_no_deps succeeded
+2025-06-18 19:33:17,384 [INFO] Command 03_install_remaining_deps succeeded
+2025-06-18 19:33:17,387 [INFO] ConfigSets completed
+2025-06-18 19:33:17,389 [INFO] -----------------------Build complete-----------------------

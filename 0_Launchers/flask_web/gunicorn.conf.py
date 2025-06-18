@@ -1,6 +1,6 @@
 """
 Gunicorn configuration for Trading Algorithm Flask Web Interface
-Optimized for production deployment on AWS
+Optimized for production deployment on AWS with SocketIO support
 """
 
 import multiprocessing
@@ -10,18 +10,18 @@ import os
 bind = "0.0.0.0:8000"
 backlog = 2048
 
-# Worker processes
-workers = os.environ.get('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1)
-worker_class = os.environ.get('GUNICORN_WORKER_CLASS', 'eventlet')
+# Worker processes - use eventlet for SocketIO support
+workers = os.environ.get('GUNICORN_WORKERS', 1)  # Single worker for SocketIO
+worker_class = 'eventlet'  # Required for SocketIO
 worker_connections = 1000
 max_requests = 1000
 max_requests_jitter = 50
 preload_app = True
 
 # Timeout settings
-timeout = 60  # Increased for ML operations
+timeout = 120  # Increased for ML operations and SocketIO
 keepalive = 2
-graceful_timeout = 60  # Increased for graceful shutdown
+graceful_timeout = 120  # Increased for graceful shutdown
 
 # Logging
 accesslog = os.environ.get('GUNICORN_ACCESS_LOG', '-')

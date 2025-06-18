@@ -1339,6 +1339,28 @@
             // Implementation for hiding loading indicator
         }
 
+        // Auto-fit functions for chart
+        function autoFitX() {
+            if (stockChart) {
+                stockChart.resetZoom();
+                showAlert('X-axis auto-fitted', 'success');
+            }
+        }
+
+        function autoFitY() {
+            if (stockChart && currentStockData) {
+                const minPrice = Math.min(...currentStockData.lows);
+                const maxPrice = Math.max(...currentStockData.highs);
+                const priceRange = maxPrice - minPrice;
+                const padding = priceRange * 0.05;
+                
+                stockChart.options.scales.y.min = minPrice - padding;
+                stockChart.options.scales.y.max = maxPrice + padding;
+                stockChart.update();
+                showAlert('Y-axis auto-fitted', 'success');
+            }
+        }
+
         // Update socket status when connection changes
         socket.on('connect', function() {
             const indicator = document.getElementById('socket-status-indicator');

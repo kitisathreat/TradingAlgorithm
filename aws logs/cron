@@ -1,0 +1,31 @@
+Jun 18 18:13:38 ip-172-31-47-153 crond[1691]: (CRON) STARTUP (1.5.7)
+Jun 18 18:13:38 ip-172-31-47-153 crond[1691]: (CRON) INFO (Syslog will be used instead of sendmail.)
+Jun 18 18:13:38 ip-172-31-47-153 crond[1691]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 25% if used.)
+Jun 18 18:13:38 ip-172-31-47-153 crond[1691]: (CRON) INFO (running with inotify support)
+Jun 18 18:30:01 ip-172-31-45-14 CROND[3314]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Jun 18 18:30:01 ip-172-31-45-14 CROND[3313]: (root) CMDEND (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Jun 18 18:50:01 ip-172-31-45-14 CROND[4760]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Jun 18 18:50:01 ip-172-31-45-14 CROND[4759]: (root) CMDEND (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Jun 18 19:01:01 ip-172-31-45-14 CROND[5192]: (root) CMD (run-parts /etc/cron.hourly)
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) starting 0anacron
+Jun 18 19:01:01 ip-172-31-45-14 anacron[5203]: Anacron started on 2025-06-18
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) finished 0anacron
+Jun 18 19:01:01 ip-172-31-45-14 anacron[5203]: Will run job `cron.daily' in 45 min.
+Jun 18 19:01:01 ip-172-31-45-14 anacron[5203]: Will run job `cron.weekly' in 65 min.
+Jun 18 19:01:01 ip-172-31-45-14 anacron[5203]: Will run job `cron.monthly' in 85 min.
+Jun 18 19:01:01 ip-172-31-45-14 anacron[5203]: Jobs will be executed sequentially
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) starting cron.logrotate.elasticbeanstalk.eb-engine.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) finished cron.logrotate.elasticbeanstalk.eb-engine.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) starting cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) finished cron.logrotate.elasticbeanstalk.eb-hooks.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) starting cron.logrotate.elasticbeanstalk.nginx.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) finished cron.logrotate.elasticbeanstalk.nginx.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) starting cron.logrotate.elasticbeanstalk.web-stderr.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) finished cron.logrotate.elasticbeanstalk.web-stderr.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) starting cron.logrotate.elasticbeanstalk.web-stdout.conf
+Jun 18 19:01:01 ip-172-31-45-14 run-parts[5192]: (/etc/cron.hourly) finished cron.logrotate.elasticbeanstalk.web-stdout.conf
+Jun 18 19:01:01 ip-172-31-45-14 CROND[5191]: (root) CMDEND (run-parts /etc/cron.hourly)
+Jun 18 19:10:01 ip-172-31-45-14 CROND[5667]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Jun 18 19:10:01 ip-172-31-45-14 CROND[5666]: (root) CMDEND (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Jun 18 19:30:01 ip-172-31-45-14 CROND[7209]: (root) CMD (/opt/elasticbeanstalk/bin/publishlogs -type publish)
+Jun 18 19:30:01 ip-172-31-45-14 CROND[7208]: (root) CMDEND (/opt/elasticbeanstalk/bin/publishlogs -type publish)

@@ -766,7 +766,6 @@ class MainWindow(QMainWindow):
         self.date_range_spin.setRange(1, 365*50)  # Allow up to 50 years
         self.date_range_spin.setValue(30)
         self.date_range_spin.setVisible(False)
-        self.date_range_spin.setPlaceholderText("Enter number of days...")
         controls_layout.addWidget(self.date_range_spin)
         self.date_range_combo.currentTextChanged.connect(self.on_date_range_changed)
         

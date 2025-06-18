@@ -18,14 +18,35 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_socketio import SocketIO, emit
 import yfinance as yf
 
+# Eventlet monkey patching for async support (must be done before other imports)
+try:
+    import eventlet
+    eventlet.monkey_patch()
+    print("[INFO] Eventlet monkey patching applied successfully")
+except ImportError as e:
+    print(f"[WARNING] Eventlet not available: {e}")
+    print("[INFO] Falling back to threading mode")
+
 # Add parent directory to path to import from orchestrator
+# Handle both local development and AWS deployment paths
 REPO_ROOT = Path(__file__).parent.parent.parent
 ORCHESTRATOR_PATH = REPO_ROOT / "_2_Orchestrator_And_ML_Python"
+
+# For AWS deployment, the orchestrator might be in the current directory
+if not ORCHESTRATOR_PATH.exists():
+    ORCHESTRATOR_PATH = Path(__file__).parent / "_2_Orchestrator_And_ML_Python"
+
+# Add both paths to sys.path to handle different deployment scenarios
 sys.path.append(str(ORCHESTRATOR_PATH))
+sys.path.append(str(REPO_ROOT / "_2_Orchestrator_And_ML_Python"))
+
+print(f"[INFO] Looking for orchestrator at: {ORCHESTRATOR_PATH}")
+print(f"[INFO] Also checking: {REPO_ROOT / '_2_Orchestrator_And_ML_Python'}")
 
 try:
     from interactive_training_app.backend.model_trainer import ModelTrainer
     MODEL_TRAINER_AVAILABLE = True
+    print("[INFO] ModelTrainer imported successfully")
 except ImportError as e:
     logging.warning(f"ModelTrainer not available: {e}")
     MODEL_TRAINER_AVAILABLE = False
@@ -37,7 +58,17 @@ logger = logging.getLogger(__name__)
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'trading_algorithm_secret_key_2024'
-socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Determine async mode based on eventlet availability
+try:
+    import eventlet
+    async_mode = 'eventlet'
+    print("[INFO] Using eventlet async mode")
+except ImportError:
+    async_mode = 'threading'
+    print("[INFO] Using threading async mode")
+
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode=async_mode, logger=True, engineio_logger=True, ping_timeout=60, ping_interval=25)
 
 # Global variables
 model_trainer = None
@@ -52,6 +83,7 @@ try:
     from stock_selection_utils import StockSelectionManager
     stock_manager = StockSelectionManager()
     STOCK_MANAGER_AVAILABLE = True
+    print("[INFO] StockSelectionManager imported successfully")
 except ImportError as e:
     logging.warning(f"StockSelectionManager not available: {e}")
     stock_manager = None
@@ -564,12 +596,26 @@ def get_model_status():
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection"""
-    emit('connected', {'message': 'Connected to trading system'})
+    logger.info(f"Client connected: {request.sid}")
+    try:
+        emit('connected', {
+            'message': 'Connected to trading system',
+            'model_available': model_trainer is not None,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error in connect handler: {e}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
     """Handle client disconnection"""
-    print('Client disconnected')
+    logger.info(f"Client disconnected: {request.sid}")
+
+@socketio.on_error()
+def error_handler(e):
+    """Handle SocketIO errors"""
+    logger.error(f"SocketIO error: {e}")
+    emit('error', {'message': 'An error occurred'})
 
 def main():
     """Main function"""
@@ -596,8 +642,11 @@ def main():
     templates_dir.mkdir(exist_ok=True)
     
     # Run the Flask app
-    print("Starting web server...")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    print("Starting web server with SocketIO support...")
+    print("SocketIO async mode:", socketio.async_mode)
+    print("SocketIO engine:", socketio.server.eio.async_mode)
+    
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
 
 if __name__ == '__main__':
     main() 
