@@ -515,6 +515,9 @@ def train_model():
     training_active = True
     training_progress = 0
     
+    # Emit initial training status
+    emit_training_progress_update()
+    
     def training_thread():
         global training_progress, training_active
         
@@ -522,26 +525,28 @@ def train_model():
             # Prepare training data
             X, y = model_trainer.prepare_training_data()
             
-            # Train model
+            # Train model with progress updates
             success = model_trainer.train_neural_network(epochs=epochs)
             
             training_active = False
             training_progress = 100 if success else 0
             
+            # Emit final progress update
+            emit_training_progress_update()
+            
             # Emit completion event
-            socketio.emit('training_complete', {
-                'success': success,
-                'message': 'Training completed successfully' if success else 'Training failed'
-            })
+            emit_training_complete(success)
             
         except Exception as e:
             training_active = False
             training_progress = 0
             logger.error(f"Training error: {e}")
-            socketio.emit('training_complete', {
-                'success': False,
-                'error': str(e)
-            })
+            
+            # Emit final progress update
+            emit_training_progress_update()
+            
+            # Emit completion event with error
+            emit_training_complete(False, str(e))
     
     # Start training in background thread
     thread = threading.Thread(target=training_thread)
@@ -634,12 +639,18 @@ def handle_connect():
         client_id = request.sid
         logger.info(f"Client connected: {client_id}")
         
-        # Send connection confirmation
+        # Send connection confirmation with detailed status
         emit('connected', {
             'message': 'Connected to trading system',
             'model_available': model_trainer is not None,
             'timestamp': datetime.now().isoformat(),
-            'client_id': client_id
+            'client_id': client_id,
+            'system_status': {
+                'model_trainer_available': model_trainer is not None,
+                'training_active': training_active,
+                'training_progress': training_progress,
+                'current_stock': current_symbol
+            }
         })
         
         # Log connection details
@@ -688,7 +699,11 @@ def error_handler(e):
 def handle_ping():
     """Handle ping from client"""
     try:
-        emit('pong', {'timestamp': datetime.now().isoformat()})
+        emit('pong', {
+            'timestamp': datetime.now().isoformat(),
+            'server_status': 'healthy',
+            'model_available': model_trainer is not None
+        })
     except Exception as e:
         logger.error(f"Error handling ping: {e}")
 
@@ -700,11 +715,128 @@ def handle_get_status():
             'model_available': model_trainer is not None,
             'training_active': training_active,
             'training_progress': training_progress,
+            'current_stock': current_symbol,
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
         logger.error(f"Error handling status request: {e}")
         emit('error', {'message': 'Failed to get status'})
+
+@socketio.on('request_stock_data')
+def handle_stock_data_request(data):
+    """Handle real-time stock data request"""
+    try:
+        symbol = data.get('symbol')
+        if not symbol:
+            emit('error', {'message': 'Symbol is required'})
+            return
+        
+        # Get stock data
+        stock_info, stock_data = get_stock_data(symbol, days=30)
+        
+        if stock_info and stock_data is not None:
+            # Calculate indicators
+            indicators = calculate_technical_indicators(stock_data)
+            
+            # Prepare chart data
+            chart_data = {
+                'dates': stock_data.index.strftime('%Y-%m-%d').tolist(),
+                'prices': stock_data['Close'].tolist(),
+                'volumes': stock_data['Volume'].tolist(),
+                'opens': stock_data['Open'].tolist(),
+                'highs': stock_data['High'].tolist(),
+                'lows': stock_data['Low'].tolist()
+            }
+            
+            emit('stock_data_update', {
+                'symbol': symbol,
+                'stock_info': stock_info,
+                'chart_data': chart_data,
+                'indicators': indicators,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            emit('error', {'message': f'Failed to fetch data for {symbol}'})
+            
+    except Exception as e:
+        logger.error(f"Error handling stock data request: {e}")
+        emit('error', {'message': f'Error fetching stock data: {str(e)}'})
+
+@socketio.on('request_prediction')
+def handle_prediction_request(data):
+    """Handle real-time prediction request"""
+    try:
+        if not model_trainer:
+            emit('error', {'message': 'Model trainer not available'})
+            return
+        
+        # Check if model is trained
+        model_state = model_trainer.get_model_state()
+        if not model_state.get('is_trained', False):
+            emit('error', {'message': 'Model needs to be trained first'})
+            return
+        
+        # Get stock data for prediction
+        symbol = data.get('symbol')
+        if not symbol:
+            emit('error', {'message': 'Symbol is required'})
+            return
+        
+        stock_info, stock_data = get_stock_data(symbol, days=30)
+        if stock_data is None:
+            emit('error', {'message': f'Failed to fetch data for {symbol}'})
+            return
+        
+        # Calculate features
+        features = model_trainer._calculate_performance_metrics(stock_data)
+        
+        # Make prediction
+        prediction = model_trainer.make_prediction(features)
+        
+        emit('prediction_result', {
+            'symbol': symbol,
+            'prediction': prediction,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error handling prediction request: {e}")
+        emit('error', {'message': f'Error making prediction: {str(e)}'})
+
+@socketio.on('training_progress_request')
+def handle_training_progress_request():
+    """Handle training progress request"""
+    try:
+        emit('training_progress_update', {
+            'active': training_active,
+            'progress': training_progress,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error handling training progress request: {e}")
+        emit('error', {'message': 'Failed to get training progress'})
+
+def emit_training_progress_update():
+    """Emit training progress update to all connected clients"""
+    try:
+        socketio.emit('training_progress_update', {
+            'active': training_active,
+            'progress': training_progress,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error emitting training progress: {e}")
+
+def emit_training_complete(success, error=None):
+    """Emit training completion to all connected clients"""
+    try:
+        socketio.emit('training_complete', {
+            'success': success,
+            'error': error,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error emitting training complete: {e}")
 
 def main():
     """Main function"""

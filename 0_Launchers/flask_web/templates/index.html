@@ -522,6 +522,9 @@
             socket.on('connect', function() {
                 document.getElementById('connection-status').innerHTML = 
                     '<span class="status-indicator status-online"></span>Connected';
+                
+                // Request initial status
+                socket.emit('get_status');
             });
             
             socket.on('disconnect', function() {
@@ -529,16 +532,145 @@
                     '<span class="status-indicator status-offline"></span>Disconnected';
             });
             
+            socket.on('connected', function(data) {
+                console.log('Connected to trading system:', data);
+                updateSystemStatusFromSocket(data);
+            });
+            
+            socket.on('status_update', function(data) {
+                console.log('Status update received:', data);
+                updateSystemStatusFromSocket(data);
+            });
+            
             socket.on('training_complete', function(data) {
                 if (data.success) {
                     showAlert('Training completed successfully!', 'success');
                 } else {
-                    showAlert('Training failed: ' + data.error, 'danger');
+                    showAlert('Training failed: ' + (data.error || 'Unknown error'), 'danger');
                 }
                 document.getElementById('training-progress-container').style.display = 'none';
                 document.getElementById('trainButton').disabled = false;
                 updateModelStatus();
             });
+            
+            socket.on('training_progress_update', function(data) {
+                console.log('Training progress update:', data);
+                if (data.active) {
+                    document.getElementById('training-progress-container').style.display = 'block';
+                    const progressBar = document.getElementById('training-progress-bar');
+                    progressBar.style.width = data.progress + '%';
+                    progressBar.textContent = data.progress + '%';
+                } else {
+                    document.getElementById('training-progress-container').style.display = 'none';
+                }
+            });
+            
+            socket.on('stock_data_update', function(data) {
+                console.log('Stock data update received:', data);
+                handleStockDataUpdate(data);
+            });
+            
+            socket.on('prediction_result', function(data) {
+                console.log('Prediction result received:', data);
+                handlePredictionResult(data);
+            });
+            
+            socket.on('error', function(data) {
+                console.error('Socket error:', data);
+                showAlert('Connection error: ' + (data.message || 'Unknown error'), 'danger');
+            });
+            
+            socket.on('pong', function(data) {
+                console.log('Pong received:', data);
+                // Update server status if needed
+                if (data.server_status === 'healthy') {
+                    // Server is healthy
+                }
+            });
+        }
+        
+        // Update system status from socket data
+        function updateSystemStatusFromSocket(data) {
+            const container = document.getElementById('system-status');
+            if (container && data.system_status) {
+                const status = data.system_status;
+                container.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>System Information</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>Model Trainer:</strong> 
+                                    <span class="status-indicator ${status.model_trainer_available ? 'status-online' : 'status-offline'}"></span>
+                                    ${status.model_trainer_available ? 'Available' : 'Not Available'}
+                                </li>
+                                <li><strong>Web Interface:</strong> 
+                                    <span class="status-indicator status-online"></span> Running
+                                </li>
+                                <li><strong>Socket Connection:</strong> 
+                                    <span class="status-indicator status-online"></span> Connected
+                                </li>
+                                <li><strong>Training Status:</strong> 
+                                    <span class="status-indicator ${status.training_active ? 'status-warning' : 'status-online'}"></span>
+                                    ${status.training_active ? 'Active' : 'Idle'}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Features</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Real-time stock data</li>
+                                <li><i class="fas fa-check text-success"></i> Technical analysis</li>
+                                <li><i class="fas fa-check text-success"></i> Interactive training</li>
+                                <li><i class="fas fa-check text-success"></i> AI predictions</li>
+                                <li><i class="fas fa-check text-success"></i> WebSocket support</li>
+                                <li><i class="fas fa-check text-success"></i> Real-time updates</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Handle stock data update from WebSocket
+        function handleStockDataUpdate(data) {
+            currentStockData = data.chart_data;
+            currentStockInfo = data.stock_info;
+            
+            // Update chart
+            updateChart(data.chart_data);
+            
+            // Update indicators
+            updateIndicators(data.indicators);
+            
+            // Show decision interface
+            document.getElementById('decision-interface').style.display = 'block';
+            
+            showAlert(`Real-time data updated for ${data.symbol}`, 'success');
+        }
+        
+        // Handle prediction result from WebSocket
+        function handlePredictionResult(data) {
+            displayPrediction(data.prediction);
+        }
+        
+        // Request real-time stock data via WebSocket
+        function requestRealTimeStockData(symbol) {
+            if (socket && socket.connected) {
+                socket.emit('request_stock_data', { symbol: symbol });
+            } else {
+                showAlert('WebSocket not connected. Using fallback HTTP request.', 'warning');
+                loadStockData(); // Fallback to HTTP
+            }
+        }
+        
+        // Request real-time prediction via WebSocket
+        function requestRealTimePrediction(symbol) {
+            if (socket && socket.connected) {
+                socket.emit('request_prediction', { symbol: symbol });
+            } else {
+                showAlert('WebSocket not connected. Using fallback HTTP request.', 'warning');
+                makePrediction(); // Fallback to HTTP
+            }
         }
 
         // Load stock options
