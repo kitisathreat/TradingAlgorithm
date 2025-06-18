@@ -254,15 +254,47 @@ class MetricsWidget(QWidget):
         group = QGroupBox("Technical Indicators")
         layout = QGridLayout(group)
         
+        # Basic indicators
         self.rsi_label = QLabel("RSI: 0.00")
         self.macd_label = QLabel("MACD: 0.00")
         self.sma_20_label = QLabel("SMA(20): $0.00")
         self.ema_12_label = QLabel("EMA(12): $0.00")
         
+        # Additional moving averages
+        self.sma_50_label = QLabel("SMA(50): $0.00")
+        self.sma_200_label = QLabel("SMA(200): $0.00")
+        self.ema_20_label = QLabel("EMA(20): $0.00")
+        
+        # Bollinger Bands
+        self.bb_upper_label = QLabel("BB Upper: $0.00")
+        self.bb_lower_label = QLabel("BB Lower: $0.00")
+        self.bb_middle_label = QLabel("BB Middle: $0.00")
+        
+        # Stochastic indicators
+        self.stoch_k_label = QLabel("Stoch %K: 0.00")
+        self.stoch_d_label = QLabel("Stoch %D: 0.00")
+        self.williams_r_label = QLabel("Williams %R: 0.00")
+        
+        # MACD components
+        self.macd_signal_label = QLabel("MACD Signal: 0.00")
+        self.macd_histogram_label = QLabel("MACD Histogram: 0.00")
+        
+        # Layout in a grid
         layout.addWidget(self.rsi_label, 0, 0)
-        layout.addWidget(self.macd_label, 1, 0)
-        layout.addWidget(self.sma_20_label, 2, 0)
-        layout.addWidget(self.ema_12_label, 3, 0)
+        layout.addWidget(self.macd_label, 0, 1)
+        layout.addWidget(self.sma_20_label, 1, 0)
+        layout.addWidget(self.ema_12_label, 1, 1)
+        layout.addWidget(self.sma_50_label, 2, 0)
+        layout.addWidget(self.sma_200_label, 2, 1)
+        layout.addWidget(self.ema_20_label, 3, 0)
+        layout.addWidget(self.bb_upper_label, 3, 1)
+        layout.addWidget(self.bb_lower_label, 4, 0)
+        layout.addWidget(self.bb_middle_label, 4, 1)
+        layout.addWidget(self.stoch_k_label, 5, 0)
+        layout.addWidget(self.stoch_d_label, 5, 1)
+        layout.addWidget(self.williams_r_label, 6, 0)
+        layout.addWidget(self.macd_signal_label, 6, 1)
+        layout.addWidget(self.macd_histogram_label, 7, 0)
         
         self.content_layout.addWidget(group)
         
@@ -330,16 +362,65 @@ class MetricsWidget(QWidget):
             ema_12 = df['Close'].ewm(span=12).mean()
             ema_26 = df['Close'].ewm(span=26).mean()
             macd = ema_12 - ema_26
+            macd_signal = macd.ewm(span=9).mean()
             current_macd = macd.iloc[-1] if not pd.isna(macd.iloc[-1]) else 0
+            current_macd_signal = macd_signal.iloc[-1] if not pd.isna(macd_signal.iloc[-1]) else 0
+            macd_histogram = current_macd - current_macd_signal
             
             # Moving averages
             sma_20_current = sma_20.iloc[-1] if not pd.isna(sma_20.iloc[-1]) else current_price
             ema_12_current = ema_12.iloc[-1] if not pd.isna(ema_12.iloc[-1]) else current_price
             
+            # Additional moving averages
+            sma_50 = df['Close'].rolling(50).mean()
+            sma_200 = df['Close'].rolling(200).mean()
+            ema_20 = df['Close'].ewm(span=20).mean()
+            
+            sma_50_current = sma_50.iloc[-1] if not pd.isna(sma_50.iloc[-1]) else current_price
+            sma_200_current = sma_200.iloc[-1] if not pd.isna(sma_200.iloc[-1]) else current_price
+            ema_20_current = ema_20.iloc[-1] if not pd.isna(ema_20.iloc[-1]) else current_price
+            
+            # Bollinger Bands
+            bb_upper = sma_20 + (std_20 * 2)
+            bb_lower = sma_20 - (std_20 * 2)
+            bb_middle = sma_20
+            
+            bb_upper_current = bb_upper.iloc[-1] if not pd.isna(bb_upper.iloc[-1]) else current_price
+            bb_lower_current = bb_lower.iloc[-1] if not pd.isna(bb_lower.iloc[-1]) else current_price
+            bb_middle_current = bb_middle.iloc[-1] if not pd.isna(bb_middle.iloc[-1]) else current_price
+            
+            # Stochastic Oscillator
+            low_14 = df['Low'].rolling(14).min()
+            high_14 = df['High'].rolling(14).max()
+            k_percent = 100 * ((df['Close'] - low_14) / (high_14 - low_14))
+            d_percent = k_percent.rolling(3).mean()
+            
+            stoch_k = k_percent.iloc[-1] if not pd.isna(k_percent.iloc[-1]) else 50
+            stoch_d = d_percent.iloc[-1] if not pd.isna(d_percent.iloc[-1]) else 50
+            
+            # Williams %R
+            williams_r = -100 * ((high_14 - df['Close']) / (high_14 - low_14))
+            williams_r_current = williams_r.iloc[-1] if not pd.isna(williams_r.iloc[-1]) else -50
+            
+            # Update all technical indicator labels
             self.rsi_label.setText(f"RSI: {current_rsi:.2f}")
             self.macd_label.setText(f"MACD: {current_macd:.2f}")
+            self.macd_signal_label.setText(f"MACD Signal: {current_macd_signal:.2f}")
+            self.macd_histogram_label.setText(f"MACD Histogram: {macd_histogram:.2f}")
+            
             self.sma_20_label.setText(f"SMA(20): ${sma_20_current:.2f}")
             self.ema_12_label.setText(f"EMA(12): ${ema_12_current:.2f}")
+            self.sma_50_label.setText(f"SMA(50): ${sma_50_current:.2f}")
+            self.sma_200_label.setText(f"SMA(200): ${sma_200_current:.2f}")
+            self.ema_20_label.setText(f"EMA(20): ${ema_20_current:.2f}")
+            
+            self.bb_upper_label.setText(f"BB Upper: ${bb_upper_current:.2f}")
+            self.bb_lower_label.setText(f"BB Lower: ${bb_lower_current:.2f}")
+            self.bb_middle_label.setText(f"BB Middle: ${bb_middle_current:.2f}")
+            
+            self.stoch_k_label.setText(f"Stoch %K: {stoch_k:.2f}")
+            self.stoch_d_label.setText(f"Stoch %D: {stoch_d:.2f}")
+            self.williams_r_label.setText(f"Williams %R: {williams_r_current:.2f}")
             
         except Exception as e:
             print(f"Error updating metrics: {str(e)}")
@@ -354,13 +435,18 @@ class StockChartWidget(pg.PlotWidget):
         self.setLabel('left', 'Price (USD$)')
         self.setLabel('bottom', 'Date')
         
-        # Enable mouse interaction
+        # Enable mouse interaction for zoom and pan
         self.setMouseEnabled(x=True, y=True)
         self.showButtons()
         
-        # Enable panning and zooming
+        # Enable panning and zooming with better configuration
         self.setInteractive(True)
-        self.getViewBox().setMouseMode(pg.ViewBox.PanMode)
+        view_box = self.getViewBox()
+        view_box.setMouseMode(pg.ViewBox.PanMode)
+        view_box.setAspectLocked(False)
+        
+        # Enable zoom with mouse wheel
+        view_box.setMouseEnabled(x=True, y=True)
         
         # Store data for tooltips
         self.df = None
@@ -496,6 +582,11 @@ Volume: {row['Volume']:,}
         self.tooltip = pg.TextItem(text='', anchor=(0, 1))
         self.tooltip.setVisible(False)
         self.addItem(self.tooltip)
+        
+        # Ensure zoom and pan are properly enabled
+        view_box = self.getViewBox()
+        view_box.setMouseMode(pg.ViewBox.PanMode)
+        view_box.setAspectLocked(False)
         
         print(f"Chart updated - Price range: ${min_price:.2f} to ${max_price:.2f}, Current: ${current_price:.2f}")
 
@@ -668,13 +759,14 @@ class MainWindow(QMainWindow):
         # Date range selection
         controls_layout.addWidget(QLabel("Days of History:"))
         self.date_range_combo = QComboBox()
-        self.date_range_combo.addItems(["30", "60", "90", "180", "365", "Custom"])
+        self.date_range_combo.addItems(["30", "90", "180", "365", "Custom"])
         self.date_range_combo.setCurrentIndex(0)
         controls_layout.addWidget(self.date_range_combo)
         self.date_range_spin = QSpinBox()
         self.date_range_spin.setRange(1, 365*50)  # Allow up to 50 years
         self.date_range_spin.setValue(30)
         self.date_range_spin.setVisible(False)
+        self.date_range_spin.setPlaceholderText("Enter number of days...")
         controls_layout.addWidget(self.date_range_spin)
         self.date_range_combo.currentTextChanged.connect(self.on_date_range_changed)
         
@@ -708,6 +800,7 @@ class MainWindow(QMainWindow):
         # Chart widget (top part of splitter)
         self.chart = StockChartWidget()
         self.chart.setMinimumHeight(300)  # Minimum height for chart
+        self.chart.setToolTip("📊 Interactive Chart\n• Mouse wheel: Zoom in/out\n• Left-click and drag: Pan around\n• Right-click: Reset view\n• Use buttons below for auto-resize")
         self.main_splitter.addWidget(self.chart)
         
         # Auto Resize buttons below the chart

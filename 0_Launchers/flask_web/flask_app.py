@@ -113,60 +113,17 @@ def get_stock_data(symbol, days=30):
         return None, None
 
 def calculate_technical_indicators(data):
-    """Calculate technical indicators for the stock data"""
+    """Calculate comprehensive technical indicators matching the local GUI"""
     if data is None or data.empty:
         return {}
     
     try:
-        # RSI
-        delta = data['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        # MACD
-        exp1 = data['Close'].ewm(span=12, adjust=False).mean()
-        exp2 = data['Close'].ewm(span=26, adjust=False).mean()
-        macd = exp1 - exp2
-        signal = macd.ewm(span=9, adjust=False).mean()
-        
-        # Moving Averages
-        sma_20 = data['Close'].rolling(window=20).mean()
-        ema_12 = data['Close'].ewm(span=12, adjust=False).mean()
-        
-        # Bollinger Bands
-        sma = data['Close'].rolling(window=20).mean()
-        std = data['Close'].rolling(window=20).std()
-        upper_band = sma + (std * 2)
-        lower_band = sma - (std * 2)
-        bollinger_width = (std.iloc[-1] / sma.iloc[-1]) * 100 if not pd.isna(sma.iloc[-1]) else 0
-        
-        # ATR (Average True Range)
-        high_low = data['High'] - data['Low']
-        high_close = np.abs(data['High'] - data['Close'].shift())
-        low_close = np.abs(data['Low'] - data['Close'].shift())
-        true_range = np.maximum(high_low, np.maximum(high_close, low_close))
-        atr = true_range.rolling(14).mean().iloc[-1] if len(data) >= 14 else true_range.mean()
-        
-        # Volume metrics
-        volume_sma = data['Volume'].rolling(window=20).mean()
-        volume_ratio = data['Volume'].iloc[-1] / volume_sma.iloc[-1] if not pd.isna(volume_sma.iloc[-1]) else 1.0
-        
-        # Price change
-        price_change = (data['Close'].iloc[-1] - data['Close'].iloc[0]) / data['Close'].iloc[0]
-        
-        # Volatility metrics
-        returns = data['Close'].pct_change().dropna()
-        daily_vol = returns.std() * 100
-        weekly_vol = returns.rolling(5).std().iloc[-1] * 100 if len(returns) >= 5 else daily_vol
-        volatility = returns.std() * np.sqrt(252)  # Annualized
-        
         # Price metrics
         current_price = data['Close'].iloc[-1]
         prev_price = data['Close'].iloc[-2] if len(data) > 1 else current_price
-        price_change_1d = current_price - prev_price
-        price_change_pct_1d = (price_change_1d / prev_price) * 100 if prev_price != 0 else 0
+        price_change = current_price - prev_price
+        price_change_pct = (price_change / prev_price) * 100 if prev_price != 0 else 0
+        
         high_price = data['High'].max()
         low_price = data['Low'].min()
         avg_price = data['Close'].mean()
@@ -174,36 +131,127 @@ def calculate_technical_indicators(data):
         # Volume metrics
         current_volume = data['Volume'].iloc[-1]
         avg_volume = data['Volume'].mean()
+        volume_ratio = current_volume / avg_volume if avg_volume > 0 else 0
+        
+        # Volatility metrics
+        daily_returns = data['Close'].pct_change().dropna()
+        daily_vol = daily_returns.std() * 100
+        weekly_vol = daily_returns.rolling(5).std().iloc[-1] * 100 if len(daily_returns) >= 5 else daily_vol
+        
+        # ATR calculation
+        high_low = data['High'] - data['Low']
+        high_close = np.abs(data['High'] - data['Close'].shift())
+        low_close = np.abs(data['Low'] - data['Close'].shift())
+        true_range = np.maximum(high_low, np.maximum(high_close, low_close))
+        atr = true_range.rolling(14).mean().iloc[-1] if len(data) >= 14 else true_range.mean()
+        
+        # Bollinger Bands
+        sma_20 = data['Close'].rolling(20).mean()
+        std_20 = data['Close'].rolling(20).std()
+        bollinger_width = (std_20.iloc[-1] / sma_20.iloc[-1]) * 100 if not pd.isna(sma_20.iloc[-1]) else 0
+        bb_upper = sma_20 + (std_20 * 2)
+        bb_lower = sma_20 - (std_20 * 2)
+        
+        # RSI
+        delta = data['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        current_rsi = rsi.iloc[-1] if not pd.isna(rsi.iloc[-1]) else 50
+        
+        # MACD
+        ema_12 = data['Close'].ewm(span=12).mean()
+        ema_26 = data['Close'].ewm(span=26).mean()
+        macd = ema_12 - ema_26
+        macd_signal = macd.ewm(span=9).mean()
+        current_macd = macd.iloc[-1] if not pd.isna(macd.iloc[-1]) else 0
+        current_macd_signal = macd_signal.iloc[-1] if not pd.isna(macd_signal.iloc[-1]) else 0
+        macd_histogram = current_macd - current_macd_signal
+        
+        # Moving averages
+        sma_20_current = sma_20.iloc[-1] if not pd.isna(sma_20.iloc[-1]) else current_price
+        ema_12_current = ema_12.iloc[-1] if not pd.isna(ema_12.iloc[-1]) else current_price
+        
+        # Additional moving averages
+        sma_50 = data['Close'].rolling(50).mean()
+        sma_200 = data['Close'].rolling(200).mean()
+        ema_20 = data['Close'].ewm(span=20).mean()
+        
+        sma_50_current = sma_50.iloc[-1] if not pd.isna(sma_50.iloc[-1]) else current_price
+        sma_200_current = sma_200.iloc[-1] if not pd.isna(sma_200.iloc[-1]) else current_price
+        ema_20_current = ema_20.iloc[-1] if not pd.isna(ema_20.iloc[-1]) else current_price
+        
+        # Bollinger Bands
+        bb_upper_current = bb_upper.iloc[-1] if not pd.isna(bb_upper.iloc[-1]) else current_price
+        bb_lower_current = bb_lower.iloc[-1] if not pd.isna(bb_lower.iloc[-1]) else current_price
+        bb_middle_current = sma_20_current
+        
+        # Stochastic Oscillator
+        low_14 = data['Low'].rolling(14).min()
+        high_14 = data['High'].rolling(14).max()
+        k_percent = 100 * ((data['Close'] - low_14) / (high_14 - low_14))
+        d_percent = k_percent.rolling(3).mean()
+        
+        stoch_k = k_percent.iloc[-1] if not pd.isna(k_percent.iloc[-1]) else 50
+        stoch_d = d_percent.iloc[-1] if not pd.isna(d_percent.iloc[-1]) else 50
+        
+        # Williams %R
+        williams_r = -100 * ((high_14 - data['Close']) / (high_14 - low_14))
+        williams_r_current = williams_r.iloc[-1] if not pd.isna(williams_r.iloc[-1]) else -50
+        
+        # Price change over period
+        price_change_period = (data['Close'].iloc[-1] - data['Close'].iloc[0]) / data['Close'].iloc[0]
+        
+        # Volatility (annualized)
+        volatility = daily_returns.std() * np.sqrt(252)
         
         return {
-            'rsi': float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50.0,
-            'macd': float(macd.iloc[-1]) if not pd.isna(macd.iloc[-1]) else 0.0,
-            'macd_signal': float(signal.iloc[-1]) if not pd.isna(signal.iloc[-1]) else 0.0,
-            'sma_20': float(sma_20.iloc[-1]) if not pd.isna(sma_20.iloc[-1]) else float(current_price),
-            'ema_12': float(ema_12.iloc[-1]) if not pd.isna(ema_12.iloc[-1]) else float(current_price),
-            'bb_upper': float(upper_band.iloc[-1]) if not pd.isna(upper_band.iloc[-1]) else float(current_price),
-            'bb_lower': float(lower_band.iloc[-1]) if not pd.isna(lower_band.iloc[-1]) else float(current_price),
-            'bb_middle': float(sma.iloc[-1]) if not pd.isna(sma.iloc[-1]) else float(current_price),
-            'bb_width': float(bollinger_width),
-            'atr': float(atr),
-            'volume_ratio': float(volume_ratio),
-            'price_change': float(price_change),
-            'price_change_1d': float(price_change_1d),
-            'price_change_pct_1d': float(price_change_pct_1d),
-            'volatility': float(volatility),
-            'daily_vol': float(daily_vol),
-            'weekly_vol': float(weekly_vol),
+            # Price metrics
             'current_price': float(current_price),
+            'price_change': float(price_change),
+            'price_change_pct': float(price_change_pct),
+            'price_change_period': float(price_change_period),
             'high_price': float(high_price),
             'low_price': float(low_price),
             'avg_price': float(avg_price),
+            
+            # Volume metrics
             'current_volume': int(current_volume),
-            'avg_volume': float(avg_volume),
-            'trend': 'UP' if price_change > 0 else 'DOWN'
+            'avg_volume': int(avg_volume),
+            'volume_ratio': float(volume_ratio),
+            
+            # Volatility metrics
+            'daily_vol': float(daily_vol),
+            'weekly_vol': float(weekly_vol),
+            'volatility': float(volatility),
+            'atr': float(atr),
+            'bollinger_width': float(bollinger_width),
+            
+            # Technical indicators
+            'rsi': float(current_rsi),
+            'macd': float(current_macd),
+            'macd_signal': float(current_macd_signal),
+            'macd_histogram': float(macd_histogram),
+            'sma_20': float(sma_20_current),
+            'ema_12': float(ema_12_current),
+            'sma_50': float(sma_50_current),
+            'sma_200': float(sma_200_current),
+            'ema_20': float(ema_20_current),
+            
+            # Bollinger Bands
+            'bb_upper': float(bb_upper_current),
+            'bb_lower': float(bb_lower_current),
+            'bb_middle': float(bb_middle_current),
+            
+            # Stochastic
+            'stoch_k': float(stoch_k),
+            'stoch_d': float(stoch_d),
+            'williams_r': float(williams_r_current)
         }
         
     except Exception as e:
-        logger.error(f"Error calculating technical indicators: {e}")
+        logger.error(f"Error calculating indicators: {str(e)}")
         return {}
 
 @app.route('/')
