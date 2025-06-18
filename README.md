@@ -17,8 +17,7 @@
 TradingAlgorithm/
 ├── 0_Launchers/
 │   ├── local_gui/           # Launchers for the local PyQt GUI
-│   ├── streamlit_local/     # Launchers for running Streamlit app locally
-│   ├── streamlit_cloud/     # Setup scripts for Streamlit Cloud deployment
+│   ├── flask_web/           # Flask web interface launcher
 │   └── build_tools/         # Build and environment setup scripts
 ├── 1_High_Performance_Module_(C++)/    # Core trading engine (C++)
 │   ├── src/                           # Source code
@@ -27,7 +26,7 @@ TradingAlgorithm/
 │   ├── logs/                          # Trading and system logs
 │   ├── tests/                         # Python tests
 │   ├── main.py                        # Main entry point
-│   └── root_requirements.txt          # Main project dependencies
+│   └── requirements.txt               # Main project dependencies
 ├── 3_Networking_and_User_Input/        # Web interface and API
 ├── docs/                              # Documentation
 └── .github/                           # CI/CD workflows
@@ -44,14 +43,13 @@ TradingAlgorithm/
 
 2. **Quick Start**
    - **Local GUI:** Run `0_Launchers/local_gui/run_local_gui.bat` or `run_local_gui.py` to launch the PyQt GUI
-   - **Local Streamlit App:** Run `0_Launchers/streamlit_local/run_streamlit_app.bat` to launch the Streamlit web interface locally
-   - **Streamlit Cloud:** Use the GitHub repo with Streamlit Cloud; the main file is `streamlit_app.py` at the project root
-   - Access the web interface at `http://localhost:8501` (for local Streamlit)
+   - **Flask Web Interface:** Run `0_Launchers/flask_web/run_flask_web.bat` to launch the Flask web interface
+   - Access the web interface at `http://localhost:5000` (for Flask)
    - Monitor trading activity in the logs directory
 
 3. **Key Files to Understand**
    - `2_Orchestrator_And_ML_Python/main.py`: Main trading logic
-   - `streamlit_app.py`: Main Streamlit app for both local and cloud
+   - `0_Launchers/flask_web/flask_app.py`: Flask web interface
    - `docs/project_structure.txt`: Detailed component documentation
 
 ### For Developers
@@ -63,7 +61,7 @@ TradingAlgorithm/
    .\venv\Scripts\activate
 
    # Install dependencies
-   pip install -r 2_Orchestrator_And_ML_Python/ml_requirements.txt
+   pip install -r requirements.txt
    ```
 
 2. **Building C++ Module**
@@ -118,8 +116,8 @@ TradingAlgorithm/
   - Log viewer
 
 ### 4. UI Components
-- Add to the Streamlit app (`streamlit_app.py`) or local GUI as appropriate
-- Follow Streamlit or PyQt best practices
+- Add to the Flask app (`0_Launchers/flask_web/flask_app.py`) or local GUI as appropriate
+- Follow Flask or PyQt best practices
 - Include error handling
 
 ## Development Guidelines
@@ -136,8 +134,8 @@ TradingAlgorithm/
    - Add validation tests
 
 3. **UI Components**
-   - Add to the Streamlit app (`streamlit_app.py`) or local GUI as appropriate
-   - Follow Streamlit or PyQt best practices
+   - Add to the Flask app (`0_Launchers/flask_web/flask_app.py`) or local GUI as appropriate
+   - Follow Flask or PyQt best practices
    - Include error handling
 
 ### Best Practices
@@ -151,7 +149,6 @@ TradingAlgorithm/
 ## Troubleshooting
 
 Common issues and solutions are documented in:
-- `docs/streamlit_cloud_troubleshooting.md`
 - `docs/setup_guide.md`
 
 ## Contributing

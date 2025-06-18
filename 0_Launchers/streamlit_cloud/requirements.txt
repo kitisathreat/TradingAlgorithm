@@ -1,8 +1,0 @@
-# Streamlit Cloud Requirements - Main File
-# This file references the override file for proper dependency resolution
-
-# Use the override file for proper installation order
--r streamlit_requirements_override.txt
-
-# Note: The override file ensures compatible versions are installed in the correct order
-# to resolve websocket dependency conflicts between TensorFlow and alpaca-trade-api 

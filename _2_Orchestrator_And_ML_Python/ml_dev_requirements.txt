@@ -1,9 +1,0 @@
-# Development dependencies
-pytest==7.4.0
-pybind11==2.11.1  # Updated for better C++ compatibility
-setuptools==68.0.0
-wheel==0.41.0
-black==23.9.0  # For code formatting
-pylint==3.0.0  # For code linting
-fastapi[testclient]==0.100.0  # For API testing
-PyQt5==5.15.9 

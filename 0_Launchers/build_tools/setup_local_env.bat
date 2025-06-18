@@ -46,7 +46,7 @@ py -3.9 -m pip install --no-cache-dir -r "%~dp0..\..\requirements.txt"
 :: Verify installation
 echo Step 6: Verifying installation...
 py -3.9 -c "import tensorflow as tf; print(f'TensorFlow version: {tf.__version__}')"
-py -3.9 -c "import streamlit as st; print(f'Streamlit version: {st.__version__}')"
+py -3.9 -c "import flask; print(f'Flask version: {flask.__version__}')"
 
 echo.
 echo ====================================================================

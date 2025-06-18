@@ -1,9 +1,0 @@
-# Constraints file to force specific versions and resolve dependency conflicts
-# This file is used with pip install --constraint to override package requirements
-
-# Force websockets to 13+ to satisfy yfinance requirement
-websockets>=13.0
-
-# Override alpaca-trade-api websocket constraint
-# This tells pip to ignore alpaca's websockets<11 requirement
-alpaca-trade-api==3.2.0 

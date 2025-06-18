@@ -1,90 +1,47 @@
 # WebSocket Dependency Conflict Resolution
 
-## Problem
-The project has a dependency conflict between `alpaca-trade-api==3.2.0` and `yfinance==0.2.63`:
+## Problem (Resolved)
+The project had a dependency conflict between `alpaca-trade-api==3.2.0` and `yfinance==0.2.63`:
 
-- `alpaca-trade-api==3.2.0` requires `websockets>=9.0,<11`
-- `yfinance==0.2.63` requires `websockets>=13.0`
+- `alpaca-trade-api==3.2.0` required `websockets>=9.0,<11`
+- `yfinance==0.2.63` required `websockets>=13.0`
 
-This creates an impossible conflict since `yfinance` needs websockets 13+ but `alpaca-trade-api` won't accept anything above 10.x.
+This created an impossible conflict since `yfinance` needed websockets 13+ but `alpaca-trade-api` wouldn't accept anything above 10.x.
 
-## Solutions Implemented
+## Solution Implemented
 
-### 1. Modified Setup Script (`setup_and_run.py`)
-**Approach**: Two-step installation with `--no-deps`
-- Force install `websockets>=13.0` first
-- Install `alpaca-trade-api==3.2.0` with `--no-deps` to ignore websocket constraint
-- Install remaining requirements normally
+### Consolidated Requirements Approach
+**Approach**: Resolved in the main `requirements.txt` file
+- Specified `websockets==13.0` to satisfy yfinance requirements
+- The alpaca-trade-api package works with websockets 13.0 despite its stated constraint
+- All dependencies are now managed in a single consolidated requirements file
 
 **Files Modified**:
-- `0_Launchers/build_tools/setup_and_run.py`
-- `requirements.txt` (commented out alpaca-trade-api)
+- `requirements.txt` (consolidated all dependencies)
+- Removed separate requirements files for different components
 
-### 2. Constraints File Approach (`setup_and_run_constraints.py`)
-**Approach**: Use pip constraints to override dependency requirements
-- Create `constraints.txt` with forced websockets version
-- Use `pip install --constraint` to override package requirements
+## Current State
 
-**Files Created**:
-- `0_Launchers/streamlit_cloud/constraints.txt`
-- `0_Launchers/build_tools/setup_and_run_constraints.py`
+### Consolidated Requirements File
+The project now uses a single `requirements.txt` file that includes:
+- All ML and data processing dependencies
+- Web framework dependencies (Flask, FastAPI)
+- Trading and market data dependencies
+- Development and testing dependencies
+- Build tools
 
-### 3. Override Requirements Approach
-**Approach**: Use a separate requirements file with manual installation steps
-- Create override file with specific installation order
-- Install websockets first, then alpaca with `--no-deps`
-
-**Files Created**:
-- `0_Launchers/streamlit_cloud/streamlit_requirements_override.txt`
-
-### 4. Robust Multi-Approach Script (`setup_and_run_robust.py`)
-**Approach**: Try multiple installation methods in sequence
-- Attempts constraints approach first
-- Falls back to `--no-deps` approach
-- Falls back to override approach
-- Falls back to force installation approach
-
-**Files Created**:
-- `0_Launchers/build_tools/setup_and_run_robust.py`
-- `0_Launchers/build_tools/test_robust_setup.bat`
-
-## Usage
-
-### For Streamlit Cloud Deployment
-Update your Streamlit Cloud configuration to use one of these main files:
-
-1. **Recommended**: `0_Launchers/build_tools/setup_and_run_robust.py`
-   - Most reliable, tries multiple approaches
-   - Best for production deployment
-
-2. **Alternative**: `0_Launchers/build_tools/setup_and_run.py`
-   - Simple two-step approach
-   - Good for testing
-
-3. **Alternative**: `0_Launchers/build_tools/setup_and_run_constraints.py`
-   - Uses pip constraints
-   - Clean approach but may not work in all environments
-
-### For Local Testing
+### Installation
+Simply install all dependencies with:
 ```bash
-# Test the robust approach
-python 0_Launchers/build_tools/setup_and_run_robust.py
-
-# Or use the batch file on Windows
-0_Launchers\build_tools\test_robust_setup.bat
+pip install -r requirements.txt
 ```
 
 ## Technical Details
 
-### Why This Conflict Occurs
-- `alpaca-trade-api` was designed for older websockets versions
-- `yfinance` was updated to require newer websockets for security/features
-- Both packages are actively maintained but have different websocket requirements
-
-### Why `--no-deps` Works
-- `--no-deps` tells pip to install the package without its dependencies
-- Since websockets is already installed (by our forced installation), alpaca can use it
-- The websocket API is generally backward compatible within major versions
+### Why This Works
+- `alpaca-trade-api` actually works fine with websockets 13.0 despite its stated constraint
+- The constraint was likely set conservatively and hasn't been updated
+- By forcing websockets 13.0, we satisfy yfinance's requirements while maintaining alpaca functionality
 
 ### Verification
 After installation, verify the setup works:
@@ -98,19 +55,24 @@ print(f"Alpaca version: {alpaca_trade_api.__version__}")
 print(f"YFinance version: {yfinance.__version__}")
 ```
 
-## Troubleshooting
+## Migration Notes
 
-### If All Approaches Fail
-1. Check if you're in a restricted environment (some cloud platforms limit pip options)
-2. Try downgrading `yfinance` to an older version that accepts websockets<11
-3. Consider using alternative packages for market data
+### Removed Files
+The following Streamlit-specific setup scripts have been removed:
+- `0_Launchers/build_tools/setup_and_run.py`
+- `0_Launchers/build_tools/setup_and_run_constraints.py`
+- `0_Launchers/build_tools/setup_and_run_robust.py`
+- `0_Launchers/build_tools/test_robust_setup.bat`
 
-### Common Issues
-- **Permission errors**: Ensure you have write access to the Python environment
-- **Network issues**: Some approaches require multiple pip calls
-- **Cache conflicts**: Use `--force-reinstall` to clear cached packages
+### Removed Requirements Files
+The following separate requirements files have been consolidated:
+- `root_requirements.txt`
+- `0_Launchers/flask_web/requirements.txt`
+- `_2_Orchestrator_And_ML_Python/ml_requirements.txt`
+- `_2_Orchestrator_And_ML_Python/ml_dev_requirements.txt`
+- `1_High_Performance_Module_(C++)/cpp_requirements.txt`
 
 ## Future Considerations
-- Monitor for updates to `alpaca-trade-api` that might accept newer websockets
-- Consider alternative market data libraries that don't have this conflict
-- Evaluate if both packages are still needed for the project 
+- Monitor for updates to `alpaca-trade-api` that might officially support newer websockets
+- Consider alternative market data libraries if needed
+- The consolidated requirements approach simplifies dependency management 

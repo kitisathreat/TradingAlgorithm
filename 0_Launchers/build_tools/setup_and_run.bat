@@ -115,14 +115,14 @@ if errorlevel 1 (
 
 echo [OK] Environment setup completed successfully
 
-:: Launch Streamlit
+:: Launch Flask Web Interface
 echo.
 echo [4/4] Launching Neural Network Training Interface...
 echo.
-call "%~dp0..\streamlit_local\run_streamlit_app.bat"
+call "%~dp0..\flask_web\run_flask_web.bat"
 if errorlevel 1 (
     echo.
-    echo [ERROR] Failed to start Streamlit interface
+    echo [ERROR] Failed to start Flask web interface
     echo        Please check the error messages above
     echo.
     pause
@@ -158,7 +158,7 @@ echo    * Real-time sentiment analysis
 echo    * Neural network training progress
 echo.
 echo  NOTES:
-echo    * The script will keep running until you press Ctrl+C to stop the Streamlit server
+echo    * The script will keep running until you press Ctrl+C to stop the Flask server
 echo    * To deactivate the virtual environment after stopping, run: deactivate
 echo    * Virtual environment location: %VENV_PATH%
 echo.

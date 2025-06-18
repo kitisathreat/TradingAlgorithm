@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the implementation of random date range selection for data fetching across all three platforms (Local GUI, Streamlit App, and Streamlit Cloud). The system now randomly selects date ranges within the last 25 years instead of being restricted to 2024 data.
+This document describes the implementation of random date range selection for data fetching across all platforms (Local GUI, Flask Web Interface). The system now randomly selects date ranges within the last 25 years instead of being restricted to 2024 data.
 
 ## Key Features
 
@@ -13,7 +13,7 @@ This document describes the implementation of random date range selection for da
 - **Timezone Awareness**: All dates are handled in UTC timezone
 
 ### 2. Cross-Platform Implementation
-The random date range functionality has been implemented across all three visualization platforms:
+The random date range functionality has been implemented across all visualization platforms:
 
 #### Local GUI (PyQt5)
 - **Files Updated**: 
@@ -23,10 +23,9 @@ The random date range functionality has been implemented across all three visual
   - `load_stock_data()` - Main data fetching function
   - `get_prediction()` - Prediction data fetching function
 
-#### Streamlit Web Interface
+#### Flask Web Interface
 - **Files Updated**:
-  - `streamlit_app.py` (project root)
-  - `_3_Networking_and_User_Input/web_interface/streamlit_training.py`
+  - `0_Launchers/flask_web/flask_app.py`
 - **Functions Updated**:
   - `load_stock_data()` - Main data fetching function
 

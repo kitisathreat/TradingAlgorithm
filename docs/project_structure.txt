@@ -3,6 +3,11 @@
 # Last Updated: 2024
 
 TradingAlgorithm/
+├── 0_Launchers/                        # Application launchers
+│   ├── local_gui/                      # Launchers for the local PyQt GUI
+│   ├── flask_web/                      # Flask web interface launcher
+│   └── build_tools/                    # Build and environment setup scripts
+│
 ├── 1_High_Performance_Module_(C++)/     # Core trading engine (C++)
 │   ├── engine.cpp                      # Main trading engine implementation
 │   ├── engine.h                        # Engine interface definitions
@@ -19,8 +24,6 @@ TradingAlgorithm/
 │   ├── train_model.py                  # ML training
 │   ├── sentiment_analyzer.py           # Sentiment analysis
 │   ├── config.py                       # Configuration
-│   ├── ml_requirements.txt             # ML module dependencies
-│   ├── ml_dev_requirements.txt         # ML development dependencies
 │   ├── interactive_training_app/       # Training interface
 │   ├── deployment_services/            # Model deployment
 │   └── tests/                          # Test suite
@@ -29,14 +32,12 @@ TradingAlgorithm/
 │   └── web_interface/                  # Web interface
 │       └── web_requirements.txt        # Web interface dependencies
 │
-├── .streamlit/                         # Streamlit config
 ├── .github/                            # GitHub workflows
 ├── .vscode/                            # VS Code settings
 │
 ├── main.py                            # Entry point
-├── streamlit_app.py                   # Dashboard
 ├── setup.sh                           # Setup script
-├── root_requirements.txt              # Main project dependencies
+├── requirements.txt                   # Main project dependencies
 ├── README.md                          # Documentation
 └── TradingAlgo.sln                    # VS solution
 
