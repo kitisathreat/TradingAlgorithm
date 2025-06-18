@@ -15,7 +15,47 @@ This guide explains how to deploy the Flask Trading Algorithm to AWS.
 
 Elastic Beanstalk is the easiest way to deploy Flask applications on AWS.
 
-#### Steps:
+#### Windows Deployment (Recommended)
+
+Due to EB CLI compatibility issues on Windows, use the manual deployment method:
+
+1. **Run the deployment preparation script:**
+   ```cmd
+   cd 0_Launchers/flask_web
+   deploy_to_eb.bat
+   ```
+
+2. **Follow the manual deployment steps:**
+   - Go to [AWS Elastic Beanstalk Console](https://console.aws.amazon.com/elasticbeanstalk/)
+   - Click "Create Application"
+   - Application name: `trading-algorithm-web`
+   - Platform: Python
+   - Platform branch: Python 3.9
+   - Platform version: 3.9.16 (latest)
+   - Click "Configure more options"
+   - Environment type: Single instance (free tier)
+   - Instance type: t3.micro (free tier) or t3.medium
+   - Click "Create environment"
+   - Once created, go to "Upload and deploy"
+   - Upload the `deployment.zip` file created by the script
+   - Click "Deploy"
+   - Wait 5-10 minutes for deployment to complete
+
+#### Alternative: AWS CLI Deployment
+
+If you have AWS CLI configured:
+
+1. **Run the AWS CLI deployment script:**
+   ```cmd
+   cd 0_Launchers/flask_web
+   deploy_with_aws_cli.bat
+   ```
+
+2. **Use the S3 URL provided by the script in Elastic Beanstalk**
+
+#### Linux/Mac Deployment (EB CLI)
+
+If you're on Linux or Mac, you can use the EB CLI:
 
 1. **Prepare your application:**
    ```bash

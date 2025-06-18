@@ -134,6 +134,20 @@ if errorlevel 1 (
 REM Install consolidated requirements
 echo     Installing consolidated dependencies...
 cd /d "%REPO_ROOT%"
+
+REM Install packages with conflicting dependencies separately
+echo        Installing alpaca-trade-api with dependency override...
+python -m pip install alpaca-trade-api==3.2.0 --no-deps
+
+echo        Installing yfinance with dependency override...
+python -m pip install yfinance==0.2.63 --no-deps
+
+REM Install websockets 13.0 explicitly since we bypassed dependency checking
+echo        Installing websockets 13.0 explicitly...
+python -m pip install websockets==13.0
+
+REM Install remaining dependencies normally
+echo        Installing remaining dependencies...
 python -m pip install -r requirements.txt --upgrade-strategy only-if-needed
 if errorlevel 1 (
     echo [ERROR] Failed to install dependencies
