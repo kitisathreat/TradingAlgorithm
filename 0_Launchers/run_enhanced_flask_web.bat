@@ -18,6 +18,6 @@ REM Change to the Flask web directory
 cd /d "%~dp0flask_web"
 
 REM Run the enhanced Flask web app
-call run_flask_web.bat
+python run_flask_web.py
 
 pause 

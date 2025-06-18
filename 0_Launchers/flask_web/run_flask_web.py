@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Neural Network Trading System - Flask Web Interface Launcher
-Python executable version of run_flask_web.bat
 
 This script:
 1. Checks for Python 3.9

@@ -22,7 +22,7 @@ Due to EB CLI compatibility issues on Windows, use the manual deployment method:
 1. **Run the deployment preparation script:**
    ```cmd
    cd 0_Launchers/flask_web
-   deploy_to_eb.bat
+   python create_deployment_zip.py
    ```
 
 2. **Follow the manual deployment steps:**
@@ -112,11 +112,16 @@ For more control over the deployment process.
    ssh -i your-key.pem ubuntu@your-instance-ip
    ```
 
-3. **Run the deployment script:**
+3. **Deploy the application:**
    ```bash
-   # Copy the deployment script to your instance
-   chmod +x deploy_aws_ec2.sh
-   ./deploy_aws_ec2.sh
+   # Option 1: Use Docker (recommended)
+   docker build -t trading-algorithm-web .
+   docker run -d -p 80:5000 trading-algorithm-web
+   
+   # Option 2: Manual deployment
+   # Copy application files to /opt/trading-algorithm-web
+   # Set up virtual environment and install dependencies
+   # Configure Nginx and Supervisor manually
    ```
 
 4. **Access your application:**

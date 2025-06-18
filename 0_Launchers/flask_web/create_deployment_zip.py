@@ -130,7 +130,6 @@ htmlcov/
 .vscode/
 .idea/
 create_deployment_zip.py
-create_deployment_zip.bat
 run_deployment_creator.bat
 """
     

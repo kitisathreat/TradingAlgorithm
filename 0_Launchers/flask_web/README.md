@@ -13,16 +13,16 @@ This Flask-based web interface provides an alternative to the PyQt5 GUI, allowin
 
 ## Quick Start
 
-### Option 1: Windows Batch File (Recommended)
-1. Double-click `run_flask_web.bat`
-2. Wait for the environment setup to complete
-3. Open your browser and go to `http://localhost:5000`
-
-### Option 2: Python Script
+### Option 1: Python Script (Recommended)
 1. Open a terminal/command prompt
 2. Navigate to this directory
 3. Run: `python run_flask_web.py`
 4. Open your browser and go to `http://localhost:5000`
+
+### Option 2: Environment Setup
+1. Run: `python setup_flask_environment.py` to set up dependencies
+2. Run: `python run_flask_web.py` to launch the application
+3. Open your browser and go to `http://localhost:5000`
 
 ## How It Works
 
@@ -69,8 +69,8 @@ The Flask web interface replicates all the key functionality of your PyQt5 GUI:
 flask_web/
 ├── flask_app.py          # Main Flask application
 ├── requirements.txt      # Python dependencies
-├── run_flask_web.bat    # Windows launcher
 ├── run_flask_web.py     # Cross-platform launcher
+├── setup_flask_environment.py  # Environment setup script
 ├── templates/
 │   └── index.html       # Main web interface
 └── README.md           # This file

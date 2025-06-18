@@ -133,7 +133,7 @@ echo [OK] Environment setup completed successfully
 echo.
 echo [4/4] Launching Neural Network Training Interface...
 echo.
-call "%~dp0..\flask_web\run_flask_web.bat"
+call "%~dp0..\flask_web\run_flask_web.py"
 if errorlevel 1 (
     echo.
     echo [ERROR] Failed to start Flask web interface

@@ -6,10 +6,10 @@ This directory contains the Flask-based web interface for the Neural Network Tra
 
 ### Local Development
 ```bash
-# Windows
-run_flask_web.bat
+# Windows/Linux/Mac
+python run_flask_web.py
 
-# Linux/Mac
+# Or run directly
 python flask_app.py
 ```
 
@@ -18,8 +18,8 @@ python flask_app.py
 # Windows
 run_production.bat
 
-# Linux/Mac
-./run_production.sh
+# Linux/Mac (use Docker or manual setup)
+docker-compose up -d
 ```
 
 ## Deployment Options
@@ -45,9 +45,9 @@ docker-compose up -d
 - Automatic scaling and load balancing
 
 ### 4. AWS EC2
-- Use the `deploy_aws_ec2.sh` script
-- Includes Nginx and Supervisor setup
+- Manual deployment with Nginx and Supervisor setup
 - Production-ready configuration
+- Use Docker deployment for easier setup
 
 ### 5. AWS ECS (Container)
 - Use the provided Dockerfile

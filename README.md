@@ -43,7 +43,7 @@ TradingAlgorithm/
 
 2. **Quick Start**
    - **Local GUI:** Run `0_Launchers/local_gui/run_local_gui.bat` or `run_local_gui.py` to launch the PyQt GUI
-   - **Flask Web Interface:** Run `0_Launchers/flask_web/run_flask_web.bat` to launch the Flask web interface
+   - **Flask Web Interface:** Run `0_Launchers/flask_web/run_flask_web.py` to launch the Flask web interface
    - Access the web interface at `http://localhost:5000` (for Flask)
    - Monitor trading activity in the logs directory
 
