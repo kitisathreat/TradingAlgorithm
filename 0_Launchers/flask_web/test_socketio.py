@@ -8,7 +8,7 @@ import json
 
 def test_socketio_connection():
     """Test SocketIO connection"""
-    base_url = "http://localhost:8000"
+    base_url = "http://localhost:5000"
     
     try:
         # Test basic Flask app
