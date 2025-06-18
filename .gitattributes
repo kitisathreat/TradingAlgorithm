@@ -30,11 +30,7 @@ README.md linguist-documentation=true
 .gitattributes linguist-generated=true
 .env linguist-generated=true
 *.csv linguist-generated=true
-root_requirements.txt linguist-generated=true
-ml_requirements.txt linguist-generated=true
-ml_dev_requirements.txt linguist-generated=true
-cpp_requirements.txt linguist-generated=true
-web_requirements.txt linguist-generated=true
+requirements.txt linguist-generated=true
 
 # --- Git LFS for Large Files ---
 *.joblib filter=lfs diff=lfs merge=lfs -text

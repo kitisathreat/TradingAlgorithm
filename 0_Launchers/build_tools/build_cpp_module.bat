@@ -36,9 +36,11 @@ if exist "%VENV_ACTIVATE%" (
 :: Change to C++ module directory
 cd 1_High_Performance_Module_(C++)
 
-:: Install required packages
+:: Install required packages from consolidated requirements
 echo Installing required packages...
-py -3.9 -m pip install -r cpp_requirements.txt
+cd ..
+py -3.9 -m pip install -r requirements.txt
+cd 1_High_Performance_Module_(C++)
 
 :: Build and install the module
 echo Building C++ module...

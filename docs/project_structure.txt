@@ -14,7 +14,6 @@ TradingAlgorithm/
 │   ├── bindings.cpp                    # Python bindings
 │   ├── setup.py                        # Package setup
 │   ├── CMakeLists.txt                  # Build config
-│   ├── cpp_requirements.txt            # C++ module dependencies
 │   └── [Visual Studio project files]
 │
 ├── 2_Orchestrator_And_ML_Python/       # ML and Trading Logic (Python)
@@ -30,7 +29,6 @@ TradingAlgorithm/
 │
 ├── 3_Networking_and_User_Input/        # UI and API Layer
 │   └── web_interface/                  # Web interface
-│       └── web_requirements.txt        # Web interface dependencies
 │
 ├── .github/                            # GitHub workflows
 ├── .vscode/                            # VS Code settings

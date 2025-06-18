@@ -235,11 +235,11 @@ def main():
     print("\n💡 RECOMMENDATIONS:")
     
     if not results[0][1]:  # Imports failed
-        print("- Install missing dependencies: pip install -r streamlit_requirements.txt")
+        print("- Install missing dependencies: pip install -r requirements.txt")
     
     if not results[2][1]:  # YFinance basic failed
         print("- YFinance is being blocked/rate-limited")
-        print("- This is common on Streamlit Cloud due to shared IP addresses")
+        print("- This is common in cloud environments due to shared IP addresses")
         print("- The app now uses fallback synthetic data when yfinance fails")
     
     if not results[3][1]:  # Multiple symbols failed
@@ -247,10 +247,10 @@ def main():
         print("- Implement caching to reduce API calls")
     
     if not results[1][1]:  # Environment variables missing
-        print("- Add missing environment variables to Streamlit Cloud secrets")
-        print("- Go to app settings > Secrets and add the API keys")
+        print("- Add missing environment variables to your environment")
+        print("- These are optional for yfinance but required for live trading")
     
-    print("\n🎯 For Streamlit Cloud deployment:")
+    print("\n🎯 For deployment:")
     print("- The app will now use synthetic data if yfinance fails")
     print("- This ensures the training interface works even with API issues")
     print("- Real data will be used when available, fallback when not")

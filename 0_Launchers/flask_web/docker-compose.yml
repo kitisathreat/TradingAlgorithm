@@ -10,10 +10,13 @@ services:
       - SECRET_KEY=your-secret-key-here
       - LOG_LEVEL=INFO
       - CORS_ORIGINS=*
+      - MODEL_SAVE_PATH=/app/models
+      - DATA_CACHE_DIR=/app/cache
     volumes:
       - ./logs:/app/logs
       - ./models:/app/models
       - ./cache:/app/cache
+      - ./templates:/app/templates
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/get_model_status"]

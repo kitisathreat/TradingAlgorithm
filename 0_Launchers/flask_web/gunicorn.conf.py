@@ -19,9 +19,9 @@ max_requests_jitter = 50
 preload_app = True
 
 # Timeout settings
-timeout = 30
+timeout = 60  # Increased for ML operations
 keepalive = 2
-graceful_timeout = 30
+graceful_timeout = 60  # Increased for graceful shutdown
 
 # Logging
 accesslog = os.environ.get('GUNICORN_ACCESS_LOG', '-')
@@ -36,6 +36,10 @@ proc_name = 'trading-algorithm-web'
 limit_request_line = 4094
 limit_request_fields = 100
 limit_request_field_size = 8190
+
+# Memory and performance
+max_requests_jitter = 50
+worker_tmp_dir = '/dev/shm'  # Use RAM for temporary files
 
 # SSL (if using HTTPS)
 # keyfile = '/path/to/keyfile'

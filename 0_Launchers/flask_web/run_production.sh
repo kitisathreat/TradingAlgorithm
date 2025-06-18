@@ -78,6 +78,13 @@ if ! python -c "import gunicorn" 2>/dev/null; then
     pip install gunicorn eventlet
 fi
 
+# Check for additional dependencies
+print_status "Checking additional dependencies..."
+if ! python -c "import lxml" 2>/dev/null; then
+    print_status "Installing additional dependencies..."
+    pip install lxml tqdm websockets textblob tenacity
+fi
+
 # Create necessary directories
 print_status "Setting up directories..."
 mkdir -p logs models cache
