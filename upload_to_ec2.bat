@@ -112,21 +112,9 @@ if "%choice%"=="1" (
     echo - Install fresh dependencies
     echo - Set up new services
     echo.
-    set /p confirm="Are you sure you want to proceed? (y/N): "
-    echo [DEBUG] User entered: '%confirm%'
-    if /i "%confirm%"=="y" goto :clean_install_confirm
-    if /i "%confirm%"=="yes" goto :clean_install_confirm
-    if /i "%confirm%"=="Y" goto :clean_install_confirm
-    if /i "%confirm%"=="YES" goto :clean_install_confirm
-    if /i "%confirm%"=="Yes" goto :clean_install_confirm
-    echo.
-    echo [INFO] Clean installation cancelled by user.
-    echo.
-    goto :end
-
-:clean_install_confirm
-    echo.
     echo [INFO] Starting clean installation...
+    echo [INFO] Press Ctrl+C or close this window to cancel the installation.
+    echo.
     ssh -i "C:\Users\KitKumar\Downloads\KKumar06202025.pem" ec2-user@35.89.15.141 "cd /home/ec2-user/flask_web && chmod +x ec2_clean_install.sh && ./ec2_clean_install.sh"
     echo.
     echo ================================================================================
