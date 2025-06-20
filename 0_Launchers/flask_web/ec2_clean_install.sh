@@ -64,40 +64,9 @@ echo "  Script directory contents:"
 ls -la
 echo
 
-# COMPLETE CLEANUP - Remove ALL previous installations
-print_status "Performing complete cleanup..."
-echo "  Stopping all services..."
-sudo systemctl stop trading-algorithm 2>/dev/null || true
-sudo systemctl disable trading-algorithm 2>/dev/null || true
-sudo systemctl stop nginx 2>/dev/null || true
-
-echo "  Removing all service files..."
-sudo rm -f /etc/systemd/system/trading-algorithm.service
-sudo rm -f /etc/nginx/sites-enabled/trading-algorithm
-sudo rm -f /etc/nginx/sites-available/trading-algorithm
-
-echo "  Removing all application directories..."
-rm -rf "$APP_DIR" 2>/dev/null || true
-rm -rf "$USER_HOME/flask_web" 2>/dev/null || true
-rm -rf "$USER_HOME/trading-algorithm" 2>/dev/null || true
-rm -rf "/home/ec2-user/trading-algorithm" 2>/dev/null || true
-rm -rf "/home/ubuntu/trading-algorithm" 2>/dev/null || true
-
-echo "  Cleaning pip cache..."
-pip cache purge 2>/dev/null || true
-rm -rf ~/.cache/pip 2>/dev/null || true
-
-echo "  Cleaning temporary files..."
-sudo rm -rf /tmp/trading_algorithm_* 2>/dev/null || true
-sudo rm -rf /tmp/pip_* 2>/dev/null || true
-
-print_success "Complete cleanup finished"
-echo
-
-# Create fresh application directory
-print_status "Creating fresh application directory..."
-mkdir -p "$APP_DIR"
-cd "$APP_DIR"
+# Skip cleanup since upload script already cleaned up and uploaded files
+print_status "Skipping cleanup - upload script already handled this..."
+print_status "Proceeding directly to file verification and installation..."
 
 # The script is run from the flask_web directory where all files are located
 print_status "Verifying required application files in current directory (flask_web)..."
@@ -140,55 +109,6 @@ fi
 
 # We're already in the flask_web directory, so no need to change directories
 print_status "Working directory: $(pwd)"
-
-# Create the proper directory structure
-mkdir -p "$APP_DIR/flask_web"
-
-# Copy files from current directory (where script is run from)
-if [ -f "flask_app.py" ]; then
-    print_status "Copying files from current directory..."
-    cp flask_app.py "$APP_DIR/flask_web/"
-    cp requirements.txt "$APP_DIR/flask_web/"
-    cp wsgi.py "$APP_DIR/flask_web/"
-    cp gunicorn.conf.py "$APP_DIR/flask_web/"
-    cp config.py "$APP_DIR/flask_web/"
-    
-    if [ -d "templates" ]; then
-        cp -r templates "$APP_DIR/flask_web/"
-    fi
-    
-    print_success "Files copied with relative pathing maintained"
-    log_installation "Application Files" "$APP_DIR" "copied with relative paths"
-elif [ -f "../flask_app.py" ]; then
-    print_status "Copying files from parent directory..."
-    cp ../flask_app.py "$APP_DIR/flask_web/"
-    cp ../requirements.txt "$APP_DIR/flask_web/"
-    cp ../wsgi.py "$APP_DIR/flask_web/"
-    cp ../gunicorn.conf.py "$APP_DIR/flask_web/"
-    cp ../config.py "$APP_DIR/flask_web/"
-    
-    if [ -d "../templates" ]; then
-        cp -r ../templates "$APP_DIR/flask_web/"
-    fi
-    
-    print_success "Files copied from parent directory"
-    log_installation "Application Files" "$APP_DIR" "copied from parent directory"
-else
-    print_error "Application files not found in current directory or parent directory"
-    print_status "Please ensure this script is run from the flask_web directory"
-    print_status "Expected files: flask_app.py, requirements.txt, wsgi.py, gunicorn.conf.py, config.py"
-    print_status "Current directory: $(pwd)"
-    print_status "Files in current directory:"
-    ls -la
-    if [ -d ".." ]; then
-        print_status "Files in parent directory:"
-        ls -la ..
-    fi
-    exit 1
-fi
-
-# Change to the flask_web directory for installation
-cd "$APP_DIR/flask_web"
 
 # Create virtual environment in the current directory (flask_web)
 print_status "Creating Python virtual environment..."
