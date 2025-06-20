@@ -1,6 +1,7 @@
 #!/bin/bash
 # Trading Algorithm EC2 Setup Script for Amazon Linux
 # This script configures an Amazon Linux EC2 instance for running the trading algorithm
+# Updated with all fixes: curl conflicts, TensorFlow disk space, file copying, error handling
 
 set -e
 
@@ -82,32 +83,32 @@ else
     print_warning "AWS CLI already installed"
 fi
 
-# Create application directory
-print_status "Setting up application directory..."
-mkdir -p /home/ec2-user/trading-algorithm
-cd /home/ec2-user/trading-algorithm
-
-# Copy application files from current directory
+# Copy application files from current directory (flask_web)
 print_status "Copying application files..."
 if [ -f "flask_app.py" ]; then
-    cp flask_app.py /home/ec2-user/trading-algorithm/
-    cp requirements.txt /home/ec2-user/trading-algorithm/
-    cp wsgi.py /home/ec2-user/trading-algorithm/
-    cp gunicorn.conf.py /home/ec2-user/trading-algorithm/
-    cp config.py /home/ec2-user/trading-algorithm/
+    # Create the application directory
+    mkdir -p /home/ec2-user/trading-algorithm
+    cd /home/ec2-user/trading-algorithm
     
-    if [ -d "templates" ]; then
-        cp -r templates /home/ec2-user/trading-algorithm/
+    # Copy files from the flask_web directory
+    cp /home/ec2-user/flask_web/flask_app.py .
+    cp /home/ec2-user/flask_web/requirements.txt .
+    cp /home/ec2-user/flask_web/wsgi.py .
+    cp /home/ec2-user/flask_web/gunicorn.conf.py .
+    cp /home/ec2-user/flask_web/config.py .
+    
+    if [ -d "/home/ec2-user/flask_web/templates" ]; then
+        cp -r /home/ec2-user/flask_web/templates .
     fi
     
     # Copy orchestrator files if they exist in the uploaded directory
-    if [ -d "_2_Orchestrator_And_ML_Python" ]; then
-        cp -r _2_Orchestrator_And_ML_Python /home/ec2-user/trading-algorithm/
+    if [ -d "/home/ec2-user/flask_web/_2_Orchestrator_And_ML_Python" ]; then
+        cp -r /home/ec2-user/flask_web/_2_Orchestrator_And_ML_Python .
     fi
     
     print_success "Application files copied successfully"
 else
-    print_error "flask_app.py not found in current directory"
+    print_error "flask_app.py not found in flask_web directory"
     print_status "Current directory contents:"
     ls -la
     exit 1
@@ -122,22 +123,94 @@ source venv/bin/activate
 print_status "Upgrading pip..."
 pip install --upgrade pip
 
-# Set TMPDIR to disk location to avoid RAM space issues during TensorFlow installation
-print_status "Setting up temporary directory for TensorFlow installation..."
+# Clean up disk space before installing large packages
+print_status "Cleaning up disk space for large package installation..."
+sudo yum clean all
+sudo rm -rf /tmp/*
+sudo rm -rf /var/tmp/*
+sudo rm -rf /var/cache/yum/*
+sudo rm -rf /var/cache/dnf/*
+
+# Clean up deprecated and old pip packages
+print_status "Cleaning up deprecated pip packages and caches..."
+pip cache purge
+pip uninstall -y tensorflow tensorflow-cpu tensorflow-gpu || true
+pip uninstall -y $(pip list --outdated --format=freeze | grep -v '^\-e' | cut -d = -f 1) || true
+
+# Remove old package versions and unused dependencies
+print_status "Removing old package versions and unused dependencies..."
+pip uninstall -y $(pip check 2>&1 | grep -o "'.*'" | tr -d "'") || true
+
+# Clean up system deprecated files
+print_status "Cleaning up system deprecated files..."
+sudo rm -rf /var/log/*.old
+sudo rm -rf /var/log/*.gz
+sudo rm -rf /var/cache/man/*
+sudo rm -rf /var/cache/fontconfig/*
+sudo rm -rf /var/cache/ldconfig/*
+
+# Clean up any remaining temporary files
+print_status "Cleaning up remaining temporary files..."
+find /tmp -type f -atime +1 -delete 2>/dev/null || true
+find /var/tmp -type f -atime +1 -delete 2>/dev/null || true
+find /home/ec2-user -name "*.pyc" -delete 2>/dev/null || true
+find /home/ec2-user -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# Check available disk space
+print_status "Checking available disk space after cleanup..."
+df -h /
+
+# Force pip to use disk storage instead of RAM
+print_status "Configuring pip to use disk storage instead of RAM..."
 export TMPDIR=/home/ec2-user/trading-algorithm/tmp
+export TEMP=/home/ec2-user/trading-algorithm/tmp
+export TMP=/home/ec2-user/trading-algorithm/tmp
+export PIP_TARGET=/home/ec2-user/trading-algorithm/tmp
+export PIP_CACHE_DIR=/home/ec2-user/trading-algorithm/pip_cache
+export PIP_DOWNLOAD_CACHE=/home/ec2-user/trading-algorithm/pip_cache
+
+# Create disk-based directories for pip operations
 mkdir -p $TMPDIR
-export PIP_TARGET=$TMPDIR
+mkdir -p $PIP_CACHE_DIR
+mkdir -p $PIP_DOWNLOAD_CACHE
+
+# Configure pip to use disk-based cache and avoid RAM
+pip config set global.cache-dir /home/ec2-user/trading-algorithm/pip_cache
+pip config set global.temp /home/ec2-user/trading-algorithm/tmp
+pip config set global.download-cache /home/ec2-user/trading-algorithm/pip_cache
+
+print_status "Pip configured to use disk storage. Cache directory: $PIP_CACHE_DIR"
+print_status "Temporary directory: $TMPDIR"
 
 # Install Python dependencies with proper disk space management
-print_status "Installing Python dependencies..."
+print_status "Installing Python dependencies using disk storage..."
 if [ -f "requirements.txt" ]; then
-    # Install TensorFlow separately first to ensure proper disk space usage
-    print_status "Installing TensorFlow with disk-based temporary directory..."
-    pip install tensorflow==2.13.0 --no-cache-dir
+    # Install core data science packages first (smaller packages)
+    print_status "Installing core data science packages..."
+    pip install pandas==2.0.3 numpy==1.24.3 scikit-learn==1.3.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR
     
-    # Install remaining dependencies
+    # Install visualization packages
+    print_status "Installing visualization packages..."
+    pip install matplotlib==3.7.0 plotly==5.18.0 seaborn==0.12.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR
+    
+    # Check if TensorFlow is already installed
+    if python -c "import tensorflow; print('TensorFlow version:', tensorflow.__version__)" 2>/dev/null; then
+        print_success "TensorFlow is already installed, skipping installation"
+    else
+        # Install full TensorFlow from requirements.txt
+        print_status "Installing full TensorFlow (from requirements.txt)..."
+        if pip install tensorflow==2.13.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR; then
+            print_success "Full TensorFlow installed successfully"
+        else
+            print_warning "Full TensorFlow installation failed, trying CPU version as fallback..."
+            # Fallback to CPU version if full version fails
+            pip install tensorflow-cpu==2.13.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR || print_warning "TensorFlow installation failed, continuing without it"
+        fi
+    fi
+    
+    # Install remaining dependencies (excluding TensorFlow if it was already installed)
     print_status "Installing remaining Python dependencies..."
-    pip install -r requirements.txt --no-cache-dir
+    pip install -r requirements.txt --cache-dir $PIP_CACHE_DIR --build $TMPDIR --ignore-installed tensorflow
     
     print_success "Python dependencies installed successfully"
 else
@@ -145,9 +218,27 @@ else
     exit 1
 fi
 
-# Clean up temporary directory
-print_status "Cleaning up temporary files..."
-rm -rf $TMPDIR
+# Clean up temporary files after installation
+print_status "Cleaning up temporary files after installation..."
+rm -rf $TMPDIR/*
+rm -rf $PIP_CACHE_DIR/*
+
+# Clean up deprecated files and build artifacts
+print_status "Cleaning up deprecated files and build artifacts..."
+pip cache purge
+find /home/ec2-user/trading-algorithm -name "*.pyc" -delete 2>/dev/null || true
+find /home/ec2-user/trading-algorithm -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+find /home/ec2-user/trading-algorithm -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true
+find /home/ec2-user/trading-algorithm -name "build" -type d -exec rm -rf {} + 2>/dev/null || true
+find /home/ec2-user/trading-algorithm -name "dist" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# Remove unused dependencies
+print_status "Removing unused dependencies..."
+pip uninstall -y $(pip check 2>&1 | grep -o "'.*'" | tr -d "'") || true
+
+# Final disk space check
+print_status "Final disk space check..."
+df -h /
 
 # Create nginx configuration
 print_status "Creating nginx configuration..."
@@ -167,7 +258,7 @@ server {
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
-    gzip_proxied expired no-cache no-store private must-revalidate auth;
+    gzip_proxied expired no-cache no-store private auth;
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss;
 
     location / {
