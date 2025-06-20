@@ -247,4 +247,6 @@ cd ..
 echo [INFO] Cleaning up temporary files...
 rmdir /s /q "ec2_deployment"
 
+REM All logs and temp files should be written to /home/%DEPLOY_USER%/trading-algorithm/flask_web/logs/ or /home/%DEPLOY_USER%/trading-algorithm/flask_web/tmp, not /tmp or /var/tmp
+
 pause 

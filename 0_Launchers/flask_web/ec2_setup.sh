@@ -226,8 +226,8 @@ sudo chown -R ubuntu:ubuntu /home/ubuntu/trading-algorithm
 chmod +x /home/ubuntu/trading-algorithm/flask_web/venv/bin/*
 
 # Create log directory
-mkdir -p /home/ubuntu/trading-algorithm/logs
-sudo chown -R ubuntu:ubuntu /home/ubuntu/trading-algorithm/logs
+mkdir -p /home/ec2-user/trading-algorithm/flask_web/logs
+sudo chown -R ubuntu:ubuntu /home/ec2-user/trading-algorithm/flask_web/logs
 
 # Start the application
 print_status "Starting trading algorithm application..."

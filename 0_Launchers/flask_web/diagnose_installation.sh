@@ -321,6 +321,10 @@ fi
 
 echo
 
+# Ensure logs directory exists
+mkdir -p /home/ec2-user/trading-algorithm/flask_web/logs
+# (If any log file paths are set, use /home/ec2-user/trading-algorithm/flask_web/logs/)
+
 # Summary and recommendations
 echo "================================================================================"
 print_status "DIAGNOSTIC SUMMARY"

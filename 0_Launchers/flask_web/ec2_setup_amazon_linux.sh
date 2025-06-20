@@ -166,12 +166,12 @@ df -h /
 
 # Force pip to use disk storage instead of RAM
 print_status "Configuring pip to use disk storage instead of RAM..."
-export TMPDIR=/home/ec2-user/trading-algorithm/tmp
-export TEMP=/home/ec2-user/trading-algorithm/tmp
-export TMP=/home/ec2-user/trading-algorithm/tmp
-export PIP_TARGET=/home/ec2-user/trading-algorithm/tmp
-export PIP_CACHE_DIR=/home/ec2-user/trading-algorithm/pip_cache
-export PIP_DOWNLOAD_CACHE=/home/ec2-user/trading-algorithm/pip_cache
+export TMPDIR=/home/ec2-user/trading-algorithm/flask_web/tmp
+export TEMP=/home/ec2-user/trading-algorithm/flask_web/tmp
+export TMP=/home/ec2-user/trading-algorithm/flask_web/tmp
+export PIP_TARGET=/home/ec2-user/trading-algorithm/flask_web/tmp
+export PIP_CACHE_DIR=/home/ec2-user/trading-algorithm/flask_web/pip_cache
+export PIP_DOWNLOAD_CACHE=/home/ec2-user/trading-algorithm/flask_web/pip_cache
 
 # Create disk-based directories for pip operations
 mkdir -p $TMPDIR
@@ -179,9 +179,9 @@ mkdir -p $PIP_CACHE_DIR
 mkdir -p $PIP_DOWNLOAD_CACHE
 
 # Configure pip to use disk-based cache and avoid RAM
-pip config set global.cache-dir /home/ec2-user/trading-algorithm/pip_cache
-pip config set global.temp /home/ec2-user/trading-algorithm/tmp
-pip config set global.download-cache /home/ec2-user/trading-algorithm/pip_cache
+pip config set global.cache-dir /home/ec2-user/trading-algorithm/flask_web/pip_cache
+pip config set global.temp /home/ec2-user/trading-algorithm/flask_web/tmp
+pip config set global.download-cache /home/ec2-user/trading-algorithm/flask_web/pip_cache
 
 print_status "Pip configured to use disk storage. Cache directory: $PIP_CACHE_DIR"
 print_status "Temporary directory: $TMPDIR"
@@ -316,7 +316,7 @@ WorkingDirectory=/home/ec2-user/trading-algorithm
 Environment=PATH=/home/ec2-user/trading-algorithm/flask_web/venv/bin
 Environment=FLASK_ENV=production
 Environment=FLASK_APP=flask_app.py
-Environment=TMPDIR=/home/ec2-user/trading-algorithm/tmp
+Environment=TMPDIR=/home/ec2-user/trading-algorithm/flask_web/tmp
 ExecStart=/home/ec2-user/trading-algorithm/flask_web/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
 ExecReload=/bin/kill -s HUP $MAINPID
 Restart=always
@@ -363,8 +363,8 @@ sudo chown -R ec2-user:ec2-user /home/ec2-user/trading-algorithm
 chmod +x /home/ec2-user/trading-algorithm/flask_web/venv/bin/*
 
 # Create log directory
-mkdir -p /home/ec2-user/trading-algorithm/logs
-sudo chown -R ec2-user:ec2-user /home/ec2-user/trading-algorithm/logs
+mkdir -p /home/ec2-user/trading-algorithm/flask_web/logs
+sudo chown -R ec2-user:ec2-user /home/ec2-user/trading-algorithm/flask_web/logs
 
 # Start the application
 print_status "Starting trading algorithm application..."

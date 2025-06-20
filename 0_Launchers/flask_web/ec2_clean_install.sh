@@ -5,7 +5,8 @@
 set -e
 
 # Create log file
-LOG_FILE="/tmp/trading_algorithm_install_$(date +%Y%m%d_%H%M%S).log"
+mkdir -p /home/ec2-user/trading-algorithm/flask_web/logs
+LOG_FILE="/home/ec2-user/trading-algorithm/flask_web/logs/trading_algorithm_install_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "================================================================================"
@@ -102,9 +103,13 @@ mkdir -p "$APP_DIR/_2_Orchestrator_And_ML_Python"
 # Copy ML orchestrator files if they exist in the parent directory
 if [ -d "../_2_Orchestrator_And_ML_Python" ]; then
     print_status "Copying ML orchestrator files..."
-    cp -r ../_2_Orchestrator_And_ML_Python "$APP_DIR/"
-    print_success "ML orchestrator files copied"
-    log_installation "ML Orchestrator" "$APP_DIR/_2_Orchestrator_And_ML_Python" "copied"
+    if [ -d "$APP_DIR/_2_Orchestrator_And_ML_Python" ]; then
+        print_status "ML orchestrator directory already exists, skipping copy"
+    else
+        cp -r ../_2_Orchestrator_And_ML_Python "$APP_DIR/"
+        print_success "ML orchestrator files copied"
+    fi
+    log_installation "ML Orchestrator" "$APP_DIR/_2_Orchestrator_And_ML_Python" "present"
 fi
 
 # We're already in the flask_web directory, so no need to change directories
