@@ -135,7 +135,7 @@ if errorlevel 1 (
 
 echo.
 echo Running clean install script...
-ssh -i "%KEY_FILE%" %DEPLOY_USER@%PUBLIC_IP% "cd ~/flask_web && chmod +x ec2_clean_install.sh && ./ec2_clean_install.sh"
+ssh -i "%KEY_FILE%" %DEPLOY_USER@%PUBLIC_IP% "cd ~/trading-algorithm/flask_web && chmod +x ec2_clean_install.sh && ./ec2_clean_install.sh"
 
 echo.
 echo Cleaning up temporary files...

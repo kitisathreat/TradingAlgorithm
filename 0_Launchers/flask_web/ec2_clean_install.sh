@@ -59,6 +59,9 @@ echo "  User home: $USER_HOME"
 echo "  App directory: $APP_DIR"
 echo "  Operating system: $(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)"
 echo "  Python version: $(python3.9 --version 2>/dev/null || echo 'Python 3.9 not found')"
+echo "  Script location: $(pwd)"
+echo "  Script directory contents:"
+ls -la
 echo
 
 # COMPLETE CLEANUP - Remove ALL previous installations
@@ -96,13 +99,50 @@ print_status "Creating fresh application directory..."
 mkdir -p "$APP_DIR"
 cd "$APP_DIR"
 
-# The script expects to be run from the flask_web directory
-# Files should be uploaded with relative pathing maintained
-print_status "Setting up application files with relative pathing..."
+# The script is run from the flask_web directory where all files are located
+print_status "Verifying required application files in current directory (flask_web)..."
+REQUIRED_FILES=("flask_app.py" "requirements.txt" "wsgi.py" "gunicorn.conf.py" "config.py")
+MISSING=0
+for file in "${REQUIRED_FILES[@]}"; do
+    if [ ! -f "$file" ]; then
+        print_error "Missing required file: $file in $(pwd)"
+        MISSING=1
+    fi
+    
+    # Optionally, print found files
+    if [ -f "$file" ]; then
+        print_status "Found: $file"
+    fi
+done
+
+if [ $MISSING -ne 0 ]; then
+    print_error "One or more required files are missing in $(pwd)."
+    print_error "Please ensure all files are uploaded to this directory before running the install script."
+    print_status "Current directory: $(pwd)"
+    print_status "Files in current directory:"
+    ls -la
+    exit 1
+fi
+
+# All files are already in the correct location (flask_web directory)
+print_success "All required files are present in $(pwd)"
+
+# Create the proper directory structure for the ML orchestrator
+mkdir -p "$APP_DIR/_2_Orchestrator_And_ML_Python"
+
+# Copy ML orchestrator files if they exist in the parent directory
+if [ -d "../_2_Orchestrator_And_ML_Python" ]; then
+    print_status "Copying ML orchestrator files..."
+    cp -r ../_2_Orchestrator_And_ML_Python "$APP_DIR/"
+    print_success "ML orchestrator files copied"
+    log_installation "ML Orchestrator" "$APP_DIR/_2_Orchestrator_And_ML_Python" "copied"
+fi
+
+# We're already in the flask_web directory, so no need to change directories
+print_status "Working directory: $(pwd)"
 
 # Create the proper directory structure
 mkdir -p "$APP_DIR/flask_web"
-mkdir -p "$APP_DIR/_2_Orchestrator_And_ML_Python"
 
 # Copy files from current directory (where script is run from)
 if [ -f "flask_app.py" ]; then
@@ -117,10 +157,6 @@ if [ -f "flask_app.py" ]; then
         cp -r templates "$APP_DIR/flask_web/"
     fi
     
-    if [ -d "../_2_Orchestrator_And_ML_Python" ]; then
-        cp -r ../_2_Orchestrator_And_ML_Python "$APP_DIR/"
-    fi
-    
     print_success "Files copied with relative pathing maintained"
     log_installation "Application Files" "$APP_DIR" "copied with relative paths"
 elif [ -f "../flask_app.py" ]; then
@@ -133,10 +169,6 @@ elif [ -f "../flask_app.py" ]; then
     
     if [ -d "../templates" ]; then
         cp -r ../templates "$APP_DIR/flask_web/"
-    fi
-    
-    if [ -d "../_2_Orchestrator_And_ML_Python" ]; then
-        cp -r ../_2_Orchestrator_And_ML_Python "$APP_DIR/"
     fi
     
     print_success "Files copied from parent directory"
@@ -158,7 +190,7 @@ fi
 # Change to the flask_web directory for installation
 cd "$APP_DIR/flask_web"
 
-# Create virtual environment in the proper location
+# Create virtual environment in the current directory (flask_web)
 print_status "Creating Python virtual environment..."
 python3.9 -m venv venv
 source venv/bin/activate

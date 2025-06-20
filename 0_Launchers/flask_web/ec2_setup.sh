@@ -90,10 +90,9 @@ else
     print_status "Please ensure flask_app.py, requirements.txt, and other files are available"
 fi
 
-# Create virtual environment
-print_status "Creating Python virtual environment..."
-python3.9 -m venv venv
-source venv/bin/activate
+# Create virtual environment in the correct location
+python3.9 -m venv flask_web/venv
+source flask_web/venv/bin/activate
 
 # Upgrade pip
 print_status "Upgrading pip..."
@@ -177,10 +176,10 @@ Type=simple
 User=ubuntu
 Group=ubuntu
 WorkingDirectory=/home/ubuntu/trading-algorithm
-Environment=PATH=/home/ubuntu/trading-algorithm/venv/bin
+Environment=PATH=/home/ubuntu/trading-algorithm/flask_web/venv/bin
 Environment=FLASK_ENV=production
 Environment=FLASK_APP=flask_app.py
-ExecStart=/home/ubuntu/trading-algorithm/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
+ExecStart=/home/ubuntu/trading-algorithm/flask_web/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
 ExecReload=/bin/kill -s HUP $MAINPID
 Restart=always
 RestartSec=10
@@ -224,7 +223,7 @@ sudo systemctl enable trading-algorithm
 # Set permissions
 print_status "Setting file permissions..."
 sudo chown -R ubuntu:ubuntu /home/ubuntu/trading-algorithm
-chmod +x /home/ubuntu/trading-algorithm/venv/bin/*
+chmod +x /home/ubuntu/trading-algorithm/flask_web/venv/bin/*
 
 # Create log directory
 mkdir -p /home/ubuntu/trading-algorithm/logs

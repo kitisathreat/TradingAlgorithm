@@ -114,10 +114,16 @@ else
     exit 1
 fi
 
-# Create virtual environment
+# Create virtual environment in the correct location
 print_status "Creating Python virtual environment..."
-python3.9 -m venv venv
-source venv/bin/activate
+python3.9 -m venv flask_web/venv
+source flask_web/venv/bin/activate
+
+# Log virtual environment details
+log_installation "Virtual Environment" "$APP_DIR/flask_web/venv" "created"
+echo "  Virtual environment: $APP_DIR/flask_web/venv"
+echo "  Python in venv: $(which python)"
+echo "  Python version in venv: $(python --version)"
 
 # Upgrade pip
 print_status "Upgrading pip..."
@@ -307,11 +313,11 @@ Type=simple
 User=ec2-user
 Group=ec2-user
 WorkingDirectory=/home/ec2-user/trading-algorithm
-Environment=PATH=/home/ec2-user/trading-algorithm/venv/bin
+Environment=PATH=/home/ec2-user/trading-algorithm/flask_web/venv/bin
 Environment=FLASK_ENV=production
 Environment=FLASK_APP=flask_app.py
 Environment=TMPDIR=/home/ec2-user/trading-algorithm/tmp
-ExecStart=/home/ec2-user/trading-algorithm/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
+ExecStart=/home/ec2-user/trading-algorithm/flask_web/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
 ExecReload=/bin/kill -s HUP $MAINPID
 Restart=always
 RestartSec=10
@@ -354,7 +360,7 @@ sudo systemctl enable trading-algorithm
 # Set permissions
 print_status "Setting file permissions..."
 sudo chown -R ec2-user:ec2-user /home/ec2-user/trading-algorithm
-chmod +x /home/ec2-user/trading-algorithm/venv/bin/*
+chmod +x /home/ec2-user/trading-algorithm/flask_web/venv/bin/*
 
 # Create log directory
 mkdir -p /home/ec2-user/trading-algorithm/logs

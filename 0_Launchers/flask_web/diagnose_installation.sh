@@ -147,20 +147,20 @@ else
     
     # Check virtual environment
     print_status "Checking virtual environment..."
-    if dir_exists "$APP_DIR/venv"; then
-        print_success "Virtual environment found at: $APP_DIR/venv"
+    if dir_exists "$APP_DIR/flask_web/venv"; then
+        print_success "Virtual environment found at: $APP_DIR/flask_web/venv"
         
         # Check if virtual environment is activated
-        if [ "$VIRTUAL_ENV" = "$APP_DIR/venv" ]; then
+        if [ "$VIRTUAL_ENV" = "$APP_DIR/flask_web/venv" ]; then
             print_success "Virtual environment is currently activated"
         else
             print_warning "Virtual environment is not activated"
         fi
         
         # Check gunicorn in virtual environment
-        if file_exists "$APP_DIR/venv/bin/gunicorn"; then
-            GUNICORN_VERSION=$("$APP_DIR/venv/bin/gunicorn" --version 2>/dev/null | cut -d' ' -f1 || echo "unknown")
-            print_success "Gunicorn found at: $APP_DIR/venv/bin/gunicorn (Version: $GUNICORN_VERSION)"
+        if file_exists "$APP_DIR/flask_web/venv/bin/gunicorn"; then
+            GUNICORN_VERSION=$("$APP_DIR/flask_web/venv/bin/gunicorn" --version 2>/dev/null | cut -d' ' -f1 || echo "unknown")
+            print_success "Gunicorn found at: $APP_DIR/flask_web/venv/bin/gunicorn (Version: $GUNICORN_VERSION)"
         else
             print_error "Gunicorn not found in virtual environment!"
         fi
@@ -168,7 +168,7 @@ else
         # Check other key packages
         print_status "Checking key packages in virtual environment..."
         cd "$APP_DIR"
-        source venv/bin/activate 2>/dev/null || true
+        source flask_web/venv/bin/activate 2>/dev/null || true
         
         KEY_PACKAGES=("flask" "tensorflow" "numpy" "pandas" "yfinance" "scikit-learn")
         for package in "${KEY_PACKAGES[@]}"; do
@@ -185,7 +185,7 @@ else
         print_status "Total packages installed: $((PACKAGE_COUNT - 2))"  # Subtract header lines
         
     else
-        print_error "Virtual environment not found at: $APP_DIR/venv"
+        print_error "Virtual environment not found at: $APP_DIR/flask_web/venv"
     fi
 fi
 
@@ -299,12 +299,12 @@ echo
 
 # Test application manually
 print_status "Testing application manually..."
-if [ -n "$APP_DIR" ] && file_exists "$APP_DIR/venv/bin/gunicorn"; then
+if [ -n "$APP_DIR" ] && file_exists "$APP_DIR/flask_web/venv/bin/gunicorn"; then
     cd "$APP_DIR"
-    source venv/bin/activate 2>/dev/null || true
+    source flask_web/venv/bin/activate 2>/dev/null || true
     
     # Test if gunicorn can start
-    timeout 5s ./venv/bin/gunicorn --config gunicorn.conf.py wsgi:app &
+    timeout 5s ./flask_web/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app &
     GUNICORN_PID=$!
     sleep 2
     
@@ -329,7 +329,7 @@ echo "==========================================================================
 if [ -n "$APP_DIR" ]; then
     echo "Application directory: $APP_DIR"
     
-    if dir_exists "$APP_DIR/venv" && file_exists "$APP_DIR/venv/bin/gunicorn"; then
+    if dir_exists "$APP_DIR/flask_web/venv" && file_exists "$APP_DIR/flask_web/venv/bin/gunicorn"; then
         print_success "✓ Virtual environment and gunicorn are properly installed"
     else
         print_error "✗ Virtual environment or gunicorn is missing"

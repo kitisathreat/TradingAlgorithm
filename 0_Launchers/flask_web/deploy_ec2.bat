@@ -84,8 +84,8 @@ echo [Service]
 echo Type=simple
 echo User=%DEPLOY_USER%
 echo WorkingDirectory=/home/%DEPLOY_USER%/trading-algorithm
-echo Environment=PATH=/home/%DEPLOY_USER%/trading-algorithm/venv/bin
-echo ExecStart=/home/%DEPLOY_USER%/trading-algorithm/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
+echo Environment=PATH=/home/%DEPLOY_USER%/trading-algorithm/flask_web/venv/bin
+echo ExecStart=/home/%DEPLOY_USER%/trading-algorithm/flask_web/venv/bin/gunicorn --config gunicorn.conf.py wsgi:app
 echo Restart=always
 echo RestartSec=10
 echo.
@@ -179,7 +179,7 @@ echo.
 echo # Set permissions
 echo echo "[INFO] Setting file permissions..."
 echo sudo chown -R %DEPLOY_USER%:%DEPLOY_USER% /home/%DEPLOY_USER%/trading-algorithm
-echo chmod +x /home/%DEPLOY_USER%/trading-algorithm/venv/bin/*
+echo chmod +x /home/%DEPLOY_USER%/trading-algorithm/flask_web/venv/bin/*
 echo.
 echo echo "[SUCCESS] Trading Algorithm deployment completed!"
 echo echo "Application should be available at: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)"
