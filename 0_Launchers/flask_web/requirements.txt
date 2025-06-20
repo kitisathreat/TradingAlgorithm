@@ -14,7 +14,7 @@ python-dotenv==1.0.0
 requests==2.31.0
 
 # =============================================================================
-# PRODUCTION SERVER
+# PRODUCTION SERVER (CRITICAL - MUST BE INSTALLED)
 # =============================================================================
 gunicorn==21.2.0
 eventlet==0.33.3
@@ -59,9 +59,17 @@ tenacity==8.2.2
 # =============================================================================
 cryptography==41.0.7
 
-# ================= Alpaca dependencies (do not add alpaca-trade-api itself) ================
+# =============================================================================
+# ALPACA TRADING DEPENDENCIES (do not add alpaca-trade-api itself)
+# =============================================================================
 deprecation==2.1.0
 msgpack==1.0.3
 PyYAML==6.0.1
 websocket-client>=0.56.0,<2
-urllib3>=1.25,<2  # TensorFlow works with urllib3 2.x, but Alpaca wants <2. Use 1.26.x if possible. 
+urllib3>=1.25,<2  # TensorFlow works with urllib3 2.x, but Alpaca wants <2. Use 1.26.x if possible.
+
+# =============================================================================
+# ADDITIONAL UTILITIES (ensuring completeness)
+# =============================================================================
+setuptools>=65.0.0
+wheel>=0.38.0 

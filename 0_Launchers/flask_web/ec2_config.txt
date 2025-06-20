@@ -1,0 +1,20 @@
+# Trading Algorithm EC2 Configuration
+# This file stores EC2 deployment details for automatic scripts
+
+# EC2 Instance ID (get from AWS Console or CLI)
+INSTANCE_ID=i-0d713dc81235dd231
+
+# EC2 Key Pair Name (without .pem extension)
+KEY_NAME=KKumar06202025
+
+# AWS Region
+REGION=us-west-2
+
+# Deploy user (usually ubuntu or ec2-user)
+DEPLOY_USER=ec2-user
+
+# Optional: Public IP (will be auto-detected if left empty)
+PUBLIC_IP=35.89.15.141
+
+# Key file path
+KEY_FILE=C:\Users\KitKumar\Downloads\KKumar06202025.pem 

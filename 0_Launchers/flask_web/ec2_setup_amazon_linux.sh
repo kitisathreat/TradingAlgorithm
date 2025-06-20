@@ -135,11 +135,9 @@ sudo rm -rf /var/cache/dnf/*
 print_status "Cleaning up deprecated pip packages and caches..."
 pip cache purge
 pip uninstall -y tensorflow tensorflow-cpu tensorflow-gpu || true
-pip uninstall -y $(pip list --outdated --format=freeze | grep -v '^\-e' | cut -d = -f 1) || true
 
 # Remove old package versions and unused dependencies
 print_status "Removing old package versions and unused dependencies..."
-pip uninstall -y $(pip check 2>&1 | grep -o "'.*'" | tr -d "'") || true
 
 # Clean up system deprecated files
 print_status "Cleaning up system deprecated files..."
@@ -187,11 +185,11 @@ print_status "Installing Python dependencies using disk storage..."
 if [ -f "requirements.txt" ]; then
     # Install core data science packages first (smaller packages)
     print_status "Installing core data science packages..."
-    pip install pandas==2.0.3 numpy==1.24.3 scikit-learn==1.3.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR
+    pip install pandas==2.0.3 numpy==1.24.3 scikit-learn==1.3.0 --cache-dir $PIP_CACHE_DIR
     
     # Install visualization packages
     print_status "Installing visualization packages..."
-    pip install matplotlib==3.7.0 plotly==5.18.0 seaborn==0.12.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR
+    pip install matplotlib==3.7.0 plotly==5.18.0 seaborn==0.12.0 --cache-dir $PIP_CACHE_DIR
     
     # Check if TensorFlow is already installed
     if python -c "import tensorflow; print('TensorFlow version:', tensorflow.__version__)" 2>/dev/null; then
@@ -199,18 +197,18 @@ if [ -f "requirements.txt" ]; then
     else
         # Install full TensorFlow from requirements.txt
         print_status "Installing full TensorFlow (from requirements.txt)..."
-        if pip install tensorflow==2.13.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR; then
+        if pip install tensorflow==2.13.0 --cache-dir $PIP_CACHE_DIR; then
             print_success "Full TensorFlow installed successfully"
         else
             print_warning "Full TensorFlow installation failed, trying CPU version as fallback..."
             # Fallback to CPU version if full version fails
-            pip install tensorflow-cpu==2.13.0 --cache-dir $PIP_CACHE_DIR --build $TMPDIR || print_warning "TensorFlow installation failed, continuing without it"
+            pip install tensorflow-cpu==2.13.0 --cache-dir $PIP_CACHE_DIR || print_warning "TensorFlow installation failed, continuing without it"
         fi
     fi
     
     # Install remaining dependencies (excluding TensorFlow if it was already installed)
     print_status "Installing remaining Python dependencies..."
-    pip install -r requirements.txt --cache-dir $PIP_CACHE_DIR --build $TMPDIR --ignore-installed tensorflow
+    pip install -r requirements.txt --cache-dir $PIP_CACHE_DIR --ignore-installed tensorflow
     
     print_success "Python dependencies installed successfully"
 else
@@ -234,7 +232,8 @@ find /home/ec2-user/trading-algorithm -name "dist" -type d -exec rm -rf {} + 2>/
 
 # Remove unused dependencies
 print_status "Removing unused dependencies..."
-pip uninstall -y $(pip check 2>&1 | grep -o "'.*'" | tr -d "'") || true
+# Remove the problematic pip check command that was causing errors
+# pip uninstall -y $(pip check 2>&1 | grep -o "'.*'" | tr -d "'") || true
 
 # Final disk space check
 print_status "Final disk space check..."
