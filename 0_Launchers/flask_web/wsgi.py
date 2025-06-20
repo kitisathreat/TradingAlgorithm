@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 WSGI application entry point for Trading Algorithm Flask Web Interface
-This file is used by production servers like Gunicorn, uWSGI, or AWS Elastic Beanstalk
+This file is used by production servers like Gunicorn or uWSGI
 """
 
 import os
