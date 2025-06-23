@@ -5,11 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neural Network Trading System</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Chart.js v3.x and plugins for financial charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- Commented out Chart.js Financial plugin
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
+    -->
+    
+    <script>
+        // Commented out financial chart plugin registration
+        /*
+        Chart.register(
+            window.CandlestickController,
+            window.OhlcController,
+            window.CandlestickElement,
+            window.OhlcElement
+        );
+        */
+    </script>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -105,6 +121,18 @@
             position: relative;
             height: 400px;
             margin: 20px 0;
+            cursor: crosshair;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-container:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .chart-container canvas {
+            transition: all 0.3s ease;
         }
         
         .progress {
@@ -207,6 +235,30 @@
             border-color: #667eea;
             box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
         }
+        
+        /* Navigation instructions styling */
+        .text-muted.small ul li {
+            margin-bottom: 0.25rem;
+            font-size: 0.85rem;
+        }
+        
+        .text-muted.small ul li i {
+            width: 16px;
+            text-align: center;
+            margin-right: 0.5rem;
+        }
+        
+        /* Legend styling */
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .legend-color {
+            border-radius: 2px;
+            margin-right: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -241,8 +293,13 @@
                             <div class="col-md-3">
                                 <strong>Current Stock:</strong> <span id="current-stock">None</span>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <strong>Connection:</strong> <span id="connection-status">Connecting...</span>
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-sm btn-outline-info" onclick="debugCurrentState()" title="Debug Current State">
+                                    <i class="fas fa-bug"></i> Debug
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -352,6 +409,11 @@
                             <div class="card-body">
                                 <div class="chart-container">
                                     <canvas id="stockChart"></canvas>
+                                    <div class="mt-2 text-center">
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="resetChartZoom()">
+                                            <i class="fas fa-expand-arrows-alt"></i> Reset Zoom
+                                        </button>
+                                    </div>
                                 </div>
                                 <!-- Stock Info Container -->
                                 <div id="stock-info" class="mt-3" style="display: none;">
@@ -379,7 +441,13 @@
                                     </div>
                                     <div class="text-muted small">
                                         <i class="fas fa-info-circle"></i> 
-                                        Use mouse wheel to zoom, left-click and drag to pan
+                                        <strong>Chart Navigation:</strong> 
+                                        <ul class="list-unstyled mt-1 mb-0">
+                                            <li><i class="fas fa-mouse"></i> <strong>Mouse Wheel:</strong> Zoom in/out</li>
+                                            <li><i class="fas fa-hand-paper"></i> <strong>Left Mouse Drag:</strong> Pan around the chart</li>
+                                            <li><i class="fas fa-expand-arrows-alt"></i> <strong>Right Mouse Drag:</strong> Zoom to selection area</li>
+                                            <li><i class="fas fa-search"></i> <strong>Hover:</strong> View detailed OHLC data</li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -520,90 +588,133 @@
         let stockChart;
         let selectedDecision = null;
         let currentStockData = null;
+        let currentStockInfo = null;
+
+        // Debug function to check current state
+        function debugCurrentState() {
+            console.log('=== DEBUG CURRENT STATE ===');
+            console.log('[DEBUG] socket:', socket ? 'connected' : 'null/undefined');
+            console.log('[DEBUG] stockChart:', stockChart ? 'exists' : 'null/undefined');
+            console.log('[DEBUG] selectedDecision:', selectedDecision);
+            console.log('[DEBUG] currentStockData:', currentStockData ? `array with ${currentStockData.length} elements` : 'null/undefined');
+            console.log('[DEBUG] currentStockInfo:', currentStockInfo);
+            
+            if (currentStockData && currentStockData.length > 0) {
+                console.log('[DEBUG] First stock data element:', currentStockData[0]);
+                console.log('[DEBUG] Stock data keys:', Object.keys(currentStockData[0]));
+            }
+            
+            // Check DOM elements
+            const decisionInterface = document.getElementById('decision-interface');
+            console.log('[DEBUG] decision-interface element:', decisionInterface ? 'found' : 'not found');
+            console.log('[DEBUG] decision-interface display:', decisionInterface ? decisionInterface.style.display : 'N/A');
+            
+            const currentStockElement = document.getElementById('current-stock');
+            console.log('[DEBUG] current-stock element:', currentStockElement ? 'found' : 'not found');
+            console.log('[DEBUG] current-stock text:', currentStockElement ? currentStockElement.textContent : 'N/A');
+            
+            console.log('=== END DEBUG STATE ===');
+        }
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('[INIT] DOMContentLoaded event fired');
+            console.log('[INIT] Chart.js available:', typeof Chart !== 'undefined');
+            console.log('[INIT] jQuery available:', typeof $ !== 'undefined');
+            console.log('[INIT] Socket.IO available:', typeof io !== 'undefined');
+            
+            // Reset retry flag
+            window.financialPluginRetryAttempted = false;
+            
+            console.log('[INIT] Initializing components...');
             initializeSocket();
             updateModelStatus();
             updateSystemStatus();
             loadStockOptions();
+            
+            console.log('[INIT] Initialization completed');
+            
+            // Debug initial state
+            setTimeout(() => {
+                console.log('[INIT] Initial state check:');
+                debugCurrentState();
+            }, 1000);
         });
-
+        
         // Socket.IO initialization
         function initializeSocket() {
-            socket = io();
-            
-            socket.on('connect', function() {
-                document.getElementById('connection-status').innerHTML = 
-                    '<span class="status-indicator status-online"></span>Connected';
+            try {
+                socket = io();
                 
-                // Request initial status
-                socket.emit('get_status');
-            });
-            
-            socket.on('disconnect', function() {
-                document.getElementById('connection-status').innerHTML = 
-                    '<span class="status-indicator status-offline"></span>Disconnected';
-            });
-            
-            socket.on('connected', function(data) {
-                console.log('Connected to trading system:', data);
-                updateSystemStatusFromSocket(data);
-            });
-            
-            socket.on('status_update', function(data) {
-                console.log('Status update received:', data);
-                updateSystemStatusFromSocket(data);
-            });
-            
-            socket.on('training_complete', function(data) {
-                if (data.success) {
-                    showAlert('Training completed successfully!', 'success');
-                } else {
-                    showAlert('Training failed: ' + (data.error || 'Unknown error'), 'danger');
-                }
-                document.getElementById('training-progress-container').style.display = 'none';
-                document.getElementById('trainButton').disabled = false;
-                updateModelStatus();
-            });
-            
-            socket.on('training_progress_update', function(data) {
-                console.log('Training progress update:', data);
-                if (data.active) {
-                    document.getElementById('training-progress-container').style.display = 'block';
-                    const progressBar = document.getElementById('training-progress-bar');
-                    progressBar.style.width = data.progress + '%';
-                    progressBar.textContent = data.progress + '%';
-                } else {
+                socket.on('connect', function() {
+                    document.getElementById('connection-status').innerHTML = 
+                        '<span class="status-indicator status-online"></span>Connected';
+                    
+                    // Request initial status
+                    socket.emit('get_status');
+                });
+                
+                socket.on('disconnect', function() {
+                    document.getElementById('connection-status').innerHTML = 
+                        '<span class="status-indicator status-offline"></span>Disconnected';
+                });
+                
+                socket.on('connected', function(data) {
+                    console.log('Connected to trading system:', data);
+                    updateSystemStatusFromSocket(data);
+                });
+                
+                socket.on('status_update', function(data) {
+                    console.log('Status update received:', data);
+                    updateSystemStatusFromSocket(data);
+                });
+                
+                socket.on('training_complete', function(data) {
+                    if (data.success) {
+                        showAlert('Training completed successfully!', 'success');
+                    } else {
+                        showAlert('Training failed: ' + (data.error || 'Unknown error'), 'danger');
+                    }
                     document.getElementById('training-progress-container').style.display = 'none';
-                }
-            });
-            
-            socket.on('stock_data_update', function(data) {
-                console.log('Stock data update received:', data);
-                handleStockDataUpdate(data);
-            });
-            
-            socket.on('prediction_result', function(data) {
-                console.log('Prediction result received:', data);
-                handlePredictionResult(data);
-            });
-            
-            socket.on('error', function(data) {
-                console.error('Server error:', data.message);
-                // Use a more robust alert system if available, for now, standard alert
-                alert('A server error occurred: ' + data.message);
-                // Hide loading indicators if they are showing
-                $('#loading-indicator').hide();
-            });
-            
-            socket.on('pong', function(data) {
-                console.log('Pong received:', data);
-                // Update server status if needed
-                if (data.server_status === 'healthy') {
-                    // Server is healthy
-                }
-            });
+                    document.getElementById('trainButton').disabled = false;
+                    updateModelStatus();
+                });
+                
+                socket.on('training_progress_update', function(data) {
+                    console.log('Training progress update:', data);
+                    if (data.active) {
+                        document.getElementById('training-progress-container').style.display = 'block';
+                        const progressBar = document.getElementById('training-progress-bar');
+                        progressBar.style.width = data.progress + '%';
+                        progressBar.textContent = data.progress + '%';
+                    } else {
+                        document.getElementById('training-progress-container').style.display = 'none';
+                    }
+                });
+                
+                socket.on('stock_data_update', function(data) {
+                    console.log('Stock data update received:', data);
+                    handleStockDataUpdate(data);
+                });
+                
+                socket.on('prediction_result', function(data) {
+                    console.log('Prediction result received:', data);
+                    handlePredictionResult(data);
+                });
+                
+                socket.on('error', function(data) {
+                    console.error('Server error:', data.message);
+                    // Use a more robust alert system if available, for now, standard alert
+                    alert('A server error occurred: ' + data.message);
+                    // Hide loading indicators if they are showing
+                    $('#loading-indicator').hide();
+                });
+                
+            } catch (error) {
+                console.error('Error initializing socket:', error);
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="status-indicator status-offline"></span>Connection Failed';
+            }
         }
         
         // Update system status from socket data
@@ -651,26 +762,87 @@
         // Handle stock data update from WebSocket
         function handleStockDataUpdate(data) {
             console.log('[DEBUG] handleStockDataUpdate called with:', data);
-            if (!data || !data.chart_data) {
-                console.error('[ERROR] No chart_data in received data:', data);
-            } else {
-                console.log('[DEBUG] chart_data received:', data.chart_data);
-                if (!Array.isArray(data.chart_data) || data.chart_data.length === 0) {
-                    console.warn('[WARN] chart_data is empty or not an array:', data.chart_data);
-                } else {
-                    // Check first element structure
-                    console.log('[DEBUG] First chart_data element:', data.chart_data[0]);
-                }
+            console.log('[DEBUG] Data type:', typeof data);
+            console.log('[DEBUG] Data keys:', data ? Object.keys(data) : 'null/undefined');
+            
+            if (!data) {
+                console.error('[ERROR] handleStockDataUpdate received null/undefined data');
+                return;
             }
+            
+            if (!data.chart_data) {
+                console.error('[ERROR] No chart_data in received data:', data);
+                console.error('[ERROR] Available keys:', Object.keys(data));
+                return;
+            }
+            
+            console.log('[DEBUG] chart_data received:', data.chart_data);
+            console.log('[DEBUG] chart_data type:', typeof data.chart_data);
+            console.log('[DEBUG] chart_data length:', Array.isArray(data.chart_data) ? data.chart_data.length : 'not an array');
+            
+            if (!Array.isArray(data.chart_data) || data.chart_data.length === 0) {
+                console.warn('[WARN] chart_data is empty or not an array:', data.chart_data);
+                return;
+            }
+            
+            // Check first element structure
+            const firstElement = data.chart_data[0];
+            console.log('[DEBUG] First chart_data element:', firstElement);
+            console.log('[DEBUG] First element keys:', firstElement ? Object.keys(firstElement) : 'null/undefined');
+            
+            // Validate required fields
+            const requiredFields = ['x', 'o', 'h', 'l', 'c'];
+            if (firstElement) {
+                const missingFields = requiredFields.filter(field => !(field in firstElement));
+                if (missingFields.length > 0) {
+                    console.error('[ERROR] First element missing required fields:', missingFields);
+                    console.error('[ERROR] Available fields:', Object.keys(firstElement));
+                    return;
+                }
+                console.log('[DEBUG] First element validation passed');
+            }
+            
+            // Store current stock data
             currentStockData = data.chart_data;
+            console.log('[DEBUG] currentStockData set to:', currentStockData);
+            console.log('[DEBUG] currentStockData length:', currentStockData.length);
+            
+            // Store stock info
             currentStockInfo = data.stock_info;
+            console.log('[DEBUG] currentStockInfo set to:', currentStockInfo);
+            
+            // Update current stock display
+            const currentStockElement = document.getElementById('current-stock');
+            if (currentStockElement && data.stock_info && data.stock_info.symbol) {
+                currentStockElement.textContent = data.stock_info.symbol;
+                console.log('[DEBUG] Updated current stock display to:', data.stock_info.symbol);
+            } else {
+                console.warn('[WARN] Could not update current stock display');
+            }
+            
             // Update chart
+            console.log('[DEBUG] Calling updateChart with:', data.chart_data);
             updateChart(data.chart_data);
+            
             // Update indicators
-            updateIndicators(data.indicators);
+            if (data.indicators) {
+                console.log('[DEBUG] Updating indicators with:', data.indicators);
+                updateIndicators(data.indicators);
+            } else {
+                console.warn('[WARN] No indicators data received');
+            }
+            
             // Show decision interface
-            document.getElementById('decision-interface').style.display = 'block';
+            const decisionInterface = document.getElementById('decision-interface');
+            if (decisionInterface) {
+                decisionInterface.style.display = 'block';
+                console.log('[DEBUG] Decision interface shown');
+            } else {
+                console.error('[ERROR] Decision interface element not found');
+            }
+            
             showAlert(`Real-time data updated for ${data.symbol}`, 'success');
+            console.log('[DEBUG] handleStockDataUpdate completed successfully');
         }
         
         // Handle prediction result from WebSocket
@@ -815,8 +987,23 @@
                         currentStockElement.textContent = data.stock_info.symbol;
                     }
                     
-                    // Update chart
-                    updateChart(data.chart_data);
+                    // Check if Chart.js is loaded before trying to update chart
+                    if (typeof Chart === 'undefined') {
+                        console.log('[INFO] Chart.js not loaded yet, waiting...');
+                        // Wait a bit and try again
+                        setTimeout(() => {
+                            if (typeof Chart !== 'undefined') {
+                                console.log('[INFO] Chart.js now loaded, updating chart...');
+                                updateChart(data.chart_data);
+                            } else {
+                                console.error('[ERROR] Chart.js still not loaded after waiting');
+                                showAlert('Chart.js failed to load. Please refresh the page.', 'error');
+                            }
+                        }, 2000);
+                    } else {
+                        // Update chart
+                        updateChart(data.chart_data);
+                    }
                     
                     // Update indicators
                     if (data.indicators) {
@@ -825,6 +1012,9 @@
                     
                     // Update stock info
                     updateStockInfo(data.stock_info);
+                    
+                    // Show decision interface
+                    document.getElementById('decision-interface').style.display = 'block';
                     
                     showAlert(`Stock data loaded for ${symbol}`, 'success');
                 } else {
@@ -840,32 +1030,42 @@
 
         // Update chart
         function updateChart(chartData) {
-            console.log('[DEBUG] updateChart called with:', chartData);
+            console.log('[CHART] updateChart called with:', chartData);
+            console.log('[CHART] Chart.js available:', typeof Chart !== 'undefined');
+            
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                console.error('[CHART] ERROR: Chart.js not loaded yet');
+                showAlert('Chart.js is still loading. Please wait a moment and try again.', 'warning');
+                return;
+            }
             
             // Check chart container and canvas
             const chartContainer = document.querySelector('.chart-container');
             if (!chartContainer) {
-                console.error('[ERROR] .chart-container not found in DOM!');
+                console.error('[CHART] ERROR: .chart-container not found in DOM!');
                 return;
             }
-            console.log('[DEBUG] .chart-container found.');
+            console.log('[CHART] .chart-container found:', chartContainer);
             
             const canvas = document.getElementById('stockChart');
             if (!canvas) {
-                console.error('[ERROR] #stockChart canvas not found!');
+                console.error('[CHART] ERROR: #stockChart canvas not found!');
                 return;
             }
-            console.log('[DEBUG] #stockChart canvas found.');
+            console.log('[CHART] #stockChart canvas found:', canvas);
+            console.log('[CHART] Canvas dimensions:', canvas.width, 'x', canvas.height);
             
             const ctx = canvas.getContext('2d');
             if (!ctx) {
-                console.error('[ERROR] Could not get 2D context from #stockChart!');
+                console.error('[CHART] ERROR: Could not get 2D context from #stockChart!');
                 return;
             }
+            console.log('[CHART] 2D context obtained successfully');
             
             // Validate chart data
             if (!Array.isArray(chartData) || chartData.length === 0) {
-                console.warn('[WARN] chartData is empty or not an array:', chartData);
+                console.warn('[CHART] WARN: chartData is empty or not an array:', chartData);
                 return;
             }
             
@@ -874,154 +1074,188 @@
             const requiredFields = ['x', 'o', 'h', 'l', 'c'];
             const missingFields = requiredFields.filter(field => !(field in first));
             if (missingFields.length > 0) {
-                console.error('[ERROR] chartData[0] missing fields:', missingFields, first);
+                console.error('[CHART] ERROR: chartData[0] missing fields:', missingFields, first);
                 return;
             }
-            console.log('[DEBUG] chartData[0] fields OK:', first);
+            console.log('[CHART] chartData[0] fields OK:', first);
+            console.log('[CHART] Total data points:', chartData.length);
             
-            // Check if Chart.js Financial plugin is available
-            const financialPluginAvailable = typeof CandlestickController !== 'undefined' && 
-                                           typeof Chart !== 'undefined' && 
-                                           Chart.registry && 
-                                           Chart.registry.controllers && 
-                                           'candlestick' in Chart.registry.controllers;
+            // Use custom candlestick implementation instead of Chart.js Financial plugin
+            console.log('[CHART] Using custom candlestick chart implementation...');
+            createCustomCandlestickChart(ctx, chartData);
+            return;
+        }
+
+        // Custom candlestick chart implementation with new navigation
+        function createCustomCandlestickChart(ctx, chartData) {
+            console.log('[CANDLESTICK] Creating custom candlestick chart with new navigation system');
+            console.log('[CANDLESTICK] Context:', ctx);
+            console.log('[CANDLESTICK] Chart data length:', chartData.length);
             
-            console.log('[DEBUG] Financial plugin available:', financialPluginAvailable);
-            console.log('[DEBUG] Chart.registry.controllers:', Object.keys(Chart.registry.controllers || {}));
+            if (stockChart) {
+                console.log('[CANDLESTICK] Destroying existing chart');
+                stockChart.destroy();
+            }
             
-            if (!financialPluginAvailable) {
-                console.error('[ERROR] Chart.js Financial plugin not loaded!');
-                console.log('[INFO] Falling back to line chart...');
-                
-                // Fallback to line chart
-                if (stockChart) {
-                    stockChart.destroy();
+            // Parse dates properly
+            const processedData = chartData.map(item => ({
+                ...item,
+                x: new Date(item.x) // Convert ISO string to Date object
+            }));
+            
+            console.log('[CANDLESTICK] Processed chart data (first 3):', processedData.slice(0, 3));
+            
+            // Create scatter data points for interaction (invisible but interactive)
+            const scatterData = processedData.map((d, index) => {
+                // Validate data point
+                if (!d || typeof d.o !== 'number' || typeof d.h !== 'number' || typeof d.l !== 'number' || typeof d.c !== 'number') {
+                    console.warn('[CANDLESTICK] Invalid data point at index', index, d);
+                    return null;
                 }
                 
-                const processedData = chartData.map(item => ({
-                    x: new Date(item.x),
-                    y: item.c // Use close price for line chart
-                }));
+                // Additional validation for NaN values
+                if (isNaN(d.o) || isNaN(d.h) || isNaN(d.l) || isNaN(d.c)) {
+                    console.warn('[CANDLESTICK] NaN values in data point at index', index, d);
+                    return null;
+                }
                 
-                stockChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [{
-                            label: 'Stock Price',
-                            data: processedData,
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            borderWidth: 2,
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `Price: $${context.parsed.y.toFixed(2)}`;
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: { 
-                                type: 'time',
-                                time: { 
-                                    unit: 'day',
-                                    displayFormats: {
-                                        day: 'MMM dd'
-                                    }
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Date'
-                                }
-                            },
-                            y: { 
-                                beginAtZero: false,
-                                title: {
-                                    display: true,
-                                    text: 'Price ($)'
-                                },
-                                ticks: {
-                                    callback: function(value) {
-                                        return '$' + value.toFixed(2);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-                console.log('[DEBUG] Fallback line chart created successfully.');
+                const scatterPoint = {
+                    x: d.x,
+                    y: d.c, // Use close price for interaction point
+                    o: d.o,
+                    h: d.h,
+                    l: d.l,
+                    c: d.c,
+                    index: index
+                };
+                
+                // Validate the created scatter point
+                if (!scatterPoint.x || isNaN(scatterPoint.y)) {
+                    console.warn('[CANDLESTICK] Invalid scatter point created at index', index, scatterPoint);
+                    return null;
+                }
+                
+                return scatterPoint;
+            }).filter(item => item !== null); // Remove invalid data points
+            
+            console.log('[CANDLESTICK] Created scatter data with', scatterData.length, 'valid points');
+            
+            // Additional validation before creating chart
+            if (scatterData.length === 0) {
+                console.error('[CANDLESTICK] ERROR: No valid scatter data points available for chart creation');
                 return;
             }
+            
+            console.log('[CANDLESTICK] Creating Chart.js instance...');
             
             try {
-                if (stockChart) {
-                    stockChart.destroy();
-                }
-                
-                // Parse dates properly
-                const processedData = chartData.map(item => ({
-                    ...item,
-                    x: new Date(item.x) // Convert ISO string to Date object
-                }));
-                
-                console.log('[DEBUG] Processed chart data:', processedData.slice(0, 3));
-                
                 stockChart = new Chart(ctx, {
-                    type: 'candlestick',
+                    type: 'scatter',
                     data: {
                         datasets: [{
-                            label: 'Candlestick',
-                            data: processedData, // array of {x, o, h, l, c}
-                            color: {
-                                up: '#26a69a',
-                                down: '#ef5350',
-                                unchanged: '#999'
-                            },
-                            borderColor: '#333',
-                            borderWidth: 1
+                            label: 'Candlesticks',
+                            data: scatterData,
+                            backgroundColor: 'transparent',
+                            borderColor: 'transparent',
+                            pointRadius: 0,
+                            pointHoverRadius: 4,  // Smaller hover radius for more precise interaction
+                            pointHoverBackgroundColor: 'rgba(0,0,0,0.1)',
+                            pointHoverBorderColor: 'rgba(0,0,0,0.3)',
+                            pointHoverBorderWidth: 1,
+                            showLine: false // No line connecting points
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: {
+                            intersect: true,  // Only trigger when hovering directly over points
+                            mode: 'point'     // Only trigger for specific points, not nearest
+                        },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
                                 enabled: true,
+                                mode: 'point',      // Only show tooltip for specific points
+                                intersect: true,    // Only trigger when hovering directly over points
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: '#333',
+                                borderWidth: 1,
+                                cornerRadius: 6,
+                                padding: 10,
                                 callbacks: {
+                                    title: function(context) {
+                                        try {
+                                            // Add proper null checks
+                                            if (!context || !context[0]) {
+                                                return 'Unknown Date';
+                                            }
+                                            const dataPoint = context[0].raw || context[0];
+                                            if (!dataPoint || !dataPoint.x) {
+                                                return 'Unknown Date';
+                                            }
+                                            const date = new Date(dataPoint.x);
+                                            return date.toLocaleDateString('en-US', {
+                                                weekday: 'short',
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            });
+                                        } catch (error) {
+                                            console.warn('[CANDLESTICK] Error in tooltip title callback:', error);
+                                            return 'Unknown Date';
+                                        }
+                                    },
                                     label: function(context) {
-                                        const d = context.raw;
-                                        return [
-                                            `Open:  $${d.o?.toFixed ? d.o.toFixed(2) : d.o}`,
-                                            `High:  $${d.h?.toFixed ? d.h.toFixed(2) : d.h}`,
-                                            `Low:   $${d.l?.toFixed ? d.l.toFixed(2) : d.l}`,
-                                            `Close: $${d.c?.toFixed ? d.c.toFixed(2) : d.c}`
-                                        ];
+                                        try {
+                                            // Add proper null checks
+                                            if (!context || !context[0]) {
+                                                return ['No data available'];
+                                            }
+                                            const dataPoint = context[0].raw || context[0];
+                                            if (dataPoint && dataPoint.o !== undefined) {
+                                                const isGreen = dataPoint.c >= dataPoint.o;
+                                                return [
+                                                    `Open:  $${dataPoint.o.toFixed(2)}`,
+                                                    `High:  $${dataPoint.h.toFixed(2)}`,
+                                                    `Low:   $${dataPoint.l.toFixed(2)}`,
+                                                    `Close: $${dataPoint.c.toFixed(2)}`
+                                                ];
+                                            }
+                                            return ['No price data available'];
+                                        } catch (error) {
+                                            console.warn('[CANDLESTICK] Error in tooltip label callback:', error);
+                                            return ['Error loading data'];
+                                        }
+                                    },
+                                    afterLabel: function(context) {
+                                        try {
+                                            // Add proper null checks
+                                            if (!context || !context[0]) {
+                                                return '';
+                                            }
+                                            const dataPoint = context[0].raw || context[0];
+                                            if (dataPoint && dataPoint.o !== undefined) {
+                                                const change = dataPoint.c - dataPoint.o;
+                                                const changePercent = (change / dataPoint.o) * 100;
+                                                const isGreen = change >= 0;
+                                                const sign = isGreen ? '+' : '';
+                                                return `${sign}${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`;
+                                            }
+                                            return '';
+                                        } catch (error) {
+                                            console.warn('[CANDLESTICK] Error in tooltip afterLabel callback:', error);
+                                            return '';
+                                        }
                                     }
                                 }
                             },
+                            // Disable the zoom plugin - we'll implement custom navigation
                             zoom: {
-                                zoom: {
-                                    wheel: {
-                                        enabled: true,
-                                    },
-                                    pinch: {
-                                        enabled: true
-                                    },
-                                    mode: 'xy',
-                                },
-                                pan: {
-                                    enabled: true,
-                                    mode: 'xy',
-                                }
+                                pan: { enabled: false },
+                                zoom: { enabled: false }
                             }
                         },
                         scales: {
@@ -1036,6 +1270,9 @@
                                 title: {
                                     display: true,
                                     text: 'Date'
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
                                 }
                             },
                             y: { 
@@ -1048,84 +1285,467 @@
                                     callback: function(value) {
                                         return '$' + value.toFixed(2);
                                     }
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
                                 }
                             }
                         }
-                    }
+                    },
+                    plugins: [{
+                        id: 'candlestickRenderer',
+                        beforeDraw: function(chart, args, options) {
+                            try {
+                                const ctx = chart.ctx;
+                                const data = chart.data.datasets[0].data;
+                                
+                                if (!data || data.length === 0) {
+                                    console.log('[CANDLESTICK] No data available for candlestick rendering');
+                                    return;
+                                }
+                                
+                                ctx.save();
+                                
+                                data.forEach((dataPoint, index) => {
+                                    if (!dataPoint || dataPoint.o === undefined) {
+                                        console.warn('[CANDLESTICK] Skipping invalid data point at index', index, dataPoint);
+                                        return;
+                                    }
+                                    
+                                    // Get pixel coordinates
+                                    const xScale = chart.scales.x;
+                                    const yScale = chart.scales.y;
+                                    
+                                    if (!xScale || !yScale) {
+                                        console.warn('[CANDLESTICK] Scales not available for data point', index);
+                                        return;
+                                    }
+                                    
+                                    const x = xScale.getPixelForValue(dataPoint.x);
+                                    const openY = yScale.getPixelForValue(dataPoint.o);
+                                    const closeY = yScale.getPixelForValue(dataPoint.c);
+                                    const highY = yScale.getPixelForValue(dataPoint.h);
+                                    const lowY = yScale.getPixelForValue(dataPoint.l);
+                                    
+                                    // Validate coordinates
+                                    if (isNaN(x) || isNaN(openY) || isNaN(closeY) || isNaN(highY) || isNaN(lowY)) {
+                                        console.warn('[CANDLESTICK] Invalid coordinates for data point', index, {
+                                            x, openY, closeY, highY, lowY,
+                                            dataPoint: { x: dataPoint.x, o: dataPoint.o, h: dataPoint.h, l: dataPoint.l, c: dataPoint.c }
+                                        });
+                                        return;
+                                    }
+                                    
+                                    // Determine color
+                                    const isGreen = dataPoint.c >= dataPoint.o;
+                                    const color = isGreen ? '#26a69a' : '#ef5350';
+                                    
+                                    // Draw wick (high to low)
+                                    ctx.strokeStyle = color;
+                                    ctx.lineWidth = 1;
+                                    ctx.beginPath();
+                                    ctx.moveTo(x, highY);
+                                    ctx.lineTo(x, lowY);
+                                    ctx.stroke();
+                                    
+                                    // Draw body (open to close)
+                                    const bodyWidth = Math.max(2, Math.min(8, xScale.width / data.length * 0.8));
+                                    const bodyLeft = x - bodyWidth / 2;
+                                    
+                                    ctx.fillStyle = color;
+                                    ctx.fillRect(bodyLeft, Math.min(openY, closeY), bodyWidth, Math.abs(closeY - openY));
+                                    
+                                    // Draw border for body
+                                    ctx.strokeStyle = color;
+                                    ctx.lineWidth = 1;
+                                    ctx.strokeRect(bodyLeft, Math.min(openY, closeY), bodyWidth, Math.abs(closeY - openY));
+                                });
+                                
+                                ctx.restore();
+                                
+                            } catch (error) {
+                                console.error('[CANDLESTICK] Error in candlestick renderer:', error);
+                            }
+                        }
+                    }]
                 });
-                console.log('[DEBUG] Candlestick chart created successfully.');
-            } catch (err) {
-                console.error('[ERROR] Exception while creating candlestick chart:', err);
-                console.error('[ERROR] Chart.js version:', Chart.version);
-                console.error('[ERROR] Available chart types:', Object.keys(Chart.registry.controllers));
                 
-                // Fallback to line chart on error
-                console.log('[INFO] Falling back to line chart due to error...');
-                if (stockChart) {
-                    stockChart.destroy();
+                console.log('[CANDLESTICK] Chart.js instance created successfully');
+                console.log('[CANDLESTICK] Chart object:', stockChart);
+                console.log('[CANDLESTICK] Chart canvas:', stockChart.canvas);
+                console.log('[CANDLESTICK] Chart scales:', stockChart.scales);
+                
+            } catch (error) {
+                console.error('[CANDLESTICK] ERROR creating Chart.js instance:', error);
+                console.error('[CANDLESTICK] Error stack:', error.stack);
+                return;
+            }
+            
+            console.log('[CANDLESTICK] Custom candlestick chart created successfully with new navigation system.');
+            
+            // Add custom navigation system
+            console.log('[CANDLESTICK] Adding custom navigation system...');
+            addCustomNavigation(stockChart);
+        }
+        
+        // Custom navigation system
+        function addCustomNavigation(chart) {
+            console.log('[NAVIGATION] Starting to add custom navigation system');
+            console.log('[NAVIGATION] Chart object:', chart);
+            console.log('[NAVIGATION] Chart canvas:', chart.canvas);
+            
+            const canvas = chart.canvas;
+            if (!canvas) {
+                console.error('[NAVIGATION] ERROR: Chart canvas is null or undefined!');
+                return;
+            }
+            
+            console.log('[NAVIGATION] Canvas dimensions:', canvas.width, 'x', canvas.height);
+            console.log('[NAVIGATION] Canvas style:', canvas.style);
+            
+            let isPanning = false;
+            let isZooming = false;
+            let lastMouseX = 0;
+            let lastMouseY = 0;
+            let panStartX = 0;
+            let panStartY = 0;
+            let zoomStartX = 0;
+            let zoomStartY = 0;
+            
+            // Performance optimization: throttle mouse events
+            let lastMouseUpdate = 0;
+            const mouseUpdateThreshold = 16; // ~60fps
+            
+            console.log('[NAVIGATION] Setting up mouse wheel event listener');
+            
+            // Mouse wheel zoom with improved precision
+            canvas.addEventListener('wheel', function(event) {
+                console.log('[NAVIGATION] Mouse wheel event triggered');
+                console.log('[NAVIGATION] Wheel deltaY:', event.deltaY);
+                console.log('[NAVIGATION] Client coordinates:', event.clientX, event.clientY);
+                
+                event.preventDefault();
+                
+                const rect = canvas.getBoundingClientRect();
+                console.log('[NAVIGATION] Canvas rect:', rect);
+                
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+                console.log('[NAVIGATION] Relative mouse position:', mouseX, mouseY);
+                
+                const xScale = chart.scales.x;
+                const yScale = chart.scales.y;
+                
+                console.log('[NAVIGATION] X scale:', xScale);
+                console.log('[NAVIGATION] Y scale:', yScale);
+                
+                if (!xScale || !yScale) {
+                    console.error('[NAVIGATION] ERROR: Scales are not available!');
+                    return;
                 }
                 
-                const processedData = chartData.map(item => ({
-                    x: new Date(item.x),
-                    y: item.c
-                }));
+                // Get the data point under the mouse
+                const xValue = xScale.getValueForPixel(mouseX);
+                const yValue = yScale.getValueForPixel(mouseY);
+                console.log('[NAVIGATION] Data coordinates:', xValue, yValue);
                 
-                stockChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [{
-                            label: 'Stock Price',
-                            data: processedData,
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            borderWidth: 2,
-                            fill: false
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `Price: $${context.parsed.y.toFixed(2)}`;
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: { 
-                                type: 'time',
-                                time: { 
-                                    unit: 'day',
-                                    displayFormats: {
-                                        day: 'MMM dd'
-                                    }
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Date'
-                                }
-                            },
-                            y: { 
-                                beginAtZero: false,
-                                title: {
-                                    display: true,
-                                    text: 'Price ($)'
-                                },
-                                ticks: {
-                                    callback: function(value) {
-                                        return '$' + value.toFixed(2);
-                                    }
-                                }
-                            }
-                        }
+                // Zoom factor (negative deltaY means zoom in) - match local GUI sensitivity
+                const zoomFactor = event.deltaY > 0 ? 0.85 : 1.15;
+                console.log('[NAVIGATION] Zoom factor:', zoomFactor);
+                
+                // Calculate new ranges
+                const xRange = xScale.max - xScale.min;
+                const yRange = yScale.max - yScale.min;
+                console.log('[NAVIGATION] Current ranges - X:', xRange, 'Y:', yRange);
+                
+                const newXRange = xRange * zoomFactor;
+                const newYRange = yRange * zoomFactor;
+                console.log('[NAVIGATION] New ranges - X:', newXRange, 'Y:', newYRange);
+                
+                // Zoom towards the mouse position
+                const xRatio = (xValue - xScale.min) / xRange;
+                const yRatio = (yValue - yScale.min) / yRange;
+                console.log('[NAVIGATION] Zoom ratios - X:', xRatio, 'Y:', yRatio);
+                
+                const oldXMin = xScale.min;
+                const oldXMax = xScale.max;
+                const oldYMin = yScale.min;
+                const oldYMax = yScale.max;
+                
+                xScale.min = xValue - newXRange * xRatio;
+                xScale.max = xValue + newXRange * (1 - xRatio);
+                yScale.min = yValue - newYRange * yRatio;
+                yScale.max = yValue + newYRange * (1 - yRatio);
+                
+                console.log('[NAVIGATION] Scale changes:');
+                console.log('[NAVIGATION]   X: min', oldXMin, '->', xScale.min, 'max', oldXMax, '->', xScale.max);
+                console.log('[NAVIGATION]   Y: min', oldYMin, '->', yScale.min, 'max', oldYMax, '->', yScale.max);
+                
+                console.log('[NAVIGATION] Calling chart.update()');
+                chart.update('none');
+                console.log('[NAVIGATION] Chart update completed');
+            });
+            
+            console.log('[NAVIGATION] Setting up mouse down event listener');
+            
+            // Mouse down events with improved button detection
+            canvas.addEventListener('mousedown', function(event) {
+                console.log('[NAVIGATION] Mouse down event triggered');
+                console.log('[NAVIGATION] Button:', event.button);
+                console.log('[NAVIGATION] Client coordinates:', event.clientX, event.clientY);
+                
+                event.preventDefault();
+                
+                const rect = canvas.getBoundingClientRect();
+                lastMouseX = event.clientX - rect.left;
+                lastMouseY = event.clientY - rect.top;
+                console.log('[NAVIGATION] Mouse position:', lastMouseX, lastMouseY);
+                
+                if (event.button === 0) { // Left mouse button - pan
+                    console.log('[NAVIGATION] Starting pan operation');
+                    isPanning = true;
+                    panStartX = lastMouseX;
+                    panStartY = lastMouseY;
+                    canvas.style.cursor = 'grabbing';
+                    console.log('[NAVIGATION] Pan started at:', panStartX, panStartY);
+                } else if (event.button === 2) { // Right mouse button - zoom selection
+                    console.log('[NAVIGATION] Starting zoom selection operation');
+                    isZooming = true;
+                    zoomStartX = lastMouseX;
+                    zoomStartY = lastMouseY;
+                    canvas.style.cursor = 'crosshair';
+                    console.log('[NAVIGATION] Zoom selection started at:', zoomStartX, zoomStartY);
+                }
+            });
+            
+            console.log('[NAVIGATION] Setting up mouse move event listener');
+            
+            // Mouse move events with throttling for better performance
+            canvas.addEventListener('mousemove', function(event) {
+                const currentTime = Date.now();
+                if (currentTime - lastMouseUpdate < mouseUpdateThreshold) {
+                    return;
+                }
+                lastMouseUpdate = currentTime;
+                
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+                
+                const xScale = chart.scales.x;
+                const yScale = chart.scales.y;
+                
+                if (!xScale || !yScale) {
+                    console.error('[NAVIGATION] ERROR: Scales not available during mouse move!');
+                    return;
+                }
+                
+                if (isPanning) {
+                    console.log('[NAVIGATION] Panning - Mouse position:', mouseX, mouseY);
+                    
+                    // Pan the chart with improved precision
+                    const deltaX = mouseX - lastMouseX;
+                    const deltaY = mouseY - lastMouseY;
+                    console.log('[NAVIGATION] Pan delta:', deltaX, deltaY);
+                    
+                    const xRange = xScale.max - xScale.min;
+                    const yRange = yScale.max - yScale.min;
+                    
+                    const xStep = (deltaX / canvas.width) * xRange;
+                    const yStep = (deltaY / canvas.height) * yRange;
+                    console.log('[NAVIGATION] Pan steps:', xStep, yStep);
+                    
+                    const oldXMin = xScale.min;
+                    const oldXMax = xScale.max;
+                    const oldYMin = yScale.min;
+                    const oldYMax = yScale.max;
+                    
+                    xScale.min -= xStep;
+                    xScale.max -= xStep;
+                    yScale.min += yStep; // Invert Y axis to match local GUI
+                    yScale.max += yStep;
+                    
+                    console.log('[NAVIGATION] Pan scale changes:');
+                    console.log('[NAVIGATION]   X: min', oldXMin, '->', xScale.min, 'max', oldXMax, '->', xScale.max);
+                    console.log('[NAVIGATION]   Y: min', oldYMin, '->', yScale.min, 'max', oldYMax, '->', yScale.max);
+                    
+                    console.log('[NAVIGATION] Calling chart.update() for pan');
+                    chart.update('none');
+                    
+                    lastMouseX = mouseX;
+                    lastMouseY = mouseY;
+                } else if (isZooming) {
+                    console.log('[NAVIGATION] Zooming - Mouse position:', mouseX, mouseY);
+                    
+                    // Show zoom selection rectangle with improved visual feedback
+                    const deltaX = mouseX - zoomStartX;
+                    const deltaY = mouseY - zoomStartY;
+                    console.log('[NAVIGATION] Zoom selection delta:', deltaX, deltaY);
+                    
+                    // Clear any existing zoom rectangle by redrawing chart
+                    console.log('[NAVIGATION] Calling chart.update() for zoom selection');
+                    chart.update('none');
+                    
+                    // Draw zoom selection rectangle with better styling
+                    const ctx = chart.ctx;
+                    if (ctx) {
+                        console.log('[NAVIGATION] Drawing zoom selection rectangle');
+                        ctx.save();
+                        ctx.strokeStyle = 'rgba(0, 123, 255, 0.8)';
+                        ctx.fillStyle = 'rgba(0, 123, 255, 0.1)';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 5]);
+                        
+                        ctx.beginPath();
+                        ctx.rect(zoomStartX, zoomStartY, deltaX, deltaY);
+                        ctx.stroke();
+                        ctx.fill();
+                        
+                        ctx.restore();
+                    } else {
+                        console.error('[NAVIGATION] ERROR: Chart context is null!');
                     }
-                });
-                console.log('[DEBUG] Fallback line chart created successfully after error.');
-            }
+                }
+            });
+            
+            console.log('[NAVIGATION] Setting up mouse up event listener');
+            
+            // Mouse up events with improved handling
+            canvas.addEventListener('mouseup', function(event) {
+                console.log('[NAVIGATION] Mouse up event triggered');
+                console.log('[NAVIGATION] Button:', event.button);
+                console.log('[NAVIGATION] Is panning:', isPanning);
+                console.log('[NAVIGATION] Is zooming:', isZooming);
+                
+                if (isPanning) {
+                    console.log('[NAVIGATION] Ending pan operation');
+                    isPanning = false;
+                    canvas.style.cursor = 'default';
+                } else if (isZooming) {
+                    console.log('[NAVIGATION] Ending zoom selection operation');
+                    isZooming = false;
+                    canvas.style.cursor = 'default';
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const mouseX = event.clientX - rect.left;
+                    const mouseY = event.clientY - rect.top;
+                    console.log('[NAVIGATION] Final mouse position for zoom:', mouseX, mouseY);
+                    
+                    const xScale = chart.scales.x;
+                    const yScale = chart.scales.y;
+                    
+                    if (!xScale || !yScale) {
+                        console.error('[NAVIGATION] ERROR: Scales not available for zoom completion!');
+                        return;
+                    }
+                    
+                    // Calculate zoom area
+                    const startX = Math.min(zoomStartX, mouseX);
+                    const endX = Math.max(zoomStartX, mouseX);
+                    const startY = Math.min(zoomStartY, mouseY);
+                    const endY = Math.max(zoomStartY, mouseY);
+                    console.log('[NAVIGATION] Zoom selection area:', startX, startY, endX, endY);
+                    
+                    // Only zoom if the selection area is large enough (match local GUI threshold)
+                    const minSelectionSize = 15;
+                    const width = Math.abs(endX - startX);
+                    const height = Math.abs(endY - startY);
+                    console.log('[NAVIGATION] Selection dimensions:', width, 'x', height);
+                    
+                    if (width > minSelectionSize && height > minSelectionSize) {
+                        console.log('[NAVIGATION] Selection area is large enough, applying zoom');
+                        
+                        // Convert pixel coordinates to data coordinates
+                        const startXValue = xScale.getValueForPixel(startX);
+                        const endXValue = xScale.getValueForPixel(endX);
+                        const startYValue = yScale.getValueForPixel(startY);
+                        const endYValue = yScale.getValueForPixel(endY);
+                        console.log('[NAVIGATION] Data coordinates for zoom:', startXValue, startYValue, endXValue, endYValue);
+                        
+                        const oldXMin = xScale.min;
+                        const oldXMax = xScale.max;
+                        const oldYMin = yScale.min;
+                        const oldYMax = yScale.max;
+                        
+                        // Set new scale ranges
+                        xScale.min = startXValue;
+                        xScale.max = endXValue;
+                        yScale.min = startYValue;
+                        yScale.max = endYValue;
+                        
+                        console.log('[NAVIGATION] Zoom scale changes:');
+                        console.log('[NAVIGATION]   X: min', oldXMin, '->', xScale.min, 'max', oldXMax, '->', xScale.max);
+                        console.log('[NAVIGATION]   Y: min', oldYMin, '->', yScale.min, 'max', oldYMax, '->', yScale.max);
+                        
+                        console.log('[NAVIGATION] Calling chart.update() for zoom completion');
+                        chart.update('none');
+                    } else {
+                        console.log('[NAVIGATION] Selection area too small, ignoring zoom');
+                    }
+                }
+            });
+            
+            console.log('[NAVIGATION] Setting up context menu event listener');
+            
+            // Prevent context menu on right click (match local GUI behavior)
+            canvas.addEventListener('contextmenu', function(event) {
+                console.log('[NAVIGATION] Context menu event prevented');
+                event.preventDefault();
+            });
+            
+            console.log('[NAVIGATION] Setting up mouse leave event listener');
+            
+            // Mouse leave events with cleanup
+            canvas.addEventListener('mouseleave', function(event) {
+                console.log('[NAVIGATION] Mouse leave event triggered');
+                if (isPanning || isZooming) {
+                    console.log('[NAVIGATION] Cleaning up navigation state');
+                    isPanning = false;
+                    isZooming = false;
+                    canvas.style.cursor = 'default';
+                }
+            });
+            
+            console.log('[NAVIGATION] Setting up keyboard event listener');
+            
+            // Add keyboard shortcuts for navigation (optional enhancement)
+            document.addEventListener('keydown', function(event) {
+                console.log('[NAVIGATION] Keydown event:', event.key, 'Ctrl:', event.ctrlKey);
+                
+                if (!stockChart) {
+                    console.log('[NAVIGATION] No stock chart available for keyboard shortcuts');
+                    return;
+                }
+                
+                const xScale = chart.scales.x;
+                const yScale = chart.scales.y;
+                
+                if (!xScale || !yScale) {
+                    console.log('[NAVIGATION] Scales not available for keyboard shortcuts');
+                    return;
+                }
+                
+                switch(event.key) {
+                    case 'r':
+                    case 'R':
+                        if (event.ctrlKey) {
+                            console.log('[NAVIGATION] Ctrl+R pressed - resetting chart zoom');
+                            event.preventDefault();
+                            resetChartZoom();
+                        }
+                        break;
+                    case '0':
+                        if (event.ctrlKey) {
+                            console.log('[NAVIGATION] Ctrl+0 pressed - resetting chart zoom');
+                            event.preventDefault();
+                            resetChartZoom();
+                        }
+                        break;
+                }
+            });
+            
+            console.log('[NAVIGATION] Enhanced custom navigation system added successfully');
+            console.log('[NAVIGATION] Event listeners attached to canvas:', canvas);
         }
 
         // Update indicators
@@ -1348,39 +1968,91 @@
 
         // Select decision
         function selectDecision(decision) {
+            console.log('[DEBUG] selectDecision() called with:', decision);
+            
             selectedDecision = decision;
+            console.log('[DEBUG] selectedDecision set to:', selectedDecision);
             
             // Remove active class from all buttons
             document.querySelectorAll('.decision-button').forEach(btn => {
                 btn.classList.remove('active');
+                console.log('[DEBUG] Removed active class from button:', btn.textContent.trim());
             });
             
             // Add active class to selected button
             event.target.classList.add('active');
+            console.log('[DEBUG] Added active class to button:', event.target.textContent.trim());
+            
+            // Show decision interface
+            const decisionInterface = document.getElementById('decision-interface');
+            if (decisionInterface) {
+                decisionInterface.style.display = 'block';
+                console.log('[DEBUG] Decision interface shown');
+            } else {
+                console.error('[ERROR] Decision interface element not found');
+            }
         }
 
         // Submit decision
         function submitDecision() {
+            console.log('[DEBUG] submitDecision() called');
+            console.log('[DEBUG] selectedDecision:', selectedDecision);
+            console.log('[DEBUG] currentStockData available:', currentStockData !== null);
+            
             if (!selectedDecision) {
+                console.error('[ERROR] No decision selected');
                 showAlert('Please select a decision first', 'warning');
                 return;
             }
             
+            if (!currentStockData) {
+                console.error('[ERROR] No stock data loaded');
+                showAlert('Please load stock data first', 'warning');
+                return;
+            }
+            
             const reasoning = document.getElementById('reasoningInput').value;
+            console.log('[DEBUG] Reasoning text:', reasoning);
+            
+            const requestData = {
+                decision: selectedDecision,
+                reasoning: reasoning
+            };
+            
+            console.log('[DEBUG] Request data being sent:', requestData);
+            console.log('[DEBUG] Current stock symbol:', currentStockData[0]?.symbol || 'Unknown');
+            console.log('[DEBUG] Current stock data length:', currentStockData.length);
+            
+            // Show loading state
+            const submitButton = document.querySelector('button[onclick="submitDecision()"]');
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            submitButton.disabled = true;
             
             fetch('/api/submit_decision', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    decision: selectedDecision,
-                    reasoning: reasoning
-                })
+                body: JSON.stringify(requestData)
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('[DEBUG] Response status:', response.status);
+                console.log('[DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return response.json();
+            })
             .then(data => {
+                console.log('[DEBUG] Response data received:', data);
+                
                 if (data.success) {
+                    console.log('[SUCCESS] Training example added successfully');
+                    console.log('[DEBUG] Training examples count:', data.training_examples);
+                    
                     showAlert(data.message, 'success');
                     document.getElementById('training-examples').textContent = data.training_examples;
                     document.getElementById('reasoningInput').value = '';
@@ -1389,11 +2061,29 @@
                         btn.classList.remove('active');
                     });
                 } else {
+                    console.error('[ERROR] Server returned success: false');
+                    console.error('[ERROR] Server error message:', data.error);
                     showAlert('Error submitting decision: ' + data.error, 'danger');
                 }
             })
             .catch(error => {
+                console.error('[ERROR] Fetch error occurred:', error);
+                console.error('[ERROR] Error name:', error.name);
+                console.error('[ERROR] Error message:', error.message);
+                console.error('[ERROR] Error stack:', error.stack);
+                
+                // Additional debugging for network errors
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    console.error('[ERROR] Network error - check if server is running');
+                }
+                
                 showAlert('Error submitting decision: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                // Restore button state
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
+                console.log('[DEBUG] submitDecision() completed');
             });
         }
 
@@ -1585,6 +2275,15 @@
 
         // Utility functions
         function showAlert(message, type) {
+            console.log(`[ALERT] ${type.toUpperCase()}: ${message}`);
+            
+            // Log additional context for errors
+            if (type === 'danger' || type === 'error') {
+                console.error('[ERROR] Alert triggered with message:', message);
+                console.error('[ERROR] Current state at error:');
+                debugCurrentState();
+            }
+            
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.innerHTML = `
@@ -1593,12 +2292,18 @@
             `;
             
             const container = document.querySelector('.main-container');
-            container.insertBefore(alertDiv, container.firstChild);
+            if (container) {
+                container.insertBefore(alertDiv, container.firstChild);
+                console.log('[DEBUG] Alert added to DOM');
+            } else {
+                console.error('[ERROR] Could not find .main-container to add alert');
+            }
             
             // Auto-dismiss after 5 seconds
             setTimeout(() => {
                 if (alertDiv.parentNode) {
                     alertDiv.remove();
+                    console.log('[DEBUG] Alert auto-dismissed');
                 }
             }, 5000);
         }
@@ -1613,14 +2318,38 @@
 
         // Auto-fit functions for chart
         function autoFitX() {
-            if (stockChart) {
-                stockChart.resetZoom();
-                showAlert('X-axis auto-fitted', 'success');
+            if (stockChart && currentStockData && currentStockData.length > 0) {
+                const xScale = stockChart.scales.x;
+                if (xScale) {
+                    // Reset X axis to show all data
+                    const dates = currentStockData.map(d => new Date(d.x));
+                    xScale.min = Math.min(...dates);
+                    xScale.max = Math.max(...dates);
+                    
+                    // Use a safer update method
+                    try {
+                        stockChart.update('none');
+                        showAlert('X-axis auto-fitted', 'success');
+                    } catch (error) {
+                        console.error('[ERROR] Failed to update chart for X auto-fit:', error);
+                        showAlert('Failed to auto-fit X-axis', 'warning');
+                    }
+                } else {
+                    showAlert('Chart scales not available', 'warning');
+                }
+            } else {
+                showAlert('No chart data available', 'warning');
             }
         }
 
         function autoFitY() {
-            if (stockChart && currentStockData) {
+            if (stockChart && currentStockData && currentStockData.length > 0) {
+                const yScale = stockChart.scales.y;
+                if (!yScale) {
+                    showAlert('Chart Y scale not available', 'warning');
+                    return;
+                }
+                
                 let minPrice, maxPrice;
                 
                 // Check if it's candlestick data or line chart data
@@ -1636,70 +2365,28 @@
                     maxPrice = Math.max(...prices);
                 } else {
                     console.warn('[WARN] Unknown data structure for auto-fit Y');
+                    showAlert('Unknown data structure for auto-fit', 'warning');
                     return;
                 }
                 
                 const priceRange = maxPrice - minPrice;
                 const padding = priceRange * 0.05;
                 
-                stockChart.options.scales.y.min = minPrice - padding;
-                stockChart.options.scales.y.max = maxPrice + padding;
-                stockChart.update();
-                showAlert('Y-axis auto-fitted', 'success');
-            }
-        }
-
-        // Update socket status when connection changes
-        socket.on('connect', function() {
-            const indicator = document.getElementById('socket-status-indicator');
-            const text = document.getElementById('socket-status-text');
-            if (indicator && text) {
-                indicator.className = 'status-indicator status-online';
-                text.textContent = 'Connected';
-            }
-        });
-
-        socket.on('disconnect', function() {
-            const indicator = document.getElementById('socket-status-indicator');
-            const text = document.getElementById('socket-status-text');
-            if (indicator && text) {
-                indicator.className = 'status-indicator status-offline';
-                text.textContent = 'Disconnected';
-            }
-        });
-
-        // Register Chart.js Financial plugin if available
-        if (window.Chart && window.CandlestickController) {
-            Chart.register(
-                window.CandlestickController,
-                window.OhlcController,
-                window.CandlestickElement,
-                window.OhlcElement
-            );
-            console.log('[DEBUG] Chart.js Financial plugin registered successfully');
-        } else {
-            console.warn('[WARN] Chart.js Financial plugin not available');
-        }
-
-        // Wait for Chart.js and Financial plugin to load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if Chart.js Financial plugin is loaded
-            if (typeof Chart !== 'undefined' && typeof CandlestickController !== 'undefined') {
-                console.log('[DEBUG] Chart.js and Financial plugin loaded successfully');
-                // Register the plugin
-                Chart.register(
-                    CandlestickController,
-                    OhlcController,
-                    CandlestickElement,
-                    OhlcElement
-                );
-                console.log('[DEBUG] Chart.js Financial plugin registered successfully');
+                yScale.min = minPrice - padding;
+                yScale.max = maxPrice + padding;
+                
+                // Use a safer update method
+                try {
+                    stockChart.update('none');
+                    showAlert('Y-axis auto-fitted', 'success');
+                } catch (error) {
+                    console.error('[ERROR] Failed to update chart for Y auto-fit:', error);
+                    showAlert('Failed to auto-fit Y-axis', 'warning');
+                }
             } else {
-                console.error('[ERROR] Chart.js or Financial plugin not loaded');
-                console.log('[DEBUG] Chart available:', typeof Chart !== 'undefined');
-                console.log('[DEBUG] CandlestickController available:', typeof CandlestickController !== 'undefined');
+                showAlert('No chart data available', 'warning');
             }
-        });
+        }
 
         // Update stock info
         function updateStockInfo(stockInfo) {
@@ -1734,64 +2421,36 @@
             }
         }
 
-        // Debug function to check system status
-        function debugSystem() {
-            console.log('[DEBUG] === System Debug Information ===');
-            console.log('[DEBUG] Chart.js version:', typeof Chart !== 'undefined' ? Chart.version : 'Not loaded');
-            console.log('[DEBUG] CandlestickController available:', typeof CandlestickController !== 'undefined');
-            console.log('[DEBUG] Socket connected:', socket && socket.connected);
-            console.log('[DEBUG] Current stock data:', currentStockData ? currentStockData.length : 'None');
-            console.log('[DEBUG] Chart instance:', stockChart ? 'Exists' : 'None');
-            
-            // Check DOM elements
-            const elements = {
-                'stockSelect': document.getElementById('stockSelect'),
-                'daysSelect': document.getElementById('daysSelect'),
-                'current-stock': document.getElementById('current-stock'),
-                'stockChart': document.getElementById('stockChart'),
-                'indicators-container': document.getElementById('indicators-container')
-            };
-            
-            console.log('[DEBUG] DOM Elements:');
-            for (const [name, element] of Object.entries(elements)) {
-                console.log(`[DEBUG] ${name}:`, element ? 'Found' : 'Missing');
+        // Reset chart zoom
+        function resetChartZoom() {
+            if (stockChart && currentStockData && currentStockData.length > 0) {
+                const xScale = stockChart.scales.x;
+                const yScale = stockChart.scales.y;
+                
+                if (xScale && yScale) {
+                    try {
+                        // Reset to show all data
+                        const dates = currentStockData.map(d => new Date(d.x));
+                        const prices = currentStockData.flatMap(d => [d.o, d.h, d.l, d.c]);
+                        
+                        xScale.min = Math.min(...dates);
+                        xScale.max = Math.max(...dates);
+                        yScale.min = Math.min(...prices) * 0.99; // Add 1% padding
+                        yScale.max = Math.max(...prices) * 1.01; // Add 1% padding
+                        
+                        stockChart.update('none');
+                        showAlert('Chart zoom reset to full view', 'info');
+                    } catch (error) {
+                        console.error('[ERROR] Failed to reset chart zoom:', error);
+                        showAlert('Failed to reset chart zoom', 'warning');
+                    }
+                } else {
+                    showAlert('Chart scales not available', 'warning');
+                }
+            } else {
+                showAlert('No chart data available', 'warning');
             }
-            
-            // Test API endpoints
-            fetch('/api/get_model_status')
-            .then(response => response.json())
-            .then(data => {
-                console.log('[DEBUG] Model status:', data);
-            })
-            .catch(error => {
-                console.error('[DEBUG] Model status error:', error);
-            });
-            
-            fetch('/api/get_stock_options')
-            .then(response => response.json())
-            .then(data => {
-                console.log('[DEBUG] Stock options count:', data.success ? data.options.length : 'Failed');
-            })
-            .catch(error => {
-                console.error('[DEBUG] Stock options error:', error);
-            });
         }
-
-        // Add debug button to the UI
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add debug button to the status bar
-            const statusBar = document.querySelector('.card-body .row');
-            if (statusBar) {
-                const debugCol = document.createElement('div');
-                debugCol.className = 'col-md-12 mt-2';
-                debugCol.innerHTML = `
-                    <button class="btn btn-sm btn-outline-secondary" onclick="debugSystem()">
-                        <i class="fas fa-bug"></i> Debug System
-                    </button>
-                `;
-                statusBar.appendChild(debugCol);
-            }
-        });
     </script>
 </body>
 </html> 
