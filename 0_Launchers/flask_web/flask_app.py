@@ -51,12 +51,47 @@ sys.path.append(str(REPO_ROOT / "_2_Orchestrator_And_ML_Python"))
 print(f"[INFO] Looking for orchestrator at: {ORCHESTRATOR_PATH}")
 print(f"[INFO] Also checking: {REPO_ROOT / '_2_Orchestrator_And_ML_Python'}")
 
+# Import ModelTrainer with better error handling for EC2
+MODEL_TRAINER_AVAILABLE = False
+model_trainer = None
+
 try:
-    from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
-    MODEL_TRAINER_AVAILABLE = True
-    print("[INFO] ModelTrainer imported successfully")
-except ImportError as e:
-    logging.warning(f"ModelTrainer not available: {e}")
+    # Try multiple import paths for EC2 deployment
+    import_paths = [
+        '_2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer',
+        'interactive_training_app.backend.model_trainer',
+        'backend.model_trainer',
+        'model_trainer'
+    ]
+    
+    ModelTrainer = None
+    import_error = None
+    
+    for import_path in import_paths:
+        try:
+            print(f"[INFO] Trying to import ModelTrainer from: {import_path}")
+            module = __import__(import_path, fromlist=['ModelTrainer'])
+            ModelTrainer = getattr(module, 'ModelTrainer')
+            print(f"[INFO] Successfully imported ModelTrainer from: {import_path}")
+            break
+        except ImportError as e:
+            import_error = e
+            print(f"[WARNING] Failed to import from {import_path}: {e}")
+            continue
+        except AttributeError as e:
+            import_error = e
+            print(f"[WARNING] ModelTrainer not found in {import_path}: {e}")
+            continue
+    
+    if ModelTrainer is not None:
+        MODEL_TRAINER_AVAILABLE = True
+        print("[INFO] ModelTrainer imported successfully")
+    else:
+        print(f"[ERROR] ModelTrainer import failed. Last error: {import_error}")
+        MODEL_TRAINER_AVAILABLE = False
+        
+except Exception as e:
+    print(f"[ERROR] Unexpected error during ModelTrainer import: {e}")
     MODEL_TRAINER_AVAILABLE = False
 
 # Import rate limiting module
@@ -105,7 +140,6 @@ socketio = SocketIO(
 )
 
 # Global variables
-model_trainer = None
 current_stock_data = None
 current_stock_info = None
 current_symbol = None
@@ -136,22 +170,52 @@ except ImportError as e:
     ]
 
 def initialize_model_trainer():
-    """Initialize the ModelTrainer instance"""
-    global model_trainer
-    if MODEL_TRAINER_AVAILABLE:
+    """Initialize the ModelTrainer instance with better error handling"""
+    global model_trainer, MODEL_TRAINER_AVAILABLE
+    
+    if not MODEL_TRAINER_AVAILABLE:
+        logger.error("Cannot initialize ModelTrainer - class not available")
+        return False
+    
+    try:
+        logger.info("Attempting to initialize ModelTrainer...")
+        model_trainer = ModelTrainer()
+        logger.info("ModelTrainer initialized successfully")
+        
+        # Test basic functionality
         try:
-            model_trainer = ModelTrainer()
-            logger.info("ModelTrainer initialized successfully")
-            return True
+            model_state = model_trainer.get_model_state()
+            logger.info(f"Model state retrieved: {model_state}")
         except Exception as e:
-            logger.error(f"Failed to initialize ModelTrainer: {e}")
-            return False
-    return False
+            logger.warning(f"Could not retrieve model state: {e}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize ModelTrainer: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception details: {str(e)}")
+        
+        # Try to get more specific error information
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        
+        return False
 
 def get_stock_data(symbol, days=30):
     """Fetch stock data from Yahoo Finance with rate limiting and fallbacks"""
     import time
     t0 = time.time()
+    
+    # Import date range utilities
+    try:
+        from _2_Orchestrator_And_ML_Python.date_range_utils import find_available_data_range
+        use_random_dates = True
+        logger.info(f"Using random date range feature for {symbol}")
+    except ImportError as e:
+        logger.warning(f"Date range utilities not available: {e}")
+        use_random_dates = False
+    
     # === TEMPORARILY DISABLE RATE LIMITER ===
     # if RATE_LIMITER_AVAILABLE and stock_data_fetcher:
     #     # Use enhanced rate-limited data fetcher
@@ -161,31 +225,50 @@ def get_stock_data(symbol, days=30):
     #             return stock_info, data
     #     except Exception as e:
     #         logger.error(f"Rate-limited stock data fetch failed for {symbol}: {e}")
+    
     # Fallback to original method if rate limiter is not available
     try:
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=days)
+        if use_random_dates:
+            # Use random date range feature
+            start_date, end_date = find_available_data_range(symbol, days)
+            logger.info(f"Using random date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        else:
+            # Use standard date range (current date minus days)
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            logger.info(f"Using standard date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        
         stock = yf.Ticker(symbol)
         data = stock.history(start=start_date, end=end_date)
+        
         if data.empty:
             logger.info(f"[TIMING] get_stock_data({symbol}, {days}) yfinance fetch returned empty data in {time.time()-t0:.2f} seconds")
             return None, None
+        
         # Calculate basic metrics
         current_price = data['Close'].iloc[-1]
         volume = data['Volume'].iloc[-1]
+        
         # Get market cap (approximate)
         try:
             info = stock.info
             market_cap = info.get('marketCap', 0)
         except:
             market_cap = 0
+        
         stock_info = {
             'current_price': float(current_price),
             'volume': int(volume),
             'market_cap': int(market_cap) if market_cap else 0,
-            'symbol': symbol
+            'symbol': symbol,
+            'start_date': start_date.strftime('%Y-%m-%d'),
+            'end_date': end_date.strftime('%Y-%m-%d'),
+            'data_points': len(data)
         }
+        
         logger.info(f"[TIMING] get_stock_data({symbol}, {days}) yfinance fetch took {time.time()-t0:.2f} seconds")
+        logger.info(f"Retrieved {len(data)} data points for {symbol}")
+        
         return stock_info, data
     except Exception as e:
         logger.error(f"Error fetching stock data for {symbol}: {e}")
@@ -466,14 +549,14 @@ def load_stock():
             # Prepare chart data for candlestick chartjs-chart-financial
             chart_data = [
                 {
-                    "x": date,
-                    "o": open_,
-                    "h": high,
-                    "l": low,
-                    "c": close
+                    "x": date.isoformat(),  # Use ISO format for proper date parsing
+                    "o": float(open_),
+                    "h": float(high),
+                    "l": float(low),
+                    "c": float(close)
                 }
                 for date, open_, high, low, close in zip(
-                    stock_data.index.strftime('%Y-%m-%d'),
+                    stock_data.index,  # Use datetime objects directly
                     stock_data['Open'],
                     stock_data['High'],
                     stock_data['Low'],
@@ -655,31 +738,68 @@ def make_prediction():
 
 @app.route('/api/get_model_status')
 def get_model_status():
-    """Get current model status"""
-    global model_trainer
+    """Get current model status with detailed diagnostics"""
+    global model_trainer, MODEL_TRAINER_AVAILABLE
     
+    # Check if ModelTrainer class is available
+    if not MODEL_TRAINER_AVAILABLE:
+        return jsonify({
+            'available': False,
+            'status': 'not_available',
+            'message': 'ModelTrainer class not available - import failed',
+            'diagnostics': {
+                'model_trainer_available': MODEL_TRAINER_AVAILABLE,
+                'model_trainer_instance': model_trainer is not None,
+                'import_paths_tried': [
+                    '_2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer',
+                    'interactive_training_app.backend.model_trainer',
+                    'backend.model_trainer',
+                    'model_trainer'
+                ]
+            }
+        })
+    
+    # Check if model trainer instance exists
     if not model_trainer:
         return jsonify({
             'available': False,
-            'message': 'Model trainer not available'
+            'status': 'not_initialized',
+            'message': 'ModelTrainer class available but instance not initialized',
+            'diagnostics': {
+                'model_trainer_available': MODEL_TRAINER_AVAILABLE,
+                'model_trainer_instance': model_trainer is not None
+            }
         })
     
     try:
+        # Try to get model state
         model_state = model_trainer.get_model_state()
         training_stats = model_trainer.get_training_stats()
         
         return jsonify({
             'available': True,
+            'status': 'available',
             'model_state': model_state,
             'training_stats': training_stats,
-            'training_examples': len(model_trainer.training_examples)
+            'training_examples': len(model_trainer.training_examples),
+            'diagnostics': {
+                'model_trainer_available': MODEL_TRAINER_AVAILABLE,
+                'model_trainer_instance': model_trainer is not None,
+                'model_trained': model_state.get('is_trained', False)
+            }
         })
         
     except Exception as e:
         logger.error(f"Error getting model status: {e}")
         return jsonify({
             'available': False,
-            'error': str(e)
+            'status': 'error',
+            'message': f'Error accessing model trainer: {str(e)}',
+            'diagnostics': {
+                'model_trainer_available': MODEL_TRAINER_AVAILABLE,
+                'model_trainer_instance': model_trainer is not None,
+                'error': str(e)
+            }
         })
 
 @socketio.on('connect')
@@ -791,14 +911,14 @@ def handle_stock_data_request(data):
             # Prepare chart data for candlestick chartjs-chart-financial
             chart_data = [
                 {
-                    "x": date,
-                    "o": open_,
-                    "h": high,
-                    "l": low,
-                    "c": close
+                    "x": date.isoformat(),  # Use ISO format for proper date parsing
+                    "o": float(open_),
+                    "h": float(high),
+                    "l": float(low),
+                    "c": float(close)
                 }
                 for date, open_, high, low, close in zip(
-                    stock_data.index.strftime('%Y-%m-%d'),
+                    stock_data.index,  # Use datetime objects directly
                     stock_data['Open'],
                     stock_data['High'],
                     stock_data['Low'],

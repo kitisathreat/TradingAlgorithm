@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neural Network Trading System</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -353,6 +353,10 @@
                                 <div class="chart-container">
                                     <canvas id="stockChart"></canvas>
                                 </div>
+                                <!-- Stock Info Container -->
+                                <div id="stock-info" class="mt-3" style="display: none;">
+                                    <!-- Stock information will be displayed here -->
+                                </div>
                                 <!-- Candlestick Legend -->
                                 <div class="mt-3">
                                     <div class="row">
@@ -646,18 +650,26 @@
         
         // Handle stock data update from WebSocket
         function handleStockDataUpdate(data) {
+            console.log('[DEBUG] handleStockDataUpdate called with:', data);
+            if (!data || !data.chart_data) {
+                console.error('[ERROR] No chart_data in received data:', data);
+            } else {
+                console.log('[DEBUG] chart_data received:', data.chart_data);
+                if (!Array.isArray(data.chart_data) || data.chart_data.length === 0) {
+                    console.warn('[WARN] chart_data is empty or not an array:', data.chart_data);
+                } else {
+                    // Check first element structure
+                    console.log('[DEBUG] First chart_data element:', data.chart_data[0]);
+                }
+            }
             currentStockData = data.chart_data;
             currentStockInfo = data.stock_info;
-            
             // Update chart
             updateChart(data.chart_data);
-            
             // Update indicators
             updateIndicators(data.indicators);
-            
             // Show decision interface
             document.getElementById('decision-interface').style.display = 'block';
-            
             showAlert(`Real-time data updated for ${data.symbol}`, 'success');
         }
         
@@ -741,76 +753,379 @@
 
         // Load stock data
         function loadStockData() {
-            const stockSelect = document.getElementById('stockSelect');
-            let symbol = stockSelect.value;
-            
-            if (symbol === 'custom') {
-                const customSymbol = document.getElementById('customTickerInput').value.toUpperCase();
-                if (customSymbol) {
-                    symbol = customSymbol;
-                } else {
-                    alert('Please enter a custom ticker symbol.');
-                    return;
-                }
-            }
-            
+            const symbol = document.getElementById('stockSelect').value;
             if (!symbol) {
-                alert('Please select a stock.');
+                showAlert('Please select a stock symbol', 'warning');
                 return;
             }
-
-            console.log(`Requesting data for symbol: ${symbol}`);
-            $('#loading-indicator').show(); // Use the correct ID here
-            socket.emit('request_stock_data', {symbol: symbol});
+            
+            // Get the days parameter
+            const daysSelect = document.getElementById('daysSelect');
+            let days = parseInt(daysSelect.value);
+            
+            // Handle custom days
+            if (daysSelect.value === 'custom') {
+                const customDaysInput = document.getElementById('customDaysInput');
+                days = parseInt(customDaysInput.value) || 30;
+            }
+            
+            console.log('[DEBUG] Loading stock data for symbol:', symbol, 'days:', days);
+            
+            fetch('/api/load_stock', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    symbol: symbol,
+                    days: days
+                })
+            })
+            .then(response => {
+                console.log('[DEBUG] Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('[DEBUG] Received data:', data);
+                
+                if (data.success) {
+                    console.log('[DEBUG] Data loaded successfully');
+                    console.log('[DEBUG] Stock info:', data.stock_info);
+                    console.log('[DEBUG] Chart data length:', data.chart_data ? data.chart_data.length : 'undefined');
+                    
+                    if (!data || !data.chart_data) {
+                        console.error('[ERROR] No chart_data in received data:', data);
+                        return;
+                    }
+                    
+                    console.log('[DEBUG] chart_data received:', data.chart_data);
+                    if (!Array.isArray(data.chart_data) || data.chart_data.length === 0) {
+                        console.warn('[WARN] chart_data is empty or not an array:', data.chart_data);
+                        return;
+                    }
+                    
+                    console.log('[DEBUG] First chart_data element:', data.chart_data[0]);
+                    
+                    // Store current stock data
+                    currentStockData = data.chart_data;
+                    
+                    // Update current stock display
+                    const currentStockElement = document.getElementById('current-stock');
+                    if (currentStockElement && data.stock_info && data.stock_info.symbol) {
+                        currentStockElement.textContent = data.stock_info.symbol;
+                    }
+                    
+                    // Update chart
+                    updateChart(data.chart_data);
+                    
+                    // Update indicators
+                    if (data.indicators) {
+                        updateIndicators(data.indicators);
+                    }
+                    
+                    // Update stock info
+                    updateStockInfo(data.stock_info);
+                    
+                    showAlert(`Stock data loaded for ${symbol}`, 'success');
+                } else {
+                    console.error('[ERROR] Failed to load stock data:', data.error);
+                    showAlert('Error loading stock data: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('[ERROR] Network error loading stock data:', error);
+                showAlert('Network error loading stock data: ' + error.message, 'danger');
+            });
         }
 
         // Update chart
         function updateChart(chartData) {
-            const ctx = document.getElementById('stockChart').getContext('2d');
-            if (stockChart) {
-                stockChart.destroy();
+            console.log('[DEBUG] updateChart called with:', chartData);
+            
+            // Check chart container and canvas
+            const chartContainer = document.querySelector('.chart-container');
+            if (!chartContainer) {
+                console.error('[ERROR] .chart-container not found in DOM!');
+                return;
             }
-            stockChart = new Chart(ctx, {
-                type: 'candlestick',
-                data: {
-                    datasets: [{
-                        label: 'Candlestick',
-                        data: chartData, // array of {x, o, h, l, c}
-                        color: {
-                            up: '#26a69a',
-                            down: '#ef5350',
-                            unchanged: '#999'
+            console.log('[DEBUG] .chart-container found.');
+            
+            const canvas = document.getElementById('stockChart');
+            if (!canvas) {
+                console.error('[ERROR] #stockChart canvas not found!');
+                return;
+            }
+            console.log('[DEBUG] #stockChart canvas found.');
+            
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('[ERROR] Could not get 2D context from #stockChart!');
+                return;
+            }
+            
+            // Validate chart data
+            if (!Array.isArray(chartData) || chartData.length === 0) {
+                console.warn('[WARN] chartData is empty or not an array:', chartData);
+                return;
+            }
+            
+            // Check first data point structure
+            const first = chartData[0];
+            const requiredFields = ['x', 'o', 'h', 'l', 'c'];
+            const missingFields = requiredFields.filter(field => !(field in first));
+            if (missingFields.length > 0) {
+                console.error('[ERROR] chartData[0] missing fields:', missingFields, first);
+                return;
+            }
+            console.log('[DEBUG] chartData[0] fields OK:', first);
+            
+            // Check if Chart.js Financial plugin is available
+            const financialPluginAvailable = typeof CandlestickController !== 'undefined' && 
+                                           typeof Chart !== 'undefined' && 
+                                           Chart.registry && 
+                                           Chart.registry.controllers && 
+                                           'candlestick' in Chart.registry.controllers;
+            
+            console.log('[DEBUG] Financial plugin available:', financialPluginAvailable);
+            console.log('[DEBUG] Chart.registry.controllers:', Object.keys(Chart.registry.controllers || {}));
+            
+            if (!financialPluginAvailable) {
+                console.error('[ERROR] Chart.js Financial plugin not loaded!');
+                console.log('[INFO] Falling back to line chart...');
+                
+                // Fallback to line chart
+                if (stockChart) {
+                    stockChart.destroy();
+                }
+                
+                const processedData = chartData.map(item => ({
+                    x: new Date(item.x),
+                    y: item.c // Use close price for line chart
+                }));
+                
+                stockChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Stock Price',
+                            data: processedData,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Price: $${context.parsed.y.toFixed(2)}`;
+                                    }
+                                }
+                            }
                         },
-                        borderColor: '#333',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            enabled: true,
-                            callbacks: {
-                                label: function(context) {
-                                    const d = context.raw;
-                                    return [
-                                        `Open:  $${d.o.toFixed(2)}`,
-                                        `High:  $${d.h.toFixed(2)}`,
-                                        `Low:   $${d.l.toFixed(2)}`,
-                                        `Close: $${d.c.toFixed(2)}`
-                                    ];
+                        scales: {
+                            x: { 
+                                type: 'time',
+                                time: { 
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM dd'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: { 
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price ($)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(2);
+                                    }
                                 }
                             }
                         }
-                    },
-                    scales: {
-                        x: { type: 'time', time: { unit: 'day' } },
-                        y: { beginAtZero: false }
                     }
+                });
+                console.log('[DEBUG] Fallback line chart created successfully.');
+                return;
+            }
+            
+            try {
+                if (stockChart) {
+                    stockChart.destroy();
                 }
-            });
+                
+                // Parse dates properly
+                const processedData = chartData.map(item => ({
+                    ...item,
+                    x: new Date(item.x) // Convert ISO string to Date object
+                }));
+                
+                console.log('[DEBUG] Processed chart data:', processedData.slice(0, 3));
+                
+                stockChart = new Chart(ctx, {
+                    type: 'candlestick',
+                    data: {
+                        datasets: [{
+                            label: 'Candlestick',
+                            data: processedData, // array of {x, o, h, l, c}
+                            color: {
+                                up: '#26a69a',
+                                down: '#ef5350',
+                                unchanged: '#999'
+                            },
+                            borderColor: '#333',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        const d = context.raw;
+                                        return [
+                                            `Open:  $${d.o?.toFixed ? d.o.toFixed(2) : d.o}`,
+                                            `High:  $${d.h?.toFixed ? d.h.toFixed(2) : d.h}`,
+                                            `Low:   $${d.l?.toFixed ? d.l.toFixed(2) : d.l}`,
+                                            `Close: $${d.c?.toFixed ? d.c.toFixed(2) : d.c}`
+                                        ];
+                                    }
+                                }
+                            },
+                            zoom: {
+                                zoom: {
+                                    wheel: {
+                                        enabled: true,
+                                    },
+                                    pinch: {
+                                        enabled: true
+                                    },
+                                    mode: 'xy',
+                                },
+                                pan: {
+                                    enabled: true,
+                                    mode: 'xy',
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { 
+                                type: 'time',
+                                time: { 
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM dd'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: { 
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price ($)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('[DEBUG] Candlestick chart created successfully.');
+            } catch (err) {
+                console.error('[ERROR] Exception while creating candlestick chart:', err);
+                console.error('[ERROR] Chart.js version:', Chart.version);
+                console.error('[ERROR] Available chart types:', Object.keys(Chart.registry.controllers));
+                
+                // Fallback to line chart on error
+                console.log('[INFO] Falling back to line chart due to error...');
+                if (stockChart) {
+                    stockChart.destroy();
+                }
+                
+                const processedData = chartData.map(item => ({
+                    x: new Date(item.x),
+                    y: item.c
+                }));
+                
+                stockChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Stock Price',
+                            data: processedData,
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Price: $${context.parsed.y.toFixed(2)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { 
+                                type: 'time',
+                                time: { 
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM dd'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: { 
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price ($)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(2);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                console.log('[DEBUG] Fallback line chart created successfully after error.');
+            }
         }
 
         // Update indicators
@@ -1186,25 +1501,51 @@
             fetch('/api/get_model_status')
             .then(response => response.json())
             .then(data => {
+                console.log('[DEBUG] Model status response:', data);
+                
                 const statusIndicator = document.getElementById('model-status');
                 const statusText = document.getElementById('model-status-text');
                 
                 if (data.available) {
-                    if (data.model_state.is_trained) {
+                    if (data.model_state && data.model_state.is_trained) {
                         statusIndicator.className = 'status-indicator status-online';
                         statusText.textContent = 'Trained';
                     } else {
                         statusIndicator.className = 'status-indicator status-warning';
                         statusText.textContent = 'Not Trained';
                     }
-                    document.getElementById('training-examples').textContent = data.training_examples;
+                    document.getElementById('training-examples').textContent = data.training_examples || 0;
                 } else {
                     statusIndicator.className = 'status-indicator status-offline';
-                    statusText.textContent = 'Not Available';
+                    
+                    // Display more specific status information
+                    if (data.status === 'not_available') {
+                        statusText.textContent = 'Not Available (Import Failed)';
+                        console.error('[ERROR] ModelTrainer import failed. Diagnostics:', data.diagnostics);
+                    } else if (data.status === 'not_initialized') {
+                        statusText.textContent = 'Not Initialized';
+                        console.warn('[WARN] ModelTrainer not initialized. Diagnostics:', data.diagnostics);
+                    } else if (data.status === 'error') {
+                        statusText.textContent = 'Error';
+                        console.error('[ERROR] ModelTrainer error. Diagnostics:', data.diagnostics);
+                    } else {
+                        statusText.textContent = 'Not Available';
+                    }
+                    
+                    document.getElementById('training-examples').textContent = '0';
+                }
+                
+                // Log diagnostics for debugging
+                if (data.diagnostics) {
+                    console.log('[DEBUG] Model diagnostics:', data.diagnostics);
                 }
             })
             .catch(error => {
                 console.error('Error updating model status:', error);
+                const statusIndicator = document.getElementById('model-status');
+                const statusText = document.getElementById('model-status-text');
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Error';
             });
         }
 
@@ -1224,8 +1565,7 @@
                                 <span class="status-indicator status-online"></span> Running
                             </li>
                             <li><strong>Socket Connection:</strong> 
-                                <span id="socket-status-indicator" class="status-indicator status-warning"></span>
-                                <span id="socket-status-text">Connecting...</span>
+                                <span class="status-indicator status-online"></span> Connected
                             </li>
                         </ul>
                     </div>
@@ -1281,8 +1621,24 @@
 
         function autoFitY() {
             if (stockChart && currentStockData) {
-                const minPrice = Math.min(...currentStockData.lows);
-                const maxPrice = Math.max(...currentStockData.highs);
+                let minPrice, maxPrice;
+                
+                // Check if it's candlestick data or line chart data
+                if (currentStockData[0] && currentStockData[0].l !== undefined) {
+                    // Candlestick data - calculate min and max from low and high prices
+                    const prices = currentStockData.flatMap(d => [d.l, d.h]);
+                    minPrice = Math.min(...prices);
+                    maxPrice = Math.max(...prices);
+                } else if (currentStockData[0] && currentStockData[0].y !== undefined) {
+                    // Line chart data - calculate min and max from y values
+                    const prices = currentStockData.map(d => d.y);
+                    minPrice = Math.min(...prices);
+                    maxPrice = Math.max(...prices);
+                } else {
+                    console.warn('[WARN] Unknown data structure for auto-fit Y');
+                    return;
+                }
+                
                 const priceRange = maxPrice - minPrice;
                 const padding = priceRange * 0.05;
                 
@@ -1309,6 +1665,131 @@
             if (indicator && text) {
                 indicator.className = 'status-indicator status-offline';
                 text.textContent = 'Disconnected';
+            }
+        });
+
+        // Register Chart.js Financial plugin if available
+        if (window.Chart && window.CandlestickController) {
+            Chart.register(
+                window.CandlestickController,
+                window.OhlcController,
+                window.CandlestickElement,
+                window.OhlcElement
+            );
+            console.log('[DEBUG] Chart.js Financial plugin registered successfully');
+        } else {
+            console.warn('[WARN] Chart.js Financial plugin not available');
+        }
+
+        // Wait for Chart.js and Financial plugin to load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if Chart.js Financial plugin is loaded
+            if (typeof Chart !== 'undefined' && typeof CandlestickController !== 'undefined') {
+                console.log('[DEBUG] Chart.js and Financial plugin loaded successfully');
+                // Register the plugin
+                Chart.register(
+                    CandlestickController,
+                    OhlcController,
+                    CandlestickElement,
+                    OhlcElement
+                );
+                console.log('[DEBUG] Chart.js Financial plugin registered successfully');
+            } else {
+                console.error('[ERROR] Chart.js or Financial plugin not loaded');
+                console.log('[DEBUG] Chart available:', typeof Chart !== 'undefined');
+                console.log('[DEBUG] CandlestickController available:', typeof CandlestickController !== 'undefined');
+            }
+        });
+
+        // Update stock info
+        function updateStockInfo(stockInfo) {
+            const container = document.getElementById('stock-info');
+            if (container && stockInfo) {
+                container.style.display = 'block';
+                container.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-2"><i class="fas fa-info-circle"></i> Stock Information</h6>
+                            <div class="metrics-card">
+                                <div class="metric-value">$${stockInfo.current_price?.toFixed(2) || 'N/A'}</div>
+                                <div class="metric-label">Current Price</div>
+                            </div>
+                            <div class="metrics-card">
+                                <div class="metric-value">${stockInfo.volume?.toLocaleString() || 'N/A'}</div>
+                                <div class="metric-label">Volume</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="metrics-card">
+                                <div class="metric-value">$${(stockInfo.market_cap / 1000000000).toFixed(2)}B</div>
+                                <div class="metric-label">Market Cap</div>
+                            </div>
+                            <div class="metrics-card">
+                                <div class="metric-value">${stockInfo.symbol}</div>
+                                <div class="metric-label">Symbol</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Debug function to check system status
+        function debugSystem() {
+            console.log('[DEBUG] === System Debug Information ===');
+            console.log('[DEBUG] Chart.js version:', typeof Chart !== 'undefined' ? Chart.version : 'Not loaded');
+            console.log('[DEBUG] CandlestickController available:', typeof CandlestickController !== 'undefined');
+            console.log('[DEBUG] Socket connected:', socket && socket.connected);
+            console.log('[DEBUG] Current stock data:', currentStockData ? currentStockData.length : 'None');
+            console.log('[DEBUG] Chart instance:', stockChart ? 'Exists' : 'None');
+            
+            // Check DOM elements
+            const elements = {
+                'stockSelect': document.getElementById('stockSelect'),
+                'daysSelect': document.getElementById('daysSelect'),
+                'current-stock': document.getElementById('current-stock'),
+                'stockChart': document.getElementById('stockChart'),
+                'indicators-container': document.getElementById('indicators-container')
+            };
+            
+            console.log('[DEBUG] DOM Elements:');
+            for (const [name, element] of Object.entries(elements)) {
+                console.log(`[DEBUG] ${name}:`, element ? 'Found' : 'Missing');
+            }
+            
+            // Test API endpoints
+            fetch('/api/get_model_status')
+            .then(response => response.json())
+            .then(data => {
+                console.log('[DEBUG] Model status:', data);
+            })
+            .catch(error => {
+                console.error('[DEBUG] Model status error:', error);
+            });
+            
+            fetch('/api/get_stock_options')
+            .then(response => response.json())
+            .then(data => {
+                console.log('[DEBUG] Stock options count:', data.success ? data.options.length : 'Failed');
+            })
+            .catch(error => {
+                console.error('[DEBUG] Stock options error:', error);
+            });
+        }
+
+        // Add debug button to the UI
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add debug button to the status bar
+            const statusBar = document.querySelector('.card-body .row');
+            if (statusBar) {
+                const debugCol = document.createElement('div');
+                debugCol.className = 'col-md-12 mt-2';
+                debugCol.innerHTML = `
+                    <button class="btn btn-sm btn-outline-secondary" onclick="debugSystem()">
+                        <i class="fas fa-bug"></i> Debug System
+                    </button>
+                `;
+                statusBar.appendChild(debugCol);
             }
         });
     </script>
