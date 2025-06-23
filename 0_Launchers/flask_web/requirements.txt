@@ -43,6 +43,12 @@ lxml>=4.9.1
 tqdm==4.65.0
 
 # =============================================================================
+# RATE LIMITING AND CACHING (NEW)
+# =============================================================================
+# Note: concurrent.futures is part of Python standard library (Python 3.2+)
+# No additional package needed for Future class
+
+# =============================================================================
 # SENTIMENT ANALYSIS
 # =============================================================================
 vaderSentiment==3.3.2

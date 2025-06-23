@@ -9,6 +9,12 @@ import sys
 import logging
 from pathlib import Path
 
+# Add the parent directory to Python path for EC2 deployment
+# This ensures the _2_Orchestrator_And_ML_Python modules can be imported
+current_file_path = Path(__file__)
+parent_dir = current_file_path.parent.parent
+sys.path.insert(0, str(parent_dir))
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
