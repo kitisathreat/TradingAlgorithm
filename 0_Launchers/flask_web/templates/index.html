@@ -9,7 +9,8 @@
     
     <!-- Chart.js v3.x and plugins for financial charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
     <!-- Commented out Chart.js Financial plugin
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
     -->
@@ -259,6 +260,129 @@
             border-radius: 2px;
             margin-right: 0.5rem;
         }
+        
+        /* Metrics Overlay Widget - similar to local GUI MetricsWidget */
+        .metrics-overlay {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            min-width: 250px;
+            max-width: 400px;
+            min-height: 40px;
+            max-height: 600px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .metrics-overlay-header {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .metrics-overlay-title {
+            flex-grow: 1;
+        }
+        
+        .metrics-overlay-controls {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .metrics-overlay-controls button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+        
+        .metrics-overlay-controls button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .metrics-overlay-content {
+            padding: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            background-color: white;
+        }
+        
+        .metric-group {
+            margin-bottom: 16px;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 12px;
+        }
+        
+        .metric-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .metric-group-title {
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 4px;
+        }
+        
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+        
+        .metric-label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            color: #212529;
+            font-weight: 600;
+            text-align: right;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .metrics-overlay {
+                max-width: 300px;
+                font-size: 11px;
+            }
+            
+            .metrics-overlay-header {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+            
+            .metrics-overlay-content {
+                padding: 8px;
+            }
+            
+            .metric-item {
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -335,156 +459,221 @@
             <!-- Data & Analysis Tab -->
             <div class="tab-pane fade show active" id="data" role="tabpanel">
                 <div class="row">
-                    <!-- Stock Selection -->
-                    <div class="col-md-4">
+                    <!-- Stock Selection and Controls -->
+                    <div class="col-12 mb-3">
                         <div class="card">
                             <div class="card-header">
-                                <i class="fas fa-search"></i> Stock Selection
+                                <i class="fas fa-search"></i> Stock Selection & Analysis
                             </div>
                             <div class="card-body">
-                                <div class="mb-3">
-                                    <label for="stockSelect" class="form-label">Stock Symbol:</label>
-                                    <select class="form-select" id="stockSelect" onchange="handleStockSelection()">
-                                        <option value="">Select a stock...</option>
-                                        <option value="random">🎲 Random Pick</option>
-                                        <option value="optimized">🚀 Optimized Pick</option>
-                                        <option value="custom">✏️ Custom Ticker</option>
-                                        <optgroup label="────────────"></optgroup>
-                                    </select>
+                                <div class="row">
+                                    <!-- Stock Selection -->
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="stock-selector"><i class="fas fa-chart-line"></i> Select Stock:</label>
+                                            <select id="stock-selector" class="form-control" onchange="handleStockSelection()">
+                                                <option value="">Choose a stock...</option>
+                                                <option value="random">🎲 Pick Random Stock</option>
+                                                <option value="optimal">⭐ Pick Optimal Stock</option>
+                                                <option value="custom">✏️ Enter Custom Ticker</option>
+                                                <optgroup label="Popular Stocks">
+                                                    <option value="AAPL">AAPL - Apple Inc.</option>
+                                                    <option value="MSFT">MSFT - Microsoft Corporation</option>
+                                                    <option value="GOOGL">GOOGL - Alphabet Inc.</option>
+                                                    <option value="AMZN">AMZN - Amazon.com Inc.</option>
+                                                    <option value="TSLA">TSLA - Tesla Inc.</option>
+                                                    <option value="NVDA">NVDA - NVIDIA Corporation</option>
+                                                    <option value="META">META - Meta Platforms Inc.</option>
+                                                    <option value="JPM">JPM - JPMorgan Chase & Co.</option>
+                                                    <option value="JNJ">JNJ - Johnson & Johnson</option>
+                                                    <option value="V">V - Visa Inc.</option>
+                                                </optgroup>
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Custom Ticker Input (hidden by default) -->
+                                        <div id="custom-ticker-input" class="form-group mt-2" style="display: none;">
+                                            <label for="custom-ticker"><i class="fas fa-edit"></i> Custom Ticker:</label>
+                                            <div class="input-group">
+                                                <input type="text" id="custom-ticker" class="form-control" placeholder="Enter ticker symbol (e.g., AAPL)" maxlength="10">
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-primary" type="button" onclick="loadCustomStock()">
+                                                        <i class="fas fa-search"></i> Load
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Date Range Selection -->
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="date-range-selector"><i class="fas fa-calendar"></i> Date Range:</label>
+                                            <select id="date-range-selector" class="form-control" onchange="handleDateRangeSelection()">
+                                                <option value="30">📅 Last 30 Days</option>
+                                                <option value="90">📅 Last 90 Days</option>
+                                                <option value="180">📅 Last 180 Days</option>
+                                                <option value="365">📅 Last 365 Days</option>
+                                                <option value="custom">📅 Custom Range</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Custom Date Range Input (hidden by default) -->
+                                        <div id="custom-date-input" class="form-group mt-2" style="display: none;">
+                                            <label for="custom-days"><i class="fas fa-calendar-alt"></i> Custom Days:</label>
+                                            <div class="input-group">
+                                                <input type="number" id="custom-days" class="form-control" placeholder="Enter number of days" min="1" max="3650" value="30">
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-primary" type="button" onclick="loadCustomDateRange()">
+                                                        <i class="fas fa-check"></i> Apply
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="mb-3" id="customTickerDiv" style="display: none;">
-                                    <label for="customTickerInput" class="form-label">Custom Ticker:</label>
-                                    <input type="text" class="form-control" id="customTickerInput" 
-                                           placeholder="Enter ticker symbol (e.g., AAPL)" style="text-transform: uppercase;">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="daysSelect" class="form-label">Days:</label>
-                                    <select class="form-select" id="daysSelect" onchange="handleDaysSelection()">
-                                        <option value="30">30</option>
-                                        <option value="90">90</option>
-                                        <option value="180">180</option>
-                                        <option value="365">365</option>
-                                        <option value="custom">Custom</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3" id="customDaysDiv" style="display: none;">
-                                    <label for="customDaysInput" class="form-label">Custom Days:</label>
-                                    <input type="number" class="form-control" id="customDaysInput" 
-                                           value="30" min="1" max="3650" placeholder="Enter number of days...">
-                                </div>
-                                <button class="btn btn-primary w-100" onclick="loadStockData()">
-                                    <i class="fas fa-download"></i> Load Stock Data
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Technical Indicators -->
-                        <div class="card">
-                            <div class="card-header">
-                                <i class="fas fa-chart-bar"></i> Technical Indicators
-                            </div>
-                            <div class="card-body" id="indicators-container">
-                                <div class="text-center text-muted">
-                                    <i class="fas fa-chart-line fa-2x mb-2"></i>
-                                    <p>Load stock data to see indicators</p>
+                                
+                                <!-- Action Buttons -->
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <button class="btn btn-success" onclick="loadStockData()">
+                                            <i class="fas fa-chart-bar"></i> Load Stock Data
+                                        </button>
+                                        <button class="btn btn-info" onclick="toggleMetricsOverlay()">
+                                            <i class="fas fa-chart-line"></i> Toggle Metrics
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="debugCurrentState()">
+                                            <i class="fas fa-bug"></i> Debug State
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Chart -->
-                    <div class="col-md-8">
+                    
+                    <!-- Chart Section - Full Width -->
+                    <div class="col-12">
                         <div class="card">
                             <div class="card-header">
                                 <i class="fas fa-chart-area"></i> Stock Chart
                                 <div class="float-end">
+                                    <!-- Chart control buttons - enabled for full functionality -->
                                     <button class="btn btn-sm btn-outline-primary" onclick="autoFitX()" title="Auto-fit X axis">
                                         <i class="fas fa-arrows-alt-h"></i> Fit X
                                     </button>
                                     <button class="btn btn-sm btn-outline-primary" onclick="autoFitY()" title="Auto-fit Y axis">
                                         <i class="fas fa-arrows-alt-v"></i> Fit Y
                                     </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="resetChartZoom()" title="Reset zoom">
+                                        <i class="fas fa-search-minus"></i> Reset
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info" onclick="toggleMetricsOverlay()" title="Toggle metrics overlay">
+                                        <i class="fas fa-chart-line"></i> Metrics
+                                    </button>
+                                    <!-- Debug buttons -->
+                                    <button class="btn btn-sm btn-outline-warning" onclick="testChartUpdate()" title="Test chart update">
+                                        <i class="fas fa-bug"></i> Test Update
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="testTooltip()" title="Test tooltip">
+                                        <i class="fas fa-bug"></i> Test Tooltip
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="testChartCleanup()" title="Test chart cleanup">
+                                        <i class="fas fa-bug"></i> Test Cleanup
+                                    </button>
                                 </div>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container">
                                     <canvas id="stockChart"></canvas>
-                                    <div class="mt-2 text-center">
-                                        <button class="btn btn-outline-secondary btn-sm" onclick="resetChartZoom()">
-                                            <i class="fas fa-expand-arrows-alt"></i> Reset Zoom
-                                        </button>
-                                    </div>
-                                </div>
-                                <!-- Stock Info Container -->
-                                <div id="stock-info" class="mt-3" style="display: none;">
-                                    <!-- Stock information will be displayed here -->
-                                </div>
-                                <!-- Candlestick Legend -->
-                                <div class="mt-3">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="d-flex align-items-center mb-2">
-                                                <div class="legend-item me-3">
-                                                    <div class="legend-color" style="background-color: #28a745; width: 20px; height: 20px; border: 1px solid #28a745;"></div>
-                                                    <span class="ms-2">Green: Bullish (Close ≥ Open)</span>
-                                                </div>
+                                    
+                                    <!-- Draggable Metrics Overlay - similar to local GUI MetricsWidget -->
+                                    <div id="metrics-overlay" class="metrics-overlay" style="display: none;">
+                                        <div class="metrics-overlay-header">
+                                            <span class="metrics-overlay-title">Financial Metrics</span>
+                                            <div class="metrics-overlay-controls">
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="toggleMetricsDisplayLevel()" title="Toggle display level">
+                                                    <i class="fas fa-layer-group"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-secondary" onclick="toggleMetricsOverlay()" title="Close">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <div class="d-flex align-items-center mb-2">
-                                                <div class="legend-item me-3">
-                                                    <div class="legend-color" style="background-color: #dc3545; width: 20px; height: 20px; border: 1px solid #dc3545;"></div>
-                                                    <span class="ms-2">Red: Bearish (Close < Open)</span>
-                                                </div>
-                                            </div>
+                                        <div class="metrics-overlay-content">
+                                            <!-- Metrics content will be populated dynamically -->
                                         </div>
-                                    </div>
-                                    <div class="text-muted small">
-                                        <i class="fas fa-info-circle"></i> 
-                                        <strong>Chart Navigation:</strong> 
-                                        <ul class="list-unstyled mt-1 mb-0">
-                                            <li><i class="fas fa-mouse"></i> <strong>Mouse Wheel:</strong> Zoom in/out</li>
-                                            <li><i class="fas fa-hand-paper"></i> <strong>Left Mouse Drag:</strong> Pan around the chart</li>
-                                            <li><i class="fas fa-expand-arrows-alt"></i> <strong>Right Mouse Drag:</strong> Zoom to selection area</li>
-                                            <li><i class="fas fa-search"></i> <strong>Hover:</strong> View detailed OHLC data</li>
-                                        </ul>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Trading Decision Interface -->
-                <div class="row mt-3" id="decision-interface" style="display: none;">
-                    <div class="col-md-12">
+                    
+                    <!-- Decision Interface -->
+                    <div id="decision-interface" class="col-12 mt-3" style="display: none;">
                         <div class="card">
                             <div class="card-header">
-                                <i class="fas fa-handshake"></i> Trading Decision
+                                <i class="fas fa-brain"></i> Trading Decision Interface
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <h5>What would you do with this stock?</h5>
-                                        <div class="d-flex flex-wrap">
-                                            <button class="btn btn-success decision-button" onclick="selectDecision('BUY')">
-                                                <i class="fas fa-arrow-up"></i> BUY
-                                            </button>
-                                            <button class="btn btn-danger decision-button" onclick="selectDecision('SELL')">
-                                                <i class="fas fa-arrow-down"></i> SELL
-                                            </button>
-                                            <button class="btn btn-warning decision-button" onclick="selectDecision('HOLD')">
-                                                <i class="fas fa-pause"></i> HOLD
-                                            </button>
+                                    <div class="col-md-12">
+                                        <h6 class="text-primary mb-3">
+                                            <i class="fas fa-chart-line"></i> Current Stock: 
+                                            <span id="decision-current-stock" class="font-weight-bold"></span>
+                                        </h6>
+                                        
+                                        <!-- Decision Buttons -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <label class="form-label"><i class="fas fa-hand-pointer"></i> Select Your Trading Decision:</label>
+                                                <div class="d-flex gap-2">
+                                                    <button id="buy-btn" class="btn btn-lg decision-button" onclick="makeDecision('BUY')" style="flex: 1; min-height: 50px;">
+                                                        <i class="fas fa-arrow-up"></i> BUY
+                                                    </button>
+                                                    <button id="sell-btn" class="btn btn-lg decision-button" onclick="makeDecision('SELL')" style="flex: 1; min-height: 50px;">
+                                                        <i class="fas fa-arrow-down"></i> SELL
+                                                    </button>
+                                                    <button id="hold-btn" class="btn btn-lg decision-button" onclick="makeDecision('HOLD')" style="flex: 1; min-height: 50px;">
+                                                        <i class="fas fa-pause"></i> HOLD
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="reasoningInput" class="form-label">Reasoning (optional):</label>
-                                        <textarea class="form-control" id="reasoningInput" rows="3" 
-                                                  placeholder="Explain your decision..."></textarea>
-                                        <button class="btn btn-primary mt-2" onclick="submitDecision()">
-                                            <i class="fas fa-save"></i> Submit Decision
-                                        </button>
+                                        
+                                        <!-- Reasoning Input -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-12">
+                                                <label for="reasoning-input" class="form-label">
+                                                    <i class="fas fa-comment-alt"></i> Trading Reasoning (Required for VADER Analysis):
+                                                </label>
+                                                <textarea id="reasoning-input" class="form-control" rows="4" 
+                                                          placeholder="Explain your trading decision in detail... Consider factors like:
+• Technical indicators and patterns
+• Market sentiment and news
+• Company fundamentals
+• Risk assessment
+• Market conditions and trends
+
+Your reasoning will be analyzed using VADER sentiment analysis to understand your decision-making process."></textarea>
+                                                <small class="form-text text-muted">
+                                                    <i class="fas fa-info-circle"></i> 
+                                                    Provide detailed reasoning for your decision. This helps train the AI to understand your trading strategy and decision-making patterns.
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Submit Button -->
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <button id="submit-decision-btn" class="btn btn-primary btn-lg w-100" onclick="submitDecision()" disabled>
+                                                    <i class="fas fa-paper-plane"></i> Submit Decision & Train Model
+                                                </button>
+                                                <small class="form-text text-muted mt-2">
+                                                    <i class="fas fa-lightbulb"></i> 
+                                                    Your decision and reasoning will be used to train the neural network using VADER sentiment analysis.
+                                                </small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -585,10 +774,76 @@
     <script>
         // Global variables
         let socket;
-        let stockChart;
+        let stockChart = null;
         let selectedDecision = null;
         let currentStockData = null;
         let currentStockInfo = null;
+        let chartInitialized = false;
+
+        // Safe chart destroy function
+        function safeChartDestroy(chart) {
+            try {
+                if (chart && typeof chart.destroy === 'function') {
+                    console.log('[CHART CLEANUP] Destroying chart instance');
+                    chart.destroy();
+                    return true;
+                }
+            } catch (error) {
+                console.error('[CHART CLEANUP] Error destroying chart:', error);
+            }
+            return false;
+        }
+
+        // Safe chart update function
+        function safeChartUpdate(chart, mode = 'none') {
+            try {
+                if (chart && typeof chart.update === 'function') {
+                    chart.update(mode);
+                    return true;
+                }
+            } catch (error) {
+                console.error('[CHART ERROR] Chart update failed:', error);
+            }
+            return false;
+        }
+
+        // Global chart error handler
+        function handleChartError(error, context) {
+            console.error(`[CHART ERROR] ${context}:`, error);
+            showAlert(`Chart error in ${context}: ${error.message}`, 'warning');
+        }
+
+        // Initialize chart system
+        function initializeChartSystem() {
+            try {
+                // Check if Chart.js is available
+                if (typeof Chart === 'undefined') {
+                    console.error('[CHART INIT] Chart.js not loaded');
+                    return false;
+                }
+
+                // Check if canvas exists
+                const canvas = document.getElementById('stockChart');
+                if (!canvas) {
+                    console.error('[CHART INIT] Canvas not found');
+                    return false;
+                }
+
+                // Check if context can be obtained
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error('[CHART INIT] Cannot get 2D context');
+                    return false;
+                }
+
+                chartInitialized = true;
+                console.log('[CHART INIT] Chart system initialized successfully');
+                return true;
+            } catch (error) {
+                handleChartError(error, 'chart initialization');
+                return false;
+            }
+        }
 
         // Debug function to check current state
         function debugCurrentState() {
@@ -631,6 +886,7 @@
             updateModelStatus();
             updateSystemStatus();
             loadStockOptions();
+            initializeMetricsOverlay();
             
             console.log('[INIT] Initialization completed');
             
@@ -876,7 +1132,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        const select = document.getElementById('stockSelect');
+                        const select = document.getElementById('stock-selector');
                         // Keep the special options
                         while (select.options.length > 5) {
                             select.remove(5);
@@ -900,21 +1156,21 @@
 
         // Handle stock selection
         function handleStockSelection() {
-            const select = document.getElementById('stockSelect');
-            const customDiv = document.getElementById('customTickerDiv');
+            const select = document.getElementById('stock-selector');
+            const customDiv = document.getElementById('custom-ticker-input');
             
             if (select.value === 'custom') {
                 customDiv.style.display = 'block';
-                document.getElementById('customTickerInput').focus();
+                document.getElementById('custom-ticker').focus();
             } else {
                 customDiv.style.display = 'none';
             }
         }
 
         // Handle days selection
-        function handleDaysSelection() {
-            const daysSelect = document.getElementById('daysSelect');
-            const customDaysDiv = document.getElementById('customDaysDiv');
+        function handleDateRangeSelection() {
+            const daysSelect = document.getElementById('date-range-selector');
+            const customDaysDiv = document.getElementById('custom-date-input');
             
             if (daysSelect.value === 'custom') {
                 customDaysDiv.style.display = 'block';
@@ -925,19 +1181,19 @@
 
         // Load stock data
         function loadStockData() {
-            const symbol = document.getElementById('stockSelect').value;
+            const symbol = document.getElementById('stock-selector').value;
             if (!symbol) {
                 showAlert('Please select a stock symbol', 'warning');
                 return;
             }
             
             // Get the days parameter
-            const daysSelect = document.getElementById('daysSelect');
+            const daysSelect = document.getElementById('date-range-selector');
             let days = parseInt(daysSelect.value);
             
             // Handle custom days
             if (daysSelect.value === 'custom') {
-                const customDaysInput = document.getElementById('customDaysInput');
+                const customDaysInput = document.getElementById('custom-days');
                 days = parseInt(customDaysInput.value) || 30;
             }
             
@@ -1028,6 +1284,73 @@
             });
         }
 
+        // Enhanced chart cleanup function
+        function cleanupChart() {
+            console.log('[CHART CLEANUP] Starting comprehensive chart cleanup');
+            
+            // Step 1: Destroy the global stockChart instance
+            if (stockChart) {
+                try {
+                    console.log('[CHART CLEANUP] Destroying global stockChart instance');
+                    safeChartDestroy(stockChart);
+                    stockChart = null;
+                } catch (error) {
+                    console.warn('[CHART CLEANUP] Error destroying global stockChart:', error);
+                    stockChart = null;
+                }
+            }
+            
+            // Step 2: Clean up all Chart.js instances that use our canvas
+            try {
+                if (Chart.instances && Chart.instances.length > 0) {
+                    console.log('[CHART CLEANUP] Found', Chart.instances.length, 'Chart.js instances');
+                    
+                    // Filter instances that use our canvas
+                    const ourInstances = Chart.instances.filter(instance => 
+                        instance && instance.canvas && instance.canvas.id === 'stockChart'
+                    );
+                    
+                    console.log('[CHART CLEANUP] Found', ourInstances.length, 'instances using our canvas');
+                    
+                    ourInstances.forEach((instance, index) => {
+                        try {
+                            console.log('[CHART CLEANUP] Destroying instance', index);
+                            safeChartDestroy(instance);
+                        } catch (error) {
+                            console.warn('[CHART CLEANUP] Error destroying instance', index, ':', error);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.warn('[CHART CLEANUP] Error checking Chart.js instances:', error);
+            }
+            
+            // Step 3: Replace canvas to clear all event listeners
+            try {
+                const canvas = document.getElementById('stockChart');
+                if (canvas) {
+                    console.log('[CHART CLEANUP] Replacing canvas to clear event listeners');
+                    const newCanvas = canvas.cloneNode(true);
+                    newCanvas.id = 'stockChart';
+                    canvas.parentNode.replaceChild(newCanvas, canvas);
+                }
+            } catch (error) {
+                console.warn('[CHART CLEANUP] Error replacing canvas:', error);
+            }
+            
+            // Step 4: Clear any remaining references
+            try {
+                // Clear Chart.js internal registry if possible
+                if (Chart.registry && Chart.registry.clear) {
+                    Chart.registry.clear();
+                }
+            } catch (error) {
+                console.warn('[CHART CLEANUP] Error clearing Chart registry:', error);
+            }
+            
+            console.log('[CHART CLEANUP] Chart cleanup completed');
+        }
+
         // Update chart
         function updateChart(chartData) {
             console.log('[CHART] updateChart called with:', chartData);
@@ -1080,6 +1403,10 @@
             console.log('[CHART] chartData[0] fields OK:', first);
             console.log('[CHART] Total data points:', chartData.length);
             
+            // Use enhanced cleanup before creating new chart
+            console.log('[CHART] Performing enhanced chart cleanup');
+            cleanupChart();
+            
             // Use custom candlestick implementation instead of Chart.js Financial plugin
             console.log('[CHART] Using custom candlestick chart implementation...');
             createCustomCandlestickChart(ctx, chartData);
@@ -1088,32 +1415,51 @@
 
         // Custom candlestick chart implementation with new navigation
         function createCustomCandlestickChart(ctx, chartData) {
-            console.log('[CANDLESTICK] Creating custom candlestick chart with new navigation system');
+            console.log('[CANDLESTICK] Creating custom candlestick chart with local GUI implementation');
             console.log('[CANDLESTICK] Context:', ctx);
             console.log('[CANDLESTICK] Chart data length:', chartData.length);
             
-            if (stockChart) {
-                console.log('[CANDLESTICK] Destroying existing chart');
-                stockChart.destroy();
-            }
+            // Use enhanced cleanup function
+            cleanupChart();
             
-            // Parse dates properly
-            const processedData = chartData.map(item => ({
-                ...item,
-                x: new Date(item.x) // Convert ISO string to Date object
-            }));
+            // Parse dates properly - match local GUI format
+            const processedData = chartData.map(item => {
+                try {
+                    // Validate the date string
+                    if (!item.x) {
+                        console.warn('[CANDLESTICK] Invalid date value:', item.x);
+                        return null;
+                    }
+                    
+                    const date = new Date(item.x);
+                    
+                    // Validate the parsed date
+                    if (isNaN(date.getTime())) {
+                        console.warn('[CANDLESTICK] Invalid date parsed:', item.x, date);
+                        return null;
+                    }
+                    
+                    return {
+                        ...item,
+                        x: date // Convert ISO string to Date object
+                    };
+                } catch (error) {
+                    console.warn('[CANDLESTICK] Error processing date:', item.x, error);
+                    return null;
+                }
+            }).filter(item => item !== null); // Remove invalid data points
             
             console.log('[CANDLESTICK] Processed chart data (first 3):', processedData.slice(0, 3));
             
-            // Create scatter data points for interaction (invisible but interactive)
+            // Create scatter data points for interaction (invisible but interactive) - match local GUI approach
             const scatterData = processedData.map((d, index) => {
-                // Validate data point
+                // Validate data point - same validation as local GUI
                 if (!d || typeof d.o !== 'number' || typeof d.h !== 'number' || typeof d.l !== 'number' || typeof d.c !== 'number') {
                     console.warn('[CANDLESTICK] Invalid data point at index', index, d);
                     return null;
                 }
                 
-                // Additional validation for NaN values
+                // Additional validation for NaN values - same as local GUI
                 if (isNaN(d.o) || isNaN(d.h) || isNaN(d.l) || isNaN(d.c)) {
                     console.warn('[CANDLESTICK] NaN values in data point at index', index, d);
                     return null;
@@ -1121,7 +1467,7 @@
                 
                 const scatterPoint = {
                     x: d.x,
-                    y: d.c, // Use close price for interaction point
+                    y: d.c, // Use close price for interaction point - same as local GUI
                     o: d.o,
                     h: d.h,
                     l: d.l,
@@ -1140,16 +1486,46 @@
             
             console.log('[CANDLESTICK] Created scatter data with', scatterData.length, 'valid points');
             
-            // Additional validation before creating chart
+            // Additional validation before creating chart - same as local GUI
             if (scatterData.length === 0) {
                 console.error('[CANDLESTICK] ERROR: No valid scatter data points available for chart creation');
+                showAlert('No valid chart data available', 'warning');
                 return;
             }
             
             console.log('[CANDLESTICK] Creating Chart.js instance...');
             
             try {
-                stockChart = new Chart(ctx, {
+                // Calculate price ranges - same as local GUI
+                const prices = scatterData.flatMap(d => [d.l, d.h]);
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
+                const currentPrice = scatterData[scatterData.length - 1].c;
+                const pricePadding = (maxPrice - minPrice) * 0.05; // 5% padding - same as local GUI
+                
+                // Set default zoom to last 30 days (or all data if less) - same as local GUI
+                const numPoints = scatterData.length;
+                let xMin, xMax;
+                if (numPoints > 30) {
+                    xMin = scatterData[scatterData.length - 30].x;
+                } else {
+                    xMin = scatterData[0].x;
+                }
+                xMax = scatterData[scatterData.length - 1].x;
+                
+                // Get fresh canvas context after cleanup
+                const canvas = document.getElementById('stockChart');
+                if (!canvas) {
+                    throw new Error('Canvas not found after cleanup');
+                }
+                
+                const freshCtx = canvas.getContext('2d');
+                if (!freshCtx) {
+                    throw new Error('Cannot get fresh 2D context');
+                }
+                
+                // Create new chart with proper configuration and explicit hitRadius
+                stockChart = new Chart(freshCtx, {
                     type: 'scatter',
                     data: {
                         datasets: [{
@@ -1157,105 +1533,33 @@
                             data: scatterData,
                             backgroundColor: 'transparent',
                             borderColor: 'transparent',
-                            pointRadius: 0,
-                            pointHoverRadius: 4,  // Smaller hover radius for more precise interaction
+                            pointRadius: 3, // Make points visible for interaction
+                            pointHoverRadius: 8,
                             pointHoverBackgroundColor: 'rgba(0,0,0,0.1)',
                             pointHoverBorderColor: 'rgba(0,0,0,0.3)',
-                            pointHoverBorderWidth: 1,
-                            showLine: false // No line connecting points
+                            pointHoverBorderWidth: 2,
+                            showLine: false,
+                            tension: 0,
+                            fill: false
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         interaction: {
-                            intersect: true,  // Only trigger when hovering directly over points
-                            mode: 'point'     // Only trigger for specific points, not nearest
+                            intersect: false,
+                            mode: 'point'
+                        },
+                        hover: {
+                            mode: 'point',
+                            intersect: false
                         },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
-                                enabled: true,
-                                mode: 'point',      // Only show tooltip for specific points
-                                intersect: true,    // Only trigger when hovering directly over points
-                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                                titleColor: '#fff',
-                                bodyColor: '#fff',
-                                borderColor: '#333',
-                                borderWidth: 1,
-                                cornerRadius: 6,
-                                padding: 10,
-                                callbacks: {
-                                    title: function(context) {
-                                        try {
-                                            // Add proper null checks
-                                            if (!context || !context[0]) {
-                                                return 'Unknown Date';
-                                            }
-                                            const dataPoint = context[0].raw || context[0];
-                                            if (!dataPoint || !dataPoint.x) {
-                                                return 'Unknown Date';
-                                            }
-                                            const date = new Date(dataPoint.x);
-                                            return date.toLocaleDateString('en-US', {
-                                                weekday: 'short',
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            });
-                                        } catch (error) {
-                                            console.warn('[CANDLESTICK] Error in tooltip title callback:', error);
-                                            return 'Unknown Date';
-                                        }
-                                    },
-                                    label: function(context) {
-                                        try {
-                                            // Add proper null checks
-                                            if (!context || !context[0]) {
-                                                return ['No data available'];
-                                            }
-                                            const dataPoint = context[0].raw || context[0];
-                                            if (dataPoint && dataPoint.o !== undefined) {
-                                                const isGreen = dataPoint.c >= dataPoint.o;
-                                                return [
-                                                    `Open:  $${dataPoint.o.toFixed(2)}`,
-                                                    `High:  $${dataPoint.h.toFixed(2)}`,
-                                                    `Low:   $${dataPoint.l.toFixed(2)}`,
-                                                    `Close: $${dataPoint.c.toFixed(2)}`
-                                                ];
-                                            }
-                                            return ['No price data available'];
-                                        } catch (error) {
-                                            console.warn('[CANDLESTICK] Error in tooltip label callback:', error);
-                                            return ['Error loading data'];
-                                        }
-                                    },
-                                    afterLabel: function(context) {
-                                        try {
-                                            // Add proper null checks
-                                            if (!context || !context[0]) {
-                                                return '';
-                                            }
-                                            const dataPoint = context[0].raw || context[0];
-                                            if (dataPoint && dataPoint.o !== undefined) {
-                                                const change = dataPoint.c - dataPoint.o;
-                                                const changePercent = (change / dataPoint.o) * 100;
-                                                const isGreen = change >= 0;
-                                                const sign = isGreen ? '+' : '';
-                                                return `${sign}${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`;
-                                            }
-                                            return '';
-                                        } catch (error) {
-                                            console.warn('[CANDLESTICK] Error in tooltip afterLabel callback:', error);
-                                            return '';
-                                        }
-                                    }
-                                }
-                            },
-                            // Disable the zoom plugin - we'll implement custom navigation
-                            zoom: {
-                                pan: { enabled: false },
-                                zoom: { enabled: false }
+                                enabled: false, // Disable built-in tooltips to use custom ones
+                                mode: 'point',
+                                intersect: false
                             }
                         },
                         scales: {
@@ -1264,7 +1568,7 @@
                                 time: { 
                                     unit: 'day',
                                     displayFormats: {
-                                        day: 'MMM dd'
+                                        day: 'MMM DD' // Moment.js format
                                     }
                                 },
                                 title: {
@@ -1273,13 +1577,15 @@
                                 },
                                 grid: {
                                     color: 'rgba(0,0,0,0.1)'
-                                }
+                                },
+                                min: xMin,
+                                max: xMax
                             },
                             y: { 
                                 beginAtZero: false,
                                 title: {
                                     display: true,
-                                    text: 'Price ($)'
+                                    text: 'Price (USD$)'
                                 },
                                 ticks: {
                                     callback: function(value) {
@@ -1288,7 +1594,9 @@
                                 },
                                 grid: {
                                     color: 'rgba(0,0,0,0.1)'
-                                }
+                                },
+                                min: Math.max(0, minPrice - pricePadding),
+                                max: maxPrice + pricePadding
                             }
                         }
                     },
@@ -1300,7 +1608,6 @@
                                 const data = chart.data.datasets[0].data;
                                 
                                 if (!data || data.length === 0) {
-                                    console.log('[CANDLESTICK] No data available for candlestick rendering');
                                     return;
                                 }
                                 
@@ -1308,16 +1615,13 @@
                                 
                                 data.forEach((dataPoint, index) => {
                                     if (!dataPoint || dataPoint.o === undefined) {
-                                        console.warn('[CANDLESTICK] Skipping invalid data point at index', index, dataPoint);
                                         return;
                                     }
                                     
-                                    // Get pixel coordinates
                                     const xScale = chart.scales.x;
                                     const yScale = chart.scales.y;
                                     
                                     if (!xScale || !yScale) {
-                                        console.warn('[CANDLESTICK] Scales not available for data point', index);
                                         return;
                                     }
                                     
@@ -1327,20 +1631,14 @@
                                     const highY = yScale.getPixelForValue(dataPoint.h);
                                     const lowY = yScale.getPixelForValue(dataPoint.l);
                                     
-                                    // Validate coordinates
                                     if (isNaN(x) || isNaN(openY) || isNaN(closeY) || isNaN(highY) || isNaN(lowY)) {
-                                        console.warn('[CANDLESTICK] Invalid coordinates for data point', index, {
-                                            x, openY, closeY, highY, lowY,
-                                            dataPoint: { x: dataPoint.x, o: dataPoint.o, h: dataPoint.h, l: dataPoint.l, c: dataPoint.c }
-                                        });
                                         return;
                                     }
                                     
-                                    // Determine color
                                     const isGreen = dataPoint.c >= dataPoint.o;
                                     const color = isGreen ? '#26a69a' : '#ef5350';
                                     
-                                    // Draw wick (high to low)
+                                    // Draw wick
                                     ctx.strokeStyle = color;
                                     ctx.lineWidth = 1;
                                     ctx.beginPath();
@@ -1348,14 +1646,13 @@
                                     ctx.lineTo(x, lowY);
                                     ctx.stroke();
                                     
-                                    // Draw body (open to close)
+                                    // Draw body
                                     const bodyWidth = Math.max(2, Math.min(8, xScale.width / data.length * 0.8));
                                     const bodyLeft = x - bodyWidth / 2;
                                     
                                     ctx.fillStyle = color;
                                     ctx.fillRect(bodyLeft, Math.min(openY, closeY), bodyWidth, Math.abs(closeY - openY));
                                     
-                                    // Draw border for body
                                     ctx.strokeStyle = color;
                                     ctx.lineWidth = 1;
                                     ctx.strokeRect(bodyLeft, Math.min(openY, closeY), bodyWidth, Math.abs(closeY - openY));
@@ -1367,32 +1664,69 @@
                                 console.error('[CANDLESTICK] Error in candlestick renderer:', error);
                             }
                         }
+                    }, {
+                        id: 'currentPriceLine',
+                        afterDraw: function(chart, args, options) {
+                            try {
+                                const ctx = chart.ctx;
+                                const data = chart.data.datasets[0].data;
+                                
+                                if (!data || data.length === 0) {
+                                    return;
+                                }
+                                
+                                const currentPrice = data[data.length - 1].c;
+                                const yScale = chart.scales.y;
+                                
+                                if (yScale) {
+                                    const currentPriceY = yScale.getPixelForValue(currentPrice);
+                                    
+                                    ctx.save();
+                                    ctx.strokeStyle = '#2196F3';
+                                    ctx.lineWidth = 2;
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.beginPath();
+                                    ctx.moveTo(0, currentPriceY);
+                                    ctx.lineTo(chart.width, currentPriceY);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                }
+                                
+                            } catch (error) {
+                                console.error('[CANDLESTICK] Error drawing current price line:', error);
+                            }
+                        }
                     }]
                 });
                 
                 console.log('[CANDLESTICK] Chart.js instance created successfully');
-                console.log('[CANDLESTICK] Chart object:', stockChart);
-                console.log('[CANDLESTICK] Chart canvas:', stockChart.canvas);
-                console.log('[CANDLESTICK] Chart scales:', stockChart.scales);
+                console.log('[CANDLESTICK] Chart updated - Price range: $' + minPrice.toFixed(2) + ' to $' + maxPrice.toFixed(2) + ', Current: $' + currentPrice.toFixed(2));
+                
+                // Add custom navigation system
+                if (stockChart && stockChart.canvas) {
+                    console.log('[CANDLESTICK] Adding navigation system');
+                    addCustomNavigation(stockChart);
+                }
                 
             } catch (error) {
                 console.error('[CANDLESTICK] ERROR creating Chart.js instance:', error);
                 console.error('[CANDLESTICK] Error stack:', error.stack);
+                showAlert('Failed to create chart: ' + error.message, 'danger');
                 return;
             }
             
-            console.log('[CANDLESTICK] Custom candlestick chart created successfully with new navigation system.');
-            
-            // Add custom navigation system
-            console.log('[CANDLESTICK] Adding custom navigation system...');
-            addCustomNavigation(stockChart);
+            console.log('[CANDLESTICK] Custom candlestick chart created successfully.');
         }
         
         // Custom navigation system
         function addCustomNavigation(chart) {
             console.log('[NAVIGATION] Starting to add custom navigation system');
             console.log('[NAVIGATION] Chart object:', chart);
-            console.log('[NAVIGATION] Chart canvas:', chart.canvas);
+            
+            if (!chart) {
+                console.error('[NAVIGATION] ERROR: Chart object is null or undefined!');
+                return;
+            }
             
             const canvas = chart.canvas;
             if (!canvas) {
@@ -1401,7 +1735,6 @@
             }
             
             console.log('[NAVIGATION] Canvas dimensions:', canvas.width, 'x', canvas.height);
-            console.log('[NAVIGATION] Canvas style:', canvas.style);
             
             let isPanning = false;
             let isZooming = false;
@@ -1416,28 +1749,45 @@
             let lastMouseUpdate = 0;
             const mouseUpdateThreshold = 16; // ~60fps
             
-            console.log('[NAVIGATION] Setting up mouse wheel event listener');
+            // Helper function to safely update chart with visual feedback
+            function safeChartUpdate() {
+                try {
+                    if (chart && typeof chart.update === 'function') {
+                        console.log('[NAVIGATION] Updating chart with active mode');
+                        // Force a complete redraw with visual feedback
+                        chart.update('active');
+                        console.log('[NAVIGATION] Chart update completed');
+                        return true;
+                    } else {
+                        console.warn('[NAVIGATION] Chart or update function not available');
+                    }
+                } catch (error) {
+                    console.error('[NAVIGATION] Error updating chart:', error);
+                }
+                return false;
+            }
             
-            // Mouse wheel zoom with improved precision
+            // Helper function to safely get scales
+            function getScales() {
+                try {
+                    if (chart && chart.scales) {
+                        return { x: chart.scales.x, y: chart.scales.y };
+                    }
+                } catch (error) {
+                    console.error('[NAVIGATION] Error getting scales:', error);
+                }
+                return { x: null, y: null };
+            }
+            
+            // Mouse wheel zoom with improved precision and visual feedback
             canvas.addEventListener('wheel', function(event) {
-                console.log('[NAVIGATION] Mouse wheel event triggered');
-                console.log('[NAVIGATION] Wheel deltaY:', event.deltaY);
-                console.log('[NAVIGATION] Client coordinates:', event.clientX, event.clientY);
-                
                 event.preventDefault();
                 
                 const rect = canvas.getBoundingClientRect();
-                console.log('[NAVIGATION] Canvas rect:', rect);
-                
                 const mouseX = event.clientX - rect.left;
                 const mouseY = event.clientY - rect.top;
-                console.log('[NAVIGATION] Relative mouse position:', mouseX, mouseY);
                 
-                const xScale = chart.scales.x;
-                const yScale = chart.scales.y;
-                
-                console.log('[NAVIGATION] X scale:', xScale);
-                console.log('[NAVIGATION] Y scale:', yScale);
+                const { x: xScale, y: yScale } = getScales();
                 
                 if (!xScale || !yScale) {
                     console.error('[NAVIGATION] ERROR: Scales are not available!');
@@ -1447,26 +1797,22 @@
                 // Get the data point under the mouse
                 const xValue = xScale.getValueForPixel(mouseX);
                 const yValue = yScale.getValueForPixel(mouseY);
-                console.log('[NAVIGATION] Data coordinates:', xValue, yValue);
                 
                 // Zoom factor (negative deltaY means zoom in) - match local GUI sensitivity
-                const zoomFactor = event.deltaY > 0 ? 0.85 : 1.15;
-                console.log('[NAVIGATION] Zoom factor:', zoomFactor);
+                const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
                 
                 // Calculate new ranges
                 const xRange = xScale.max - xScale.min;
                 const yRange = yScale.max - yScale.min;
-                console.log('[NAVIGATION] Current ranges - X:', xRange, 'Y:', yRange);
                 
                 const newXRange = xRange * zoomFactor;
                 const newYRange = yRange * zoomFactor;
-                console.log('[NAVIGATION] New ranges - X:', newXRange, 'Y:', newYRange);
                 
                 // Zoom towards the mouse position
                 const xRatio = (xValue - xScale.min) / xRange;
                 const yRatio = (yValue - yScale.min) / yRange;
-                console.log('[NAVIGATION] Zoom ratios - X:', xRatio, 'Y:', yRatio);
                 
+                // Store old values for comparison
                 const oldXMin = xScale.min;
                 const oldXMax = xScale.max;
                 const oldYMin = yScale.min;
@@ -1477,29 +1823,24 @@
                 yScale.min = yValue - newYRange * yRatio;
                 yScale.max = yValue + newYRange * (1 - yRatio);
                 
-                console.log('[NAVIGATION] Scale changes:');
-                console.log('[NAVIGATION]   X: min', oldXMin, '->', xScale.min, 'max', oldXMax, '->', xScale.max);
-                console.log('[NAVIGATION]   Y: min', oldYMin, '->', yScale.min, 'max', oldYMax, '->', yScale.max);
-                
-                console.log('[NAVIGATION] Calling chart.update()');
-                chart.update('none');
-                console.log('[NAVIGATION] Chart update completed');
+                // Check if values actually changed
+                if (oldXMin !== xScale.min || oldXMax !== xScale.max || 
+                    oldYMin !== yScale.min || oldYMax !== yScale.max) {
+                    console.log('[NAVIGATION] Zoom applied - X:', xScale.min.toFixed(2), 'to', xScale.max.toFixed(2), 
+                               'Y:', yScale.min.toFixed(2), 'to', yScale.max.toFixed(2));
+                    safeChartUpdate();
+                } else {
+                    console.log('[NAVIGATION] Zoom values unchanged, skipping update');
+                }
             });
-            
-            console.log('[NAVIGATION] Setting up mouse down event listener');
             
             // Mouse down events with improved button detection
             canvas.addEventListener('mousedown', function(event) {
-                console.log('[NAVIGATION] Mouse down event triggered');
-                console.log('[NAVIGATION] Button:', event.button);
-                console.log('[NAVIGATION] Client coordinates:', event.clientX, event.clientY);
-                
                 event.preventDefault();
                 
                 const rect = canvas.getBoundingClientRect();
                 lastMouseX = event.clientX - rect.left;
                 lastMouseY = event.clientY - rect.top;
-                console.log('[NAVIGATION] Mouse position:', lastMouseX, lastMouseY);
                 
                 if (event.button === 0) { // Left mouse button - pan
                     console.log('[NAVIGATION] Starting pan operation');
@@ -1507,18 +1848,14 @@
                     panStartX = lastMouseX;
                     panStartY = lastMouseY;
                     canvas.style.cursor = 'grabbing';
-                    console.log('[NAVIGATION] Pan started at:', panStartX, panStartY);
                 } else if (event.button === 2) { // Right mouse button - zoom selection
                     console.log('[NAVIGATION] Starting zoom selection operation');
                     isZooming = true;
                     zoomStartX = lastMouseX;
                     zoomStartY = lastMouseY;
                     canvas.style.cursor = 'crosshair';
-                    console.log('[NAVIGATION] Zoom selection started at:', zoomStartX, zoomStartY);
                 }
             });
-            
-            console.log('[NAVIGATION] Setting up mouse move event listener');
             
             // Mouse move events with throttling for better performance
             canvas.addEventListener('mousemove', function(event) {
@@ -1531,30 +1868,57 @@
                 const rect = canvas.getBoundingClientRect();
                 const mouseX = event.clientX - rect.left;
                 const mouseY = event.clientY - rect.top;
-                
-                const xScale = chart.scales.x;
-                const yScale = chart.scales.y;
-                
+                const { x: xScale, y: yScale } = getScales();
                 if (!xScale || !yScale) {
-                    console.error('[NAVIGATION] ERROR: Scales not available during mouse move!');
+                    hideCustomTooltip();
                     return;
+                }
+                // Custom hover detection for candlesticks
+                if (!isPanning && !isZooming) {
+                    const data = chart.data.datasets[0].data;
+                    if (data && data.length > 0) {
+                        let nearestIndex = -1;
+                        let minDistance = Infinity;
+                        data.forEach((dataPoint, index) => {
+                            if (dataPoint && dataPoint.x !== undefined) {
+                                const dataX = xScale.getPixelForValue(dataPoint.x);
+                                const distance = Math.abs(mouseX - dataX);
+                                const bodyWidth = Math.max(2, Math.min(8, xScale.width / data.length * 0.8));
+                                const hoverRadius = bodyWidth * 2;
+                                if (distance <= hoverRadius) {
+                                    if (distance < minDistance) {
+                                        minDistance = distance;
+                                        nearestIndex = index;
+                                    }
+                                }
+                            }
+                        });
+                        if (nearestIndex >= 0) {
+                            canvas.style.cursor = 'pointer';
+                            showCustomTooltip(data[nearestIndex], event.clientX, event.clientY);
+                        } else {
+                            canvas.style.cursor = 'default';
+                            hideCustomTooltip();
+                        }
+                    } else {
+                        hideCustomTooltip();
+                    }
+                } else {
+                    hideCustomTooltip();
                 }
                 
                 if (isPanning) {
-                    console.log('[NAVIGATION] Panning - Mouse position:', mouseX, mouseY);
-                    
                     // Pan the chart with improved precision
                     const deltaX = mouseX - lastMouseX;
                     const deltaY = mouseY - lastMouseY;
-                    console.log('[NAVIGATION] Pan delta:', deltaX, deltaY);
                     
                     const xRange = xScale.max - xScale.min;
                     const yRange = yScale.max - yScale.min;
                     
                     const xStep = (deltaX / canvas.width) * xRange;
                     const yStep = (deltaY / canvas.height) * yRange;
-                    console.log('[NAVIGATION] Pan steps:', xStep, yStep);
                     
+                    // Store old values for comparison
                     const oldXMin = xScale.min;
                     const oldXMax = xScale.max;
                     const oldYMin = yScale.min;
@@ -1565,31 +1929,29 @@
                     yScale.min += yStep; // Invert Y axis to match local GUI
                     yScale.max += yStep;
                     
-                    console.log('[NAVIGATION] Pan scale changes:');
-                    console.log('[NAVIGATION]   X: min', oldXMin, '->', xScale.min, 'max', oldXMax, '->', xScale.max);
-                    console.log('[NAVIGATION]   Y: min', oldYMin, '->', yScale.min, 'max', oldYMax, '->', yScale.max);
-                    
-                    console.log('[NAVIGATION] Calling chart.update() for pan');
-                    chart.update('none');
+                    // Check if values actually changed
+                    if (oldXMin !== xScale.min || oldXMax !== xScale.max || 
+                        oldYMin !== yScale.min || oldYMax !== yScale.max) {
+                        console.log('[NAVIGATION] Pan applied - X:', xScale.min.toFixed(2), 'to', xScale.max.toFixed(2), 
+                                   'Y:', yScale.min.toFixed(2), 'to', yScale.max.toFixed(2));
+                        safeChartUpdate();
+                    } else {
+                        console.log('[NAVIGATION] Pan values unchanged, skipping update');
+                    }
                     
                     lastMouseX = mouseX;
                     lastMouseY = mouseY;
                 } else if (isZooming) {
-                    console.log('[NAVIGATION] Zooming - Mouse position:', mouseX, mouseY);
-                    
                     // Show zoom selection rectangle with improved visual feedback
                     const deltaX = mouseX - zoomStartX;
                     const deltaY = mouseY - zoomStartY;
-                    console.log('[NAVIGATION] Zoom selection delta:', deltaX, deltaY);
                     
                     // Clear any existing zoom rectangle by redrawing chart
-                    console.log('[NAVIGATION] Calling chart.update() for zoom selection');
-                    chart.update('none');
+                    safeChartUpdate();
                     
                     // Draw zoom selection rectangle with better styling
                     const ctx = chart.ctx;
                     if (ctx) {
-                        console.log('[NAVIGATION] Drawing zoom selection rectangle');
                         ctx.save();
                         ctx.strokeStyle = 'rgba(0, 123, 255, 0.8)';
                         ctx.fillStyle = 'rgba(0, 123, 255, 0.1)';
@@ -1602,21 +1964,12 @@
                         ctx.fill();
                         
                         ctx.restore();
-                    } else {
-                        console.error('[NAVIGATION] ERROR: Chart context is null!');
                     }
                 }
             });
             
-            console.log('[NAVIGATION] Setting up mouse up event listener');
-            
             // Mouse up events with improved handling
             canvas.addEventListener('mouseup', function(event) {
-                console.log('[NAVIGATION] Mouse up event triggered');
-                console.log('[NAVIGATION] Button:', event.button);
-                console.log('[NAVIGATION] Is panning:', isPanning);
-                console.log('[NAVIGATION] Is zooming:', isZooming);
-                
                 if (isPanning) {
                     console.log('[NAVIGATION] Ending pan operation');
                     isPanning = false;
@@ -1629,10 +1982,8 @@
                     const rect = canvas.getBoundingClientRect();
                     const mouseX = event.clientX - rect.left;
                     const mouseY = event.clientY - rect.top;
-                    console.log('[NAVIGATION] Final mouse position for zoom:', mouseX, mouseY);
                     
-                    const xScale = chart.scales.x;
-                    const yScale = chart.scales.y;
+                    const { x: xScale, y: yScale } = getScales();
                     
                     if (!xScale || !yScale) {
                         console.error('[NAVIGATION] ERROR: Scales not available for zoom completion!');
@@ -1644,13 +1995,11 @@
                     const endX = Math.max(zoomStartX, mouseX);
                     const startY = Math.min(zoomStartY, mouseY);
                     const endY = Math.max(zoomStartY, mouseY);
-                    console.log('[NAVIGATION] Zoom selection area:', startX, startY, endX, endY);
                     
-                    // Only zoom if the selection area is large enough (match local GUI threshold)
+                    // Only zoom if the selection area is large enough
                     const minSelectionSize = 15;
                     const width = Math.abs(endX - startX);
                     const height = Math.abs(endY - startY);
-                    console.log('[NAVIGATION] Selection dimensions:', width, 'x', height);
                     
                     if (width > minSelectionSize && height > minSelectionSize) {
                         console.log('[NAVIGATION] Selection area is large enough, applying zoom');
@@ -1660,12 +2009,6 @@
                         const endXValue = xScale.getValueForPixel(endX);
                         const startYValue = yScale.getValueForPixel(startY);
                         const endYValue = yScale.getValueForPixel(endY);
-                        console.log('[NAVIGATION] Data coordinates for zoom:', startXValue, startYValue, endXValue, endYValue);
-                        
-                        const oldXMin = xScale.min;
-                        const oldXMax = xScale.max;
-                        const oldYMin = yScale.min;
-                        const oldYMax = yScale.max;
                         
                         // Set new scale ranges
                         xScale.min = startXValue;
@@ -1673,31 +2016,22 @@
                         yScale.min = startYValue;
                         yScale.max = endYValue;
                         
-                        console.log('[NAVIGATION] Zoom scale changes:');
-                        console.log('[NAVIGATION]   X: min', oldXMin, '->', xScale.min, 'max', oldXMax, '->', xScale.max);
-                        console.log('[NAVIGATION]   Y: min', oldYMin, '->', yScale.min, 'max', oldYMax, '->', yScale.max);
-                        
-                        console.log('[NAVIGATION] Calling chart.update() for zoom completion');
-                        chart.update('none');
+                        console.log('[NAVIGATION] Zoom selection applied - X:', xScale.min.toFixed(2), 'to', xScale.max.toFixed(2), 
+                                   'Y:', yScale.min.toFixed(2), 'to', yScale.max.toFixed(2));
+                        safeChartUpdate();
                     } else {
                         console.log('[NAVIGATION] Selection area too small, ignoring zoom');
                     }
                 }
             });
             
-            console.log('[NAVIGATION] Setting up context menu event listener');
-            
-            // Prevent context menu on right click (match local GUI behavior)
+            // Prevent context menu on right click
             canvas.addEventListener('contextmenu', function(event) {
-                console.log('[NAVIGATION] Context menu event prevented');
                 event.preventDefault();
             });
             
-            console.log('[NAVIGATION] Setting up mouse leave event listener');
-            
             // Mouse leave events with cleanup
             canvas.addEventListener('mouseleave', function(event) {
-                console.log('[NAVIGATION] Mouse leave event triggered');
                 if (isPanning || isZooming) {
                     console.log('[NAVIGATION] Cleaning up navigation state');
                     isPanning = false;
@@ -1706,269 +2040,329 @@
                 }
             });
             
-            console.log('[NAVIGATION] Setting up keyboard event listener');
-            
-            // Add keyboard shortcuts for navigation (optional enhancement)
-            document.addEventListener('keydown', function(event) {
-                console.log('[NAVIGATION] Keydown event:', event.key, 'Ctrl:', event.ctrlKey);
-                
-                if (!stockChart) {
-                    console.log('[NAVIGATION] No stock chart available for keyboard shortcuts');
-                    return;
+            // Click handler for manual tooltip triggering
+            canvas.addEventListener('click', function(event) {
+                if (isPanning || isZooming) {
+                    return; // Don't trigger tooltip during navigation
                 }
                 
-                const xScale = chart.scales.x;
-                const yScale = chart.scales.y;
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+                
+                const { x: xScale, y: yScale } = getScales();
                 
                 if (!xScale || !yScale) {
-                    console.log('[NAVIGATION] Scales not available for keyboard shortcuts');
                     return;
                 }
                 
-                switch(event.key) {
-                    case 'r':
-                    case 'R':
-                        if (event.ctrlKey) {
-                            console.log('[NAVIGATION] Ctrl+R pressed - resetting chart zoom');
-                            event.preventDefault();
-                            resetChartZoom();
+                const data = chart.data.datasets[0].data;
+                if (data && data.length > 0) {
+                    // Find the clicked candlestick
+                    let clickedIndex = -1;
+                    let minDistance = Infinity;
+                    
+                    data.forEach((dataPoint, index) => {
+                        if (dataPoint && dataPoint.x !== undefined) {
+                            const dataX = xScale.getPixelForValue(dataPoint.x);
+                            const distance = Math.abs(mouseX - dataX);
+                            
+                            // Check if click is within the candlestick area
+                            const bodyWidth = Math.max(2, Math.min(8, xScale.width / data.length * 0.8));
+                            const clickRadius = bodyWidth * 3; // Larger click area
+                            
+                            if (distance <= clickRadius) {
+                                if (distance < minDistance) {
+                                    minDistance = distance;
+                                    clickedIndex = index;
+                                }
+                            }
                         }
-                        break;
-                    case '0':
-                        if (event.ctrlKey) {
-                            console.log('[NAVIGATION] Ctrl+0 pressed - resetting chart zoom');
-                            event.preventDefault();
-                            resetChartZoom();
-                        }
-                        break;
+                    });
+                    
+                    // Show tooltip for clicked candlestick
+                    if (clickedIndex >= 0) {
+                        console.log('[CLICK] Clicked on candlestick at index:', clickedIndex);
+                        const clickedData = data[clickedIndex];
+                        
+                        // Create a custom tooltip
+                        const tooltipContent = `
+                            <div style="background: rgba(0,0,0,0.9); color: white; padding: 10px; border-radius: 6px; font-family: Arial, sans-serif;">
+                                <div style="font-weight: bold; margin-bottom: 5px;">
+                                    ${new Date(clickedData.x).toLocaleDateString('en-US', {
+                                        weekday: 'short',
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    })}
+                                </div>
+                                <div>Open: $${clickedData.o.toFixed(2)}</div>
+                                <div>High: $${clickedData.h.toFixed(2)}</div>
+                                <div>Low: $${clickedData.l.toFixed(2)}</div>
+                                <div>Close: $${clickedData.c.toFixed(2)}</div>
+                                <div style="margin-top: 5px; color: ${clickedData.c >= clickedData.o ? '#26a69a' : '#ef5350'};">
+                                    ${clickedData.c >= clickedData.o ? '+' : ''}${(clickedData.c - clickedData.o).toFixed(2)} 
+                                    (${((clickedData.c - clickedData.o) / clickedData.o * 100).toFixed(2)}%)
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Show the tooltip using a simple alert for now
+                        showAlert(`Candlestick Data: ${new Date(clickedData.x).toLocaleDateString()} - Close: $${clickedData.c.toFixed(2)}`, 'info');
+                    }
                 }
             });
             
             console.log('[NAVIGATION] Enhanced custom navigation system added successfully');
-            console.log('[NAVIGATION] Event listeners attached to canvas:', canvas);
         }
 
         // Update indicators
         function updateIndicators(indicators) {
-            const container = document.getElementById('indicators-container');
+            // Store indicators data for use in metrics overlay
+            currentStockInfo = indicators;
             
-            container.innerHTML = `
-                <div class="row">
-                    <!-- Price Metrics -->
-                    <div class="col-12">
-                        <h6 class="text-primary mb-2"><i class="fas fa-dollar-sign"></i> Price Metrics</h6>
+            // Update the metrics overlay if it's visible
+            const overlay = document.getElementById('metrics-overlay');
+            if (overlay && overlay.style.display !== 'none') {
+                const currentLevel = overlay.getAttribute('data-display-level') || 'basic';
+                updateMetricsDisplay(overlay, currentLevel);
+            }
+            
+            console.log('[INDICATORS] Updated indicators data:', indicators);
+            console.log('[INDICATORS] Metrics overlay updated if visible');
+        }
+
+        // Metrics Overlay Functions - similar to local GUI MetricsWidget
+        function updateMetricsOverlay(indicators) {
+            const overlay = document.getElementById('metrics-overlay');
+            const content = document.getElementById('metrics-overlay-content');
+            
+            if (!overlay || !content) return;
+            
+            content.innerHTML = `
+                <div class="metrics-group">
+                    <div class="metrics-group-title">Price Metrics</div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Current Price:</span>
+                        <span class="metrics-item-value">$${indicators.current_price.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.current_price.toFixed(2)}</div>
-                            <div class="metric-label">Current Price</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Daily Change:</span>
+                        <span class="metrics-item-value">$${indicators.price_change.toFixed(2)} (${indicators.price_change_pct.toFixed(2)}%)</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.price_change_pct.toFixed(2)}%</div>
-                            <div class="metric-label">Daily Change</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Change (Period):</span>
+                        <span class="metrics-item-value">${(indicators.price_change_period * 100).toFixed(2)}%</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${(indicators.price_change_period * 100).toFixed(2)}%</div>
-                            <div class="metric-label">Period Change</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">High/Low:</span>
+                        <span class="metrics-item-value">$${indicators.high_price.toFixed(2)} / $${indicators.low_price.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.high_price.toFixed(2)}</div>
-                            <div class="metric-label">High Price</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Avg Price:</span>
+                        <span class="metrics-item-value">$${indicators.avg_price.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.low_price.toFixed(2)}</div>
-                            <div class="metric-label">Low Price</div>
-                        </div>
+                </div>
+                
+                <div class="metrics-group">
+                    <div class="metrics-group-title">Volume Metrics</div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Volume:</span>
+                        <span class="metrics-item-value">${indicators.current_volume.toLocaleString()}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.avg_price.toFixed(2)}</div>
-                            <div class="metric-label">Average Price</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Avg Volume:</span>
+                        <span class="metrics-item-value">${indicators.avg_volume.toLocaleString()}</span>
                     </div>
-                    
-                    <!-- Volume Metrics -->
-                    <div class="col-12 mt-3">
-                        <h6 class="text-primary mb-2"><i class="fas fa-chart-bar"></i> Volume Metrics</h6>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Volume Ratio:</span>
+                        <span class="metrics-item-value">${indicators.volume_ratio.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.current_volume.toLocaleString()}</div>
-                            <div class="metric-label">Current Volume</div>
-                        </div>
+                </div>
+                
+                <div class="metrics-group">
+                    <div class="metrics-group-title">Volatility Metrics</div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Daily Volatility:</span>
+                        <span class="metrics-item-value">${indicators.daily_vol.toFixed(2)}%</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.avg_volume.toLocaleString()}</div>
-                            <div class="metric-label">Average Volume</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Weekly Volatility:</span>
+                        <span class="metrics-item-value">${indicators.weekly_vol.toFixed(2)}%</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.volume_ratio.toFixed(2)}</div>
-                            <div class="metric-label">Volume Ratio</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Annualized Volatility:</span>
+                        <span class="metrics-item-value">${(indicators.volatility * 100).toFixed(2)}%</span>
                     </div>
-                    
-                    <!-- Volatility Metrics -->
-                    <div class="col-12 mt-3">
-                        <h6 class="text-primary mb-2"><i class="fas fa-chart-line"></i> Volatility Metrics</h6>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">ATR:</span>
+                        <span class="metrics-item-value">$${indicators.atr.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.daily_vol.toFixed(2)}%</div>
-                            <div class="metric-label">Daily Volatility</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Bollinger Width:</span>
+                        <span class="metrics-item-value">${indicators.bollinger_width.toFixed(2)}%</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.weekly_vol.toFixed(2)}%</div>
-                            <div class="metric-label">Weekly Volatility</div>
-                        </div>
+                </div>
+                
+                <div class="metrics-group">
+                    <div class="metrics-group-title">Technical Indicators</div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">RSI:</span>
+                        <span class="metrics-item-value">${indicators.rsi.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.volatility.toFixed(2)}%</div>
-                            <div class="metric-label">Annual Volatility</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">MACD:</span>
+                        <span class="metrics-item-value">${indicators.macd.toFixed(4)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.atr.toFixed(2)}</div>
-                            <div class="metric-label">ATR</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">MACD Signal:</span>
+                        <span class="metrics-item-value">${indicators.macd_signal.toFixed(4)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.bollinger_width.toFixed(2)}%</div>
-                            <div class="metric-label">Bollinger Width</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">MACD Histogram:</span>
+                        <span class="metrics-item-value">${indicators.macd_histogram.toFixed(4)}</span>
                     </div>
-                    
-                    <!-- Technical Indicators -->
-                    <div class="col-12 mt-3">
-                        <h6 class="text-primary mb-2"><i class="fas fa-cogs"></i> Technical Indicators</h6>
+                </div>
+                
+                <div class="metrics-group">
+                    <div class="metrics-group-title">Moving Averages</div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">SMA(20):</span>
+                        <span class="metrics-item-value">$${indicators.sma_20.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.rsi.toFixed(2)}</div>
-                            <div class="metric-label">RSI</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">EMA(12):</span>
+                        <span class="metrics-item-value">$${indicators.ema_12.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.macd.toFixed(4)}</div>
-                            <div class="metric-label">MACD</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">SMA(50):</span>
+                        <span class="metrics-item-value">$${indicators.sma_50.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.macd_signal.toFixed(4)}</div>
-                            <div class="metric-label">MACD Signal</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">SMA(200):</span>
+                        <span class="metrics-item-value">$${indicators.sma_200.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.macd_histogram.toFixed(4)}</div>
-                            <div class="metric-label">MACD Histogram</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">EMA(20):</span>
+                        <span class="metrics-item-value">$${indicators.ema_20.toFixed(2)}</span>
                     </div>
-                    
-                    <!-- Moving Averages -->
-                    <div class="col-12 mt-3">
-                        <h6 class="text-primary mb-2"><i class="fas fa-chart-area"></i> Moving Averages</h6>
+                </div>
+                
+                <div class="metrics-group">
+                    <div class="metrics-group-title">Bollinger Bands</div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">BB Upper:</span>
+                        <span class="metrics-item-value">$${indicators.bb_upper.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.sma_20.toFixed(2)}</div>
-                            <div class="metric-label">SMA(20)</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">BB Middle:</span>
+                        <span class="metrics-item-value">$${indicators.bb_middle.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.ema_12.toFixed(2)}</div>
-                            <div class="metric-label">EMA(12)</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">BB Lower:</span>
+                        <span class="metrics-item-value">$${indicators.bb_lower.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.sma_50.toFixed(2)}</div>
-                            <div class="metric-label">SMA(50)</div>
-                        </div>
+                </div>
+                
+                <div class="metrics-group">
+                    <div class="metrics-group-title">Stochastic & Williams</div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Stoch %K:</span>
+                        <span class="metrics-item-value">${indicators.stoch_k.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.sma_200.toFixed(2)}</div>
-                            <div class="metric-label">SMA(200)</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Stoch %D:</span>
+                        <span class="metrics-item-value">${indicators.stoch_d.toFixed(2)}</span>
                     </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.ema_20.toFixed(2)}</div>
-                            <div class="metric-label">EMA(20)</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Bollinger Bands -->
-                    <div class="col-12 mt-3">
-                        <h6 class="text-primary mb-2"><i class="fas fa-chart-bar"></i> Bollinger Bands</h6>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.bb_upper.toFixed(2)}</div>
-                            <div class="metric-label">BB Upper</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.bb_lower.toFixed(2)}</div>
-                            <div class="metric-label">BB Lower</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">$${indicators.bb_middle.toFixed(2)}</div>
-                            <div class="metric-label">BB Middle</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Stochastic & Williams -->
-                    <div class="col-12 mt-3">
-                        <h6 class="text-primary mb-2"><i class="fas fa-chart-line"></i> Stochastic & Williams</h6>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.stoch_k.toFixed(2)}</div>
-                            <div class="metric-label">Stoch %K</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.stoch_d.toFixed(2)}</div>
-                            <div class="metric-label">Stoch %D</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="metrics-card">
-                            <div class="metric-value">${indicators.williams_r.toFixed(2)}</div>
-                            <div class="metric-label">Williams %R</div>
-                        </div>
+                    <div class="metrics-item">
+                        <span class="metrics-item-label">Williams %R:</span>
+                        <span class="metrics-item-value">${indicators.williams_r.toFixed(2)}</span>
                     </div>
                 </div>
             `;
+            
+            // Show the overlay
+            overlay.style.display = 'block';
+            
+            // Initialize dragging
+            initializeMetricsOverlayDragging();
+        }
+        
+        function toggleMetricsDisplay(level) {
+            const overlay = document.getElementById('metrics-overlay');
+            if (!overlay) return;
+            
+            // Remove all display classes
+            overlay.classList.remove('minimized', 'medium', 'full');
+            
+            // Add the appropriate class
+            if (level === 'min') {
+                overlay.classList.add('minimized');
+            } else if (level === 'medium') {
+                overlay.classList.add('medium');
+            } else if (level === 'full') {
+                overlay.classList.add('full');
+            }
+        }
+        
+        function initializeMetricsOverlayDragging() {
+            const overlay = document.getElementById('metrics-overlay');
+            const header = overlay.querySelector('.metrics-overlay-header');
+            
+            if (!overlay || !header) return;
+            
+            let isDragging = false;
+            let dragStartX = 0;
+            let dragStartY = 0;
+            let overlayStartX = 0;
+            let overlayStartY = 0;
+            
+            header.addEventListener('mousedown', function(e) {
+                if (e.target.tagName === 'BUTTON') return; // Don't drag when clicking buttons
+                
+                isDragging = true;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                
+                const rect = overlay.getBoundingClientRect();
+                overlayStartX = rect.left;
+                overlayStartY = rect.top;
+                
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - dragStartX;
+                const deltaY = e.clientY - dragStartY;
+                
+                const newX = overlayStartX + deltaX;
+                const newY = overlayStartY + deltaY;
+                
+                // Clamp to chart container bounds
+                const chartContainer = document.querySelector('.chart-container');
+                if (chartContainer) {
+                    const containerRect = chartContainer.getBoundingClientRect();
+                    const maxX = containerRect.width - overlay.offsetWidth;
+                    const maxY = containerRect.height - overlay.offsetHeight;
+                    
+                    overlay.style.left = Math.max(0, Math.min(newX, maxX)) + 'px';
+                    overlay.style.top = Math.max(0, Math.min(newY, maxY)) + 'px';
+                } else {
+                    overlay.style.left = newX + 'px';
+                    overlay.style.top = newY + 'px';
+                }
+            });
+            
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
         }
 
-        // Select decision
-        function selectDecision(decision) {
-            console.log('[DEBUG] selectDecision() called with:', decision);
+        // Make decision
+        function makeDecision(decision) {
+            console.log('[DEBUG] makeDecision() called with:', decision);
             
             selectedDecision = decision;
             console.log('[DEBUG] selectedDecision set to:', selectedDecision);
@@ -1980,17 +2374,25 @@
             });
             
             // Add active class to selected button
-            event.target.classList.add('active');
-            console.log('[DEBUG] Added active class to button:', event.target.textContent.trim());
+            document.getElementById(decision.toLowerCase() + '-btn').classList.add('active');
+            console.log('[DEBUG] Added active class to button:', decision);
             
-            // Show decision interface
-            const decisionInterface = document.getElementById('decision-interface');
-            if (decisionInterface) {
-                decisionInterface.style.display = 'block';
-                console.log('[DEBUG] Decision interface shown');
-            } else {
-                console.error('[ERROR] Decision interface element not found');
+            // Enable submit button
+            const submitBtn = document.getElementById('submit-decision-btn');
+            const reasoningInput = document.getElementById('reasoning-input');
+            if (submitBtn && reasoningInput) {
+                if (reasoningInput.value.trim().length > 0) {
+                    submitBtn.disabled = false;
+                } else {
+                    // Enable but warn user
+                    submitBtn.disabled = false;
+                }
             }
+        }
+
+        // Select decision (legacy function name)
+        function selectDecision(decision) {
+            return makeDecision(decision);
         }
 
         // Submit decision
@@ -2248,8 +2650,8 @@
                         <h5>System Information</h5>
                         <ul class="list-unstyled">
                             <li><strong>Model Trainer:</strong> 
-                                <span class="status-indicator {{ 'status-online' if model_trainer_available else 'status-offline' }}"></span>
-                                {{ 'Available' if model_trainer_available else 'Not Available' }}
+                                <span class="status-indicator ${status.model_trainer_available ? 'status-online' : 'status-offline'}"></span>
+                                ${status.model_trainer_available ? 'Available' : 'Not Available'}
                             </li>
                             <li><strong>Web Interface:</strong> 
                                 <span class="status-indicator status-online"></span> Running
@@ -2316,26 +2718,28 @@
             // Implementation for hiding loading indicator
         }
 
-        // Auto-fit functions for chart
+        // Auto-fit functions for chart - match local GUI implementation exactly
         function autoFitX() {
             if (stockChart && currentStockData && currentStockData.length > 0) {
+                try {
+                    // Match local GUI auto_resize_x implementation
+                    // Enable auto-range for X axis, then immediately disable it
                 const xScale = stockChart.scales.x;
                 if (xScale) {
-                    // Reset X axis to show all data
-                    const dates = currentStockData.map(d => new Date(d.x));
-                    xScale.min = Math.min(...dates);
-                    xScale.max = Math.max(...dates);
-                    
-                    // Use a safer update method
-                    try {
-                        stockChart.update('none');
+                        // Reset X axis to show all data with proper date handling
+                        const dates = currentStockData.map(d => new Date(d.x));
+                        xScale.min = Math.min(...dates);
+                        xScale.max = Math.max(...dates);
+                        
+                        // Use active mode for visual feedback - same as local GUI
+                        stockChart.update('active');
                         showAlert('X-axis auto-fitted', 'success');
+                    } else {
+                        showAlert('Chart X scale not available', 'warning');
+                    }
                     } catch (error) {
                         console.error('[ERROR] Failed to update chart for X auto-fit:', error);
                         showAlert('Failed to auto-fit X-axis', 'warning');
-                    }
-                } else {
-                    showAlert('Chart scales not available', 'warning');
                 }
             } else {
                 showAlert('No chart data available', 'warning');
@@ -2344,40 +2748,26 @@
 
         function autoFitY() {
             if (stockChart && currentStockData && currentStockData.length > 0) {
+                try {
+                    // Match local GUI auto_resize_y implementation
                 const yScale = stockChart.scales.y;
                 if (!yScale) {
                     showAlert('Chart Y scale not available', 'warning');
                     return;
                 }
                 
-                let minPrice, maxPrice;
-                
-                // Check if it's candlestick data or line chart data
-                if (currentStockData[0] && currentStockData[0].l !== undefined) {
-                    // Candlestick data - calculate min and max from low and high prices
-                    const prices = currentStockData.flatMap(d => [d.l, d.h]);
-                    minPrice = Math.min(...prices);
-                    maxPrice = Math.max(...prices);
-                } else if (currentStockData[0] && currentStockData[0].y !== undefined) {
-                    // Line chart data - calculate min and max from y values
-                    const prices = currentStockData.map(d => d.y);
-                    minPrice = Math.min(...prices);
-                    maxPrice = Math.max(...prices);
-                } else {
-                    console.warn('[WARN] Unknown data structure for auto-fit Y');
-                    showAlert('Unknown data structure for auto-fit', 'warning');
-                    return;
-                }
-                
-                const priceRange = maxPrice - minPrice;
-                const padding = priceRange * 0.05;
-                
-                yScale.min = minPrice - padding;
-                yScale.max = maxPrice + padding;
-                
-                // Use a safer update method
-                try {
-                    stockChart.update('none');
+                    // Calculate price ranges - same as local GUI
+                        const prices = currentStockData.flatMap(d => [d.l, d.h]);
+                    const minPrice = Math.min(...prices);
+                    const maxPrice = Math.max(...prices);
+                    const pricePadding = (maxPrice - minPrice) * 0.05; // 5% padding - same as local GUI
+                    
+                    // Set Y axis range with padding
+                    yScale.min = Math.max(0, minPrice - pricePadding);
+                    yScale.max = maxPrice + pricePadding;
+                    
+                    // Use active mode for visual feedback - same as local GUI
+                    stockChart.update('active');
                     showAlert('Y-axis auto-fitted', 'success');
                 } catch (error) {
                     console.error('[ERROR] Failed to update chart for Y auto-fit:', error);
@@ -2438,7 +2828,8 @@
                         yScale.min = Math.min(...prices) * 0.99; // Add 1% padding
                         yScale.max = Math.max(...prices) * 1.01; // Add 1% padding
                         
-                        stockChart.update('none');
+                        // Use active mode for visual feedback
+                        stockChart.update('active');
                         showAlert('Chart zoom reset to full view', 'info');
                     } catch (error) {
                         console.error('[ERROR] Failed to reset chart zoom:', error);
@@ -2451,6 +2842,493 @@
                 showAlert('No chart data available', 'warning');
             }
         }
+
+        // Test function to manually trigger chart update
+        function testChartUpdate() {
+            if (stockChart) {
+                console.log('[TEST] Manually triggering chart update');
+                console.log('[TEST] Chart scales before update:', {
+                    x: { min: stockChart.scales.x.min, max: stockChart.scales.x.max },
+                    y: { min: stockChart.scales.y.min, max: stockChart.scales.y.max }
+                });
+                
+                try {
+                    stockChart.update('active');
+                    console.log('[TEST] Chart update completed successfully');
+                    showAlert('Chart update test completed', 'info');
+                } catch (error) {
+                    console.error('[TEST] Chart update failed:', error);
+                    showAlert('Chart update test failed: ' + error.message, 'danger');
+                }
+            } else {
+                console.warn('[TEST] No chart available for testing');
+                showAlert('No chart available for testing', 'warning');
+            }
+        }
+
+        // Test function to manually trigger tooltip
+        function testTooltip() {
+            if (stockChart && currentStockData && currentStockData.length > 0) {
+                console.log('[TEST] Testing tooltip functionality');
+                
+                // Get the first data point
+                const firstDataPoint = currentStockData[0];
+                console.log('[TEST] First data point:', firstDataPoint);
+                
+                // Simulate a tooltip event
+                const mockContext = [{
+                    raw: {
+                        x: firstDataPoint.x,
+                        y: firstDataPoint.c,
+                        o: firstDataPoint.o,
+                        h: firstDataPoint.h,
+                        l: firstDataPoint.l,
+                        c: firstDataPoint.c
+                    }
+                }];
+                
+                console.log('[TEST] Mock tooltip context:', mockContext);
+                
+                // Test tooltip callbacks
+                if (stockChart.options.plugins.tooltip.callbacks.title) {
+                    const title = stockChart.options.plugins.tooltip.callbacks.title(mockContext);
+                    console.log('[TEST] Tooltip title:', title);
+                }
+                
+                if (stockChart.options.plugins.tooltip.callbacks.label) {
+                    const labels = stockChart.options.plugins.tooltip.callbacks.label(mockContext);
+                    console.log('[TEST] Tooltip labels:', labels);
+                }
+                
+                if (stockChart.options.plugins.tooltip.callbacks.afterLabel) {
+                    const afterLabel = stockChart.options.plugins.tooltip.callbacks.afterLabel(mockContext);
+                    console.log('[TEST] Tooltip afterLabel:', afterLabel);
+                }
+                
+                showAlert('Tooltip test completed - check console for results', 'info');
+            } else {
+                console.warn('[TEST] No chart or data available for tooltip testing');
+                showAlert('No chart or data available for tooltip testing', 'warning');
+            }
+        }
+
+        // Test function to debug chart cleanup
+        function testChartCleanup() {
+            console.log('[TEST] Testing chart cleanup');
+            console.log('[TEST] Current stockChart:', stockChart);
+            console.log('[TEST] Chart.js instances:', Chart.instances ? Chart.instances.length : 'undefined');
+            
+            if (Chart.instances && Chart.instances.length > 0) {
+                console.log('[TEST] Chart.js instances details:');
+                Chart.instances.forEach((instance, index) => {
+                    console.log(`[TEST] Instance ${index}:`, {
+                        id: instance.id,
+                        canvas: instance.canvas ? instance.canvas.id : 'no canvas',
+                        type: instance.config ? instance.config.type : 'unknown'
+                    });
+                });
+            }
+            
+            cleanupChart();
+            
+            console.log('[TEST] After cleanup - stockChart:', stockChart);
+            console.log('[TEST] After cleanup - Chart.js instances:', Chart.instances ? Chart.instances.length : 'undefined');
+            
+            showAlert('Chart cleanup test completed - check console for results', 'info');
+        }
+
+        // Toggle metrics overlay visibility
+        function toggleMetricsOverlay() {
+            const overlay = document.getElementById('metrics-overlay');
+            if (overlay) {
+                const isVisible = overlay.style.display !== 'none';
+                overlay.style.display = isVisible ? 'none' : 'block';
+                console.log('[METRICS] Metrics overlay toggled:', !isVisible);
+                showAlert(`Metrics overlay ${isVisible ? 'hidden' : 'shown'}`, 'info');
+            } else {
+                console.warn('[METRICS] Metrics overlay element not found');
+                showAlert('Metrics overlay not available', 'warning');
+            }
+        }
+
+        // Toggle metrics overlay display level
+        function toggleMetricsDisplayLevel() {
+            const overlay = document.getElementById('metrics-overlay');
+            if (overlay) {
+                const currentLevel = overlay.getAttribute('data-display-level') || 'basic';
+                const levels = ['basic', 'detailed', 'advanced'];
+                const currentIndex = levels.indexOf(currentLevel);
+                const nextIndex = (currentIndex + 1) % levels.length;
+                const nextLevel = levels[nextIndex];
+                
+                overlay.setAttribute('data-display-level', nextLevel);
+                updateMetricsDisplay(overlay, nextLevel);
+                console.log('[METRICS] Display level changed to:', nextLevel);
+                showAlert(`Metrics display level: ${nextLevel}`, 'info');
+            }
+        }
+
+        // Update metrics display based on level
+        function updateMetricsDisplay(overlay, level) {
+            const content = overlay.querySelector('.metrics-overlay-content');
+            if (!content) return;
+            
+            switch (level) {
+                case 'basic':
+                    content.innerHTML = `
+                        <div class="metric-item">
+                            <span class="metric-label">Current Price:</span>
+                            <span class="metric-value">$${currentStockInfo?.current_price?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Daily Change:</span>
+                            <span class="metric-value">${currentStockInfo?.price_change_pct?.toFixed(2) || 'N/A'}%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Volume:</span>
+                            <span class="metric-value">${currentStockInfo?.volume?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                    `;
+                    break;
+                case 'detailed':
+                    content.innerHTML = `
+                        <div class="metric-item">
+                            <span class="metric-label">Current Price:</span>
+                            <span class="metric-value">$${currentStockInfo?.current_price?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Daily Change:</span>
+                            <span class="metric-value">${currentStockInfo?.price_change_pct?.toFixed(2) || 'N/A'}%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">High/Low:</span>
+                            <span class="metric-value">$${currentStockInfo?.high_price?.toFixed(2) || 'N/A'} / $${currentStockInfo?.low_price?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Market Cap:</span>
+                            <span class="metric-value">$${(currentStockInfo?.market_cap / 1000000000)?.toFixed(2) || 'N/A'}B</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Volume:</span>
+                            <span class="metric-value">${currentStockInfo?.volume?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Avg Volume:</span>
+                            <span class="metric-value">${currentStockInfo?.avg_volume?.toLocaleString() || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">RSI:</span>
+                            <span class="metric-value">${currentStockInfo?.rsi?.toFixed(2) || 'N/A'}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">MACD:</span>
+                            <span class="metric-value">${currentStockInfo?.macd?.toFixed(4) || 'N/A'}</span>
+                        </div>
+                    `;
+                    break;
+                case 'advanced':
+                    content.innerHTML = `
+                        <!-- Price Metrics -->
+                        <div class="metric-group">
+                            <div class="metric-group-title">Price Metrics</div>
+                            <div class="metric-item">
+                                <span class="metric-label">Current Price:</span>
+                                <span class="metric-value">$${currentStockInfo?.current_price?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Daily Change:</span>
+                                <span class="metric-value">${currentStockInfo?.price_change_pct?.toFixed(2) || 'N/A'}%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">High/Low:</span>
+                                <span class="metric-value">$${currentStockInfo?.high_price?.toFixed(2) || 'N/A'} / $${currentStockInfo?.low_price?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Avg Price:</span>
+                                <span class="metric-value">$${currentStockInfo?.avg_price?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Volume Metrics -->
+                        <div class="metric-group">
+                            <div class="metric-group-title">Volume Metrics</div>
+                            <div class="metric-item">
+                                <span class="metric-label">Volume:</span>
+                                <span class="metric-value">${currentStockInfo?.volume?.toLocaleString() || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Avg Volume:</span>
+                                <span class="metric-value">${currentStockInfo?.avg_volume?.toLocaleString() || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Volume Ratio:</span>
+                                <span class="metric-value">${currentStockInfo?.volume_ratio?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Volatility Metrics -->
+                        <div class="metric-group">
+                            <div class="metric-group-title">Volatility Metrics</div>
+                            <div class="metric-item">
+                                <span class="metric-label">Daily Volatility:</span>
+                                <span class="metric-value">${currentStockInfo?.daily_vol?.toFixed(2) || 'N/A'}%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Weekly Volatility:</span>
+                                <span class="metric-value">${currentStockInfo?.weekly_vol?.toFixed(2) || 'N/A'}%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Annualized Volatility:</span>
+                                <span class="metric-value">${(currentStockInfo?.volatility * 100).toFixed(2)}%</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">ATR:</span>
+                                <span class="metric-value">$${currentStockInfo?.atr?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Bollinger Width:</span>
+                                <span class="metric-value">${currentStockInfo?.bollinger_width?.toFixed(2) || 'N/A'}%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Technical Indicators -->
+                        <div class="metric-group">
+                            <div class="metric-group-title">Technical Indicators</div>
+                            <div class="metric-item">
+                                <span class="metric-label">RSI:</span>
+                                <span class="metric-value">${currentStockInfo?.rsi?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">MACD:</span>
+                                <span class="metric-value">${currentStockInfo?.macd?.toFixed(4) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">MACD Signal:</span>
+                                <span class="metric-value">${currentStockInfo?.macd_signal?.toFixed(4) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">MACD Histogram:</span>
+                                <span class="metric-value">${currentStockInfo?.macd_histogram?.toFixed(4) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Stoch %K:</span>
+                                <span class="metric-value">${currentStockInfo?.stoch_k?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Stoch %D:</span>
+                                <span class="metric-value">${currentStockInfo?.stoch_d?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Williams %R:</span>
+                                <span class="metric-value">${currentStockInfo?.williams_r?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Moving Averages -->
+                        <div class="metric-group">
+                            <div class="metric-group-title">Moving Averages</div>
+                            <div class="metric-item">
+                                <span class="metric-label">SMA(20):</span>
+                                <span class="metric-value">$${currentStockInfo?.sma_20?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">EMA(12):</span>
+                                <span class="metric-value">$${currentStockInfo?.ema_12?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">SMA(50):</span>
+                                <span class="metric-value">$${currentStockInfo?.sma_50?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">SMA(200):</span>
+                                <span class="metric-value">$${currentStockInfo?.sma_200?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">EMA(20):</span>
+                                <span class="metric-value">$${currentStockInfo?.ema_20?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Bollinger Bands -->
+                        <div class="metric-group">
+                            <div class="metric-group-title">Bollinger Bands</div>
+                            <div class="metric-item">
+                                <span class="metric-label">BB Upper:</span>
+                                <span class="metric-value">$${currentStockInfo?.bb_upper?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">BB Middle:</span>
+                                <span class="metric-value">$${currentStockInfo?.bb_middle?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">BB Lower:</span>
+                                <span class="metric-value">$${currentStockInfo?.bb_lower?.toFixed(2) || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Data Info -->
+                        <div class="metric-group">
+                            <div class="metric-group-title">Data Info</div>
+                            <div class="metric-item">
+                                <span class="metric-label">Data Points:</span>
+                                <span class="metric-value">${currentStockData?.length || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Date Range:</span>
+                                <span class="metric-value">${currentStockInfo?.start_date || 'N/A'} to ${currentStockInfo?.end_date || 'N/A'}</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-label">Market Cap:</span>
+                                <span class="metric-value">$${(currentStockInfo?.market_cap / 1000000000)?.toFixed(2) || 'N/A'}B</span>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+        }
+
+        // Initialize metrics overlay
+        function initializeMetricsOverlay() {
+            const overlay = document.getElementById('metrics-overlay');
+            if (overlay) {
+                // Set initial display level
+                overlay.setAttribute('data-display-level', 'basic');
+                updateMetricsDisplay(overlay, 'basic');
+                
+                // Make overlay draggable
+                makeDraggable(overlay);
+                console.log('[METRICS] Metrics overlay initialized');
+            }
+        }
+
+        // Make element draggable
+        function makeDraggable(element) {
+            let isDragging = false;
+            let currentX;
+            let currentY;
+            let initialX;
+            let initialY;
+            let xOffset = 0;
+            let yOffset = 0;
+
+            element.addEventListener('mousedown', dragStart);
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+
+            function dragStart(e) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+
+                if (e.target === element || element.contains(e.target)) {
+                    isDragging = true;
+                }
+            }
+
+            function drag(e) {
+                if (isDragging) {
+                    e.preventDefault();
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+
+                    xOffset = currentX;
+                    yOffset = currentY;
+
+                    setTranslate(currentX, currentY, element);
+                }
+            }
+
+            function setTranslate(xPos, yPos, el) {
+                el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+            }
+
+            function dragEnd(e) {
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+            }
+        }
+
+        // Custom tooltip system
+        let customTooltip = null;
+        let tooltipTimeout = null;
+
+        function createCustomTooltip() {
+            if (customTooltip) customTooltip.remove();
+            customTooltip = document.createElement('div');
+            customTooltip.id = 'custom-tooltip';
+            customTooltip.style.cssText = `
+                position: absolute;
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 10px;
+                border-radius: 6px;
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                pointer-events: none;
+                z-index: 1000;
+                border: 1px solid #333;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                display: none;
+                max-width: 200px;
+            `;
+            document.body.appendChild(customTooltip);
+            return customTooltip;
+        }
+
+        function showCustomTooltip(dataPoint, mouseX, mouseY) {
+            if (!customTooltip) createCustomTooltip();
+            const change = dataPoint.c - dataPoint.o;
+            const changePercent = (change / dataPoint.o) * 100;
+            const isGreen = change >= 0;
+            const sign = isGreen ? '+' : '';
+            customTooltip.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #555; padding-bottom: 3px;">
+                    ${new Date(dataPoint.x).toLocaleDateString('en-US', {
+                        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+                    })}
+                </div>
+                <div style="margin-bottom: 2px;">Open: $${dataPoint.o.toFixed(2)}</div>
+                <div style="margin-bottom: 2px;">High: $${dataPoint.h.toFixed(2)}</div>
+                <div style="margin-bottom: 2px;">Low: $${dataPoint.l.toFixed(2)}</div>
+                <div style="margin-bottom: 5px;">Close: $${dataPoint.c.toFixed(2)}</div>
+                <div style="color: ${isGreen ? '#26a69a' : '#ef5350'}; font-weight: bold;">
+                    ${sign}${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)
+                </div>
+            `;
+            // Position tooltip relative to chart container
+            const chartContainer = document.querySelector('.chart-container');
+            const rect = chartContainer.getBoundingClientRect();
+            const tooltipWidth = 200;
+            const tooltipHeight = 120;
+            let left = mouseX + 15;
+            let top = mouseY + 15;
+            // Clamp to chart container
+            if (left + tooltipWidth > rect.right) left = mouseX - tooltipWidth - 15;
+            if (top + tooltipHeight > rect.bottom) top = mouseY - tooltipHeight - 15;
+            customTooltip.style.left = left + 'px';
+            customTooltip.style.top = top + 'px';
+            customTooltip.style.display = 'block';
+            if (tooltipTimeout) clearTimeout(tooltipTimeout);
+        }
+
+        function hideCustomTooltip() {
+            if (customTooltip) customTooltip.style.display = 'none';
+            if (tooltipTimeout) clearTimeout(tooltipTimeout);
+        }
+
+        // --- 2. Robust Metrics Overlay Checks ---
+        function safeVal(val, digits=2, isMoney=false, isPercent=false) {
+            if (val === undefined || val === null || isNaN(val)) return 'N/A';
+            if (isMoney) return `$${(+val).toFixed(digits)}`;
+            if (isPercent) return `${(+val).toFixed(digits)}%`;
+            return (+val).toFixed(digits);
+        }
+        // In updateMetricsOverlay, replace all .toFixed() and .toLocaleString() with safeVal()
+        // Example:
+        // <span class="metrics-item-value">$${indicators.current_price.toFixed(2)}</span>
+        // becomes:
+        // <span class="metrics-item-value">${safeVal(indicators.current_price,2,true)}</span>
+        // Do this for all metrics fields.
     </script>
 </body>
 </html> 

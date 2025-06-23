@@ -25,6 +25,14 @@ from custom_model_dialog import CustomModelDialog
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from _2_Orchestrator_And_ML_Python.interactive_training_app.backend.model_trainer import ModelTrainer
 
+# Import the financial modeler widget
+try:
+    from financial_modeler_widget import FinancialModelerWidget
+    FINANCIAL_MODELER_AVAILABLE = True
+except ImportError as e:
+    print(f"Financial modeler widget not available: {e}")
+    FINANCIAL_MODELER_AVAILABLE = False
+
 # Create a simple ModelBridge class for now
 class ModelBridge:
     def __init__(self):
@@ -676,8 +684,8 @@ class TrainingThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Neural Network Trading System")
-        self.setMinimumSize(800, 600)
+        self.setWindowTitle("Neural Network Trading System & Financial Modeler")
+        self.setMinimumSize(1200, 800)
         
         # Initialize model components
         self.model_trainer = ModelTrainer()
@@ -690,17 +698,65 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # Create scrollable area for entire content
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        # Create main tab widget
+        self.main_tab_widget = QTabWidget()
+        self.main_tab_widget.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #c0c0c0;
+                background-color: white;
+            }
+            QTabBar::tab {
+                background-color: #f0f0f0;
+                padding: 12px 20px;
+                margin-right: 2px;
+                border: 1px solid #c0c0c0;
+                border-bottom: none;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                font-weight: bold;
+            }
+            QTabBar::tab:selected {
+                background-color: white;
+                border-bottom: 1px solid white;
+            }
+            QTabBar::tab:hover {
+                background-color: #e0e0e0;
+            }
+        """)
         
-        # Create content widget that will be inside the scroll area
-        self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout(self.content_widget)
-        self.content_layout.setContentsMargins(10, 10, 10, 10)
-        self.content_layout.setSpacing(10)
+        # Create trading tab
+        self.create_trading_tab()
+        
+        # Create financial modeler tab (if available)
+        if FINANCIAL_MODELER_AVAILABLE:
+            self.create_financial_modeler_tab()
+        else:
+            # Create placeholder tab
+            self.create_placeholder_tab()
+        
+        main_layout.addWidget(self.main_tab_widget)
+        
+        # Add a status bar
+        self.statusBar().showMessage("Trading System & Financial Modeler - Use tabs to switch between interfaces. F11: Fullscreen, F5: Refresh data.")
+        
+    def create_trading_tab(self):
+        """Create the trading interface tab."""
+        trading_widget = QWidget()
+        trading_layout = QVBoxLayout(trading_widget)
+        trading_layout.setContentsMargins(10, 10, 10, 10)
+        trading_layout.setSpacing(10)
+        
+        # Create scrollable area for trading content
+        trading_scroll_area = QScrollArea()
+        trading_scroll_area.setWidgetResizable(True)
+        trading_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        trading_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        
+        # Create trading content widget
+        trading_content = QWidget()
+        trading_content_layout = QVBoxLayout(trading_content)
+        trading_content_layout.setContentsMargins(0, 0, 0, 0)
+        trading_content_layout.setSpacing(10)
         
         # Controls (stock, date, get data)
         controls_widget = QWidget()
@@ -779,7 +835,7 @@ class MainWindow(QMainWindow):
         self.loading_label.setVisible(False)
         controls_layout.addWidget(self.loading_label)
         
-        self.content_layout.addWidget(controls_widget)
+        trading_content_layout.addWidget(controls_widget)
         controls_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
         # Create a splitter for the chart and controls area
@@ -840,8 +896,8 @@ class MainWindow(QMainWindow):
         self.metrics_widget.show()
         self.metrics_widget.raise_()
         
-        # Add splitter to content layout
-        self.content_layout.addWidget(self.main_splitter, stretch=1)
+        # Add splitter to trading content layout
+        trading_content_layout.addWidget(self.main_splitter, stretch=1)
         
         # Create a container for all the controls below the chart
         controls_container = QWidget()
@@ -953,13 +1009,50 @@ class MainWindow(QMainWindow):
         # Set initial splitter sizes (70% chart, 30% controls)
         self.main_splitter.setSizes([700, 300])
         
-        # Set the content widget as the scroll area's widget
-        self.scroll_area.setWidget(self.content_widget)
-        main_layout.addWidget(self.scroll_area)
+        # Set the trading content widget as the scroll area's widget
+        trading_scroll_area.setWidget(trading_content)
+        trading_layout.addWidget(trading_scroll_area)
         
-        # Add a status bar to show scroll information
-        self.statusBar().showMessage("Use the splitter handle to resize the chart area. Scroll if content exceeds window bounds. F11: Fullscreen, F5: Refresh data.")
+        # Add the trading tab
+        self.main_tab_widget.addTab(trading_widget, "📈 Trading System")
         
+    def create_financial_modeler_tab(self):
+        """Create the financial modeler tab."""
+        try:
+            self.financial_modeler_widget = FinancialModelerWidget()
+            self.main_tab_widget.addTab(self.financial_modeler_widget, "📊 Financial Modeler")
+        except Exception as e:
+            print(f"Error creating financial modeler tab: {e}")
+            self.create_placeholder_tab()
+            
+    def create_placeholder_tab(self):
+        """Create a placeholder tab when financial modeler is not available."""
+        placeholder_widget = QWidget()
+        placeholder_layout = QVBoxLayout(placeholder_widget)
+        
+        # Add a message about the financial modeler
+        message = QLabel("Financial Modeler")
+        message.setStyleSheet("font-size: 18px; font-weight: bold; color: #666; padding: 20px;")
+        message.setAlignment(Qt.AlignCenter)
+        placeholder_layout.addWidget(message)
+        
+        info_text = QLabel(
+            "The Financial Modeler provides Excel-like functionality for:\n"
+            "• 3-Part Financial Models (Income Statement, Balance Sheet, Cash Flows)\n"
+            "• SEC Filing Data Extraction\n"
+            "• Sensitivity Analysis and Scenario Modeling\n"
+            "• Professional Excel Export\n\n"
+            "To enable this feature, ensure all dependencies are installed:\n"
+            "pip install pandas numpy yfinance openpyxl sec-api"
+        )
+        info_text.setStyleSheet("font-size: 12px; color: #888; padding: 20px; line-height: 1.5;")
+        info_text.setAlignment(Qt.AlignCenter)
+        info_text.setWordWrap(True)
+        placeholder_layout.addWidget(info_text)
+        
+        placeholder_layout.addStretch()
+        self.main_tab_widget.addTab(placeholder_widget, "📊 Financial Modeler")
+
     def on_date_range_changed(self, value):
         if value == "Custom":
             self.date_range_spin.setVisible(True)

@@ -37,6 +37,13 @@ eventlet==0.33.3
 lxml>=4.9.1
 tqdm==4.65.0
 websockets==13.0  # Required for yfinance, compatible with alpaca-trade-api
+yfinance==0.2.63  # Yahoo Finance data for financial modeling (matches existing codebase)
+
+# =============================================================================
+# FINANCIAL MODELING AND SEC DATA
+# =============================================================================
+sec-api==0.0.1  # SEC API for filing data
+openpyxl==3.1.2  # Excel file handling for financial models
 
 # =============================================================================
 # ALPACA TRADING (Uncomment when ready to add paper trading functionality)
