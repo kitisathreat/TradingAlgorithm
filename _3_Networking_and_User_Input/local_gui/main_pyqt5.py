@@ -19,6 +19,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from _2_Orchestrator_And_ML_Python.model_trainer import ModelTrainer
 from _2_Orchestrator_And_ML_Python.model_bridge import ModelBridge
 
+# Import the financial modeler widget (if available)
+try:
+    from financial_modeler_widget import FinancialModelerWidget
+    FINANCIAL_MODELER_AVAILABLE = True
+except ImportError as e:
+    print(f"Financial modeler widget not available: {e}")
+    FINANCIAL_MODELER_AVAILABLE = False
+
 class StockChartWidget(pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -103,7 +111,7 @@ class TrainingThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Neural Network Trading System (PyQt5)")
+        self.setWindowTitle("Neural Network Trading System & Financial Modeler (PyQt5)")
         self.setMinimumSize(1200, 800)
         
         # Initialize model components
@@ -137,20 +145,79 @@ class MainWindow(QMainWindow):
         
         # Create training tab
         training_tab = QWidget()
-        tabs.addTab(training_tab, "Training")
+        tabs.addTab(training_tab, "📈 Training")
         self.setup_training_tab(training_tab)
         
         # Create prediction tab
         prediction_tab = QWidget()
-        tabs.addTab(prediction_tab, "Prediction")
+        tabs.addTab(prediction_tab, "🔮 Prediction")
         self.setup_prediction_tab(prediction_tab)
+        
+        # Create financial modeler tab (if available)
+        if FINANCIAL_MODELER_AVAILABLE:
+            try:
+                self.financial_modeler_widget = FinancialModelerWidget()
+                tabs.addTab(self.financial_modeler_widget, "📊 Financial Modeler")
+            except Exception as e:
+                print(f"Error creating financial modeler tab: {e}")
+                # Create placeholder tab
+                placeholder_tab = QWidget()
+                placeholder_layout = QVBoxLayout(placeholder_tab)
+                
+                message = QLabel("Financial Modeler")
+                message.setStyleSheet("font-size: 18px; font-weight: bold; color: #666; padding: 20px;")
+                message.setAlignment(Qt.AlignCenter)
+                placeholder_layout.addWidget(message)
+                
+                info_text = QLabel(
+                    "The Financial Modeler provides Excel-like functionality for:\n"
+                    "• 3-Part Financial Models (Income Statement, Balance Sheet, Cash Flows)\n"
+                    "• SEC Filing Data Extraction\n"
+                    "• Sensitivity Analysis and Scenario Modeling\n"
+                    "• Professional Excel Export\n\n"
+                    "To enable this feature, ensure all dependencies are installed:\n"
+                    "pip install pandas numpy yfinance openpyxl sec-api"
+                )
+                info_text.setStyleSheet("font-size: 12px; color: #888; padding: 20px; line-height: 1.5;")
+                info_text.setAlignment(Qt.AlignCenter)
+                info_text.setWordWrap(True)
+                placeholder_layout.addWidget(info_text)
+                
+                placeholder_layout.addStretch()
+                tabs.addTab(placeholder_tab, "📊 Financial Modeler")
+        else:
+            # Create placeholder tab when financial modeler is not available
+            placeholder_tab = QWidget()
+            placeholder_layout = QVBoxLayout(placeholder_tab)
+            
+            message = QLabel("Financial Modeler")
+            message.setStyleSheet("font-size: 18px; font-weight: bold; color: #666; padding: 20px;")
+            message.setAlignment(Qt.AlignCenter)
+            placeholder_layout.addWidget(message)
+            
+            info_text = QLabel(
+                "The Financial Modeler provides Excel-like functionality for:\n"
+                "• 3-Part Financial Models (Income Statement, Balance Sheet, Cash Flows)\n"
+                "• SEC Filing Data Extraction\n"
+                "• Sensitivity Analysis and Scenario Modeling\n"
+                "• Professional Excel Export\n\n"
+                "To enable this feature, ensure all dependencies are installed:\n"
+                "pip install pandas numpy yfinance openpyxl sec-api"
+            )
+            info_text.setStyleSheet("font-size: 12px; color: #888; padding: 20px; line-height: 1.5;")
+            info_text.setAlignment(Qt.AlignCenter)
+            info_text.setWordWrap(True)
+            placeholder_layout.addWidget(info_text)
+            
+            placeholder_layout.addStretch()
+            tabs.addTab(placeholder_tab, "📊 Financial Modeler")
         
         # Set the content widget as the scroll area's widget
         self.scroll_area.setWidget(self.content_widget)
         layout.addWidget(self.scroll_area)
         
         # Add status bar
-        self.statusBar().showMessage("Use scroll if content exceeds window bounds. F11: Fullscreen, F5: Refresh data.")
+        self.statusBar().showMessage("Use tabs to switch between Trading System and Financial Modeler. F11: Fullscreen, F5: Refresh data.")
         
         # Apply material design theme
         apply_stylesheet(self, theme='light_blue.xml')

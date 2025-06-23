@@ -21,96 +21,98 @@ import time
 
 def print_header():
     """Print the application header"""
-    print()
     print("=" * 80)
-    print("                    NEURAL NETWORK TRADING SYSTEM - LOCAL GUI")
+    print("           NEURAL NETWORK TRADING SYSTEM & FINANCIAL MODELER")
+    print("                        LOCAL GUI SETUP")
     print("=" * 80)
     print()
-    print(" This system trains an AI to mimic your trading decisions by combining:")
-    print(" * Technical Analysis (RSI, MACD, Bollinger Bands)")
-    print(" * Sentiment Analysis (VADER analysis of your reasoning)")
-    print(" * Neural Network Learning (TensorFlow deep learning)")
+    print("This setup will:")
+    print("  • Create a Python virtual environment")
+    print("  • Install all required dependencies")
+    print("  • Launch the integrated trading system and financial modeler")
+    print()
+    print("Features:")
+    print("  • 📈 Interactive trading system with neural network models")
+    print("  • 📊 Excel-like financial modeler with 3-part financial models")
+    print("  • 🎯 SEC filing data extraction and sensitivity analysis")
+    print("  • 💾 Professional Excel export capabilities")
+    print()
+    print("-" * 80)
     print()
 
 def print_section(title):
     """Print a section header"""
     print()
-    print("-" * 80)
-    print(f" {title}")
-    print("-" * 80)
-    print()
+    print(f"[{title}]")
+    print("-" * 40)
 
 def check_python_version():
-    """Check if Python 3.9 is available"""
-    print("[1/5] Checking Python installation...")
+    """Check if Python version is compatible"""
+    print_section("1/5")
+    print("Checking Python version...")
     
-    # Check current Python version
-    current_version = sys.version_info
-    if current_version.major == 3 and current_version.minor == 9:
-        print("[OK] Python 3.9 found")
-        return True
+    version = sys.version_info
+    print(f"    Python version: {version.major}.{version.minor}.{version.micro}")
     
-    # Try to find Python 3.9 using py launcher (Windows)
-    if platform.system() == "Windows":
-        try:
-            result = subprocess.run(["py", "-3.9", "--version"], 
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                print("[OK] Python 3.9 found via py launcher")
-                return True
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
+    if version.major != 3:
+        print()
+        print("[ERROR] Python 3 is required")
+        print("        Please install Python 3.9 or later")
+        print()
+        input("Press Enter to exit...")
+        return False
     
-    print()
-    print("[ERROR] Python 3.9 is required but not found")
-    print("        Please install Python 3.9 from https://www.python.org/downloads/")
-    print()
-    input("Press Enter to exit...")
-    return False
+    if version.minor < 9:
+        print()
+        print("[WARNING] Python 3.9+ is recommended for optimal performance")
+        print("          Current version may work but is not guaranteed")
+        print()
+        response = input("Continue anyway? (y/N): ").strip().lower()
+        if response not in ['y', 'yes']:
+            return False
+    
+    print("[OK] Python version is compatible")
+    return True
 
 def detect_venv_path():
-    """Detect the appropriate virtual environment path"""
-    print("[INFO] Detecting environment for virtual environment path...")
+    """Detect the virtual environment path"""
+    print_section("2/5")
+    print("Detecting virtual environment location...")
     
-    # Get script directory
-    script_dir = Path(__file__).parent
-    
-    # Check LOCALAPPDATA (Windows)
-    local_app_data = os.environ.get('LOCALAPPDATA')
-    if local_app_data:
-        # Test if LOCALAPPDATA is writable
-        test_file = Path(local_app_data) / "write_test.tmp"
-        try:
-            test_file.write_text("test")
-            test_file.unlink()  # Remove test file
-            venv_path = Path(local_app_data) / "TradingAlgorithm" / "venv"
-            print(f"[OK] Using AppData location: {venv_path}")
-            return venv_path
-        except (OSError, PermissionError):
-            venv_path = script_dir.parent / "venv"
-            print(f"[WARNING] LOCALAPPDATA not writable, using project directory: {venv_path}")
-            return venv_path
+    # Use a location accessible to all users (no admin rights required)
+    if platform.system() == "Windows":
+        # Windows: Use user's AppData folder
+        venv_path = Path.home() / "AppData" / "Local" / "TradingAlgorithm" / "venv"
     else:
-        venv_path = script_dir.parent / "venv"
-        print(f"[INFO] LOCALAPPDATA not available, using project directory: {venv_path}")
-        return venv_path
+        # Unix/Linux: Use user's home directory
+        venv_path = Path.home() / ".trading_algorithm" / "venv"
+    
+    print(f"    Virtual environment will be created at:")
+    print(f"    {venv_path}")
+    print()
+    print("    This location:")
+    print("    • Requires no administrator privileges")
+    print("    • Is accessible to all users")
+    print("    • Will be automatically managed")
+    
+    return venv_path
 
 def remove_existing_venv(venv_path):
     """Remove existing virtual environment if it exists"""
-    print()
-    print("[2/5] Checking virtual environment...")
-    
     if venv_path.exists():
-        print("    Found existing virtual environment")
-        print("    Attempting to remove...")
+        print()
+        print(f"Found existing virtual environment at: {venv_path}")
+        print("Removing it to ensure a clean setup...")
         
         try:
+            import shutil
             shutil.rmtree(venv_path)
-            print("[OK] Successfully removed existing virtual environment")
+            print("[OK] Existing virtual environment removed")
         except OSError as e:
             print()
             print("[ERROR] Could not remove existing virtual environment")
-            print("        Please close any applications using the virtual environment and try again")
+            print(f"        This may be due to insufficient permissions.")
+            print(f"        Please manually delete: {venv_path}")
             print(f"        Error: {e}")
             print()
             input("Press Enter to exit...")
@@ -186,7 +188,7 @@ def setup_environment(venv_path):
     dependencies = [
         "numpy==1.23.5",
         "scikit-learn==1.3.0", 
-        "PyQt6==6.4.2",
+        "PyQt5==5.15.9",
         "pyqtgraph==0.13.3",
         "pandas==2.0.3",
         "yfinance==0.2.63",
@@ -212,17 +214,40 @@ def setup_environment(venv_path):
         input("Press Enter to exit...")
         return False
     
+    # Install Financial Modeler dependencies
+    print("    Installing Financial Modeler dependencies...")
+    financial_deps = [
+        "openpyxl==3.1.2",  # Excel file handling for financial models
+        "sec-api==0.0.1"    # SEC API for filing data
+    ]
+    
+    try:
+        for dep in financial_deps:
+            print(f"        Installing {dep}...")
+            subprocess.run([str(python_exe), "-m", "pip", "install", dep], 
+                          check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        print()
+        print("[WARNING] Some Financial Modeler dependencies failed to install")
+        print("          The trading system will still work, but financial modeling features may be limited")
+        print(f"          Error: {e}")
+        print()
+        response = input("Continue anyway? (y/N): ").strip().lower()
+        if response not in ['y', 'yes']:
+            return False
+    
     print("[OK] Environment setup completed successfully")
     return True
 
 def launch_gui(venv_path):
     """Launch the GUI application"""
     print()
-    print("[4/5] Launching Neural Network Trading System GUI...")
+    print("[4/5] Launching Neural Network Trading System & Financial Modeler...")
     print()
     print("=" * 80)
     print(" NOTES:")
     print(" * The GUI will open in a new window")
+    print(" * Use tabs to switch between Trading System and Financial Modeler")
     print(" * Close the GUI window to exit the application")
     print(" * To deactivate the virtual environment after stopping, run: deactivate")
     print(f" * Virtual environment location: {venv_path}")

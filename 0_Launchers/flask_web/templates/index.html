@@ -1533,7 +1533,7 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                             data: scatterData,
                             backgroundColor: 'transparent',
                             borderColor: 'transparent',
-                            pointRadius: 3, // Make points visible for interaction
+                            pointRadius: 0.001, // invisible but interactive
                             pointHoverRadius: 8,
                             pointHoverBackgroundColor: 'rgba(0,0,0,0.1)',
                             pointHoverBorderColor: 'rgba(0,0,0,0.3)',
@@ -2144,23 +2144,23 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                     <div class="metrics-group-title">Price Metrics</div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Current Price:</span>
-                        <span class="metrics-item-value">$${indicators.current_price.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.current_price,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Daily Change:</span>
-                        <span class="metrics-item-value">$${indicators.price_change.toFixed(2)} (${indicators.price_change_pct.toFixed(2)}%)</span>
+                        <span class="metrics-item-value">${safeVal(indicators.price_change,2,true)} (${safeVal(indicators.price_change_pct,2,false,true)})</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Change (Period):</span>
-                        <span class="metrics-item-value">${(indicators.price_change_period * 100).toFixed(2)}%</span>
+                        <span class="metrics-item-value">${safeVal(indicators.price_change_period*100,2,false,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">High/Low:</span>
-                        <span class="metrics-item-value">$${indicators.high_price.toFixed(2)} / $${indicators.low_price.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.high_price,2,true)} / ${safeVal(indicators.low_price,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Avg Price:</span>
-                        <span class="metrics-item-value">$${indicators.avg_price.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.avg_price,2,true)}</span>
                     </div>
                 </div>
                 
@@ -2168,15 +2168,15 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                     <div class="metrics-group-title">Volume Metrics</div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Volume:</span>
-                        <span class="metrics-item-value">${indicators.current_volume.toLocaleString()}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.current_volume,0)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Avg Volume:</span>
-                        <span class="metrics-item-value">${indicators.avg_volume.toLocaleString()}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.avg_volume,0)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Volume Ratio:</span>
-                        <span class="metrics-item-value">${indicators.volume_ratio.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.volume_ratio,2)}</span>
                     </div>
                 </div>
                 
@@ -2184,23 +2184,23 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                     <div class="metrics-group-title">Volatility Metrics</div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Daily Volatility:</span>
-                        <span class="metrics-item-value">${indicators.daily_vol.toFixed(2)}%</span>
+                        <span class="metrics-item-value">${safeVal(indicators.daily_vol,2,false,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Weekly Volatility:</span>
-                        <span class="metrics-item-value">${indicators.weekly_vol.toFixed(2)}%</span>
+                        <span class="metrics-item-value">${safeVal(indicators.weekly_vol,2,false,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Annualized Volatility:</span>
-                        <span class="metrics-item-value">${(indicators.volatility * 100).toFixed(2)}%</span>
+                        <span class="metrics-item-value">${safeVal(indicators.volatility*100,2,false,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">ATR:</span>
-                        <span class="metrics-item-value">$${indicators.atr.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.atr,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Bollinger Width:</span>
-                        <span class="metrics-item-value">${indicators.bollinger_width.toFixed(2)}%</span>
+                        <span class="metrics-item-value">${safeVal(indicators.bollinger_width,2,false,true)}</span>
                     </div>
                 </div>
                 
@@ -2208,19 +2208,19 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                     <div class="metrics-group-title">Technical Indicators</div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">RSI:</span>
-                        <span class="metrics-item-value">${indicators.rsi.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.rsi,2)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">MACD:</span>
-                        <span class="metrics-item-value">${indicators.macd.toFixed(4)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.macd,4)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">MACD Signal:</span>
-                        <span class="metrics-item-value">${indicators.macd_signal.toFixed(4)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.macd_signal,4)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">MACD Histogram:</span>
-                        <span class="metrics-item-value">${indicators.macd_histogram.toFixed(4)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.macd_histogram,4)}</span>
                     </div>
                 </div>
                 
@@ -2228,23 +2228,23 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                     <div class="metrics-group-title">Moving Averages</div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">SMA(20):</span>
-                        <span class="metrics-item-value">$${indicators.sma_20.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.sma_20,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">EMA(12):</span>
-                        <span class="metrics-item-value">$${indicators.ema_12.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.ema_12,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">SMA(50):</span>
-                        <span class="metrics-item-value">$${indicators.sma_50.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.sma_50,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">SMA(200):</span>
-                        <span class="metrics-item-value">$${indicators.sma_200.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.sma_200,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">EMA(20):</span>
-                        <span class="metrics-item-value">$${indicators.ema_20.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.ema_20,2,true)}</span>
                     </div>
                 </div>
                 
@@ -2252,15 +2252,15 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                     <div class="metrics-group-title">Bollinger Bands</div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">BB Upper:</span>
-                        <span class="metrics-item-value">$${indicators.bb_upper.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.bb_upper,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">BB Middle:</span>
-                        <span class="metrics-item-value">$${indicators.bb_middle.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.bb_middle,2,true)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">BB Lower:</span>
-                        <span class="metrics-item-value">$${indicators.bb_lower.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.bb_lower,2,true)}</span>
                     </div>
                 </div>
                 
@@ -2268,15 +2268,15 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
                     <div class="metrics-group-title">Stochastic & Williams</div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Stoch %K:</span>
-                        <span class="metrics-item-value">${indicators.stoch_k.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.stoch_k,2)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Stoch %D:</span>
-                        <span class="metrics-item-value">${indicators.stoch_d.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.stoch_d,2)}</span>
                     </div>
                     <div class="metrics-item">
                         <span class="metrics-item-label">Williams %R:</span>
-                        <span class="metrics-item-value">${indicators.williams_r.toFixed(2)}</span>
+                        <span class="metrics-item-value">${safeVal(indicators.williams_r,2)}</span>
                     </div>
                 </div>
             `;
@@ -3303,8 +3303,10 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
             let left = mouseX + 15;
             let top = mouseY + 15;
             // Clamp to chart container
-            if (left + tooltipWidth > rect.right) left = mouseX - tooltipWidth - 15;
-            if (top + tooltipHeight > rect.bottom) top = mouseY - tooltipHeight - 15;
+            if (left + tooltipWidth > rect.right) left = rect.right - tooltipWidth - 10;
+            if (top + tooltipHeight > rect.bottom) top = rect.bottom - tooltipHeight - 10;
+            if (left < rect.left) left = rect.left + 10;
+            if (top < rect.top) top = rect.top + 10;
             customTooltip.style.left = left + 'px';
             customTooltip.style.top = top + 'px';
             customTooltip.style.display = 'block';
@@ -3329,6 +3331,92 @@ Your reasoning will be analyzed using VADER sentiment analysis to understand you
         // becomes:
         // <span class="metrics-item-value">${safeVal(indicators.current_price,2,true)}</span>
         // Do this for all metrics fields.
+
+        // --- Robust Pan/Zoom Logic ---
+        function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+        // In addCustomNavigation, update pan/zoom logic:
+        // Replace pan logic with:
+        function panChart(chart, deltaX, deltaY, data) {
+            const xScale = chart.options.scales.x;
+            const yScale = chart.options.scales.y;
+            // Get data range
+            const dates = data.map(d => new Date(d.x).getTime());
+            const prices = data.flatMap(d => [d.l, d.h]);
+            const minDate = Math.min(...dates);
+            const maxDate = Math.max(...dates);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            // Calculate new min/max
+            let newXMin = clamp(xScale.min + deltaX, minDate, maxDate - 1);
+            let newXMax = clamp(xScale.max + deltaX, minDate + 1, maxDate);
+            let newYMin = clamp(yScale.min + deltaY, minPrice, maxPrice - 0.01);
+            let newYMax = clamp(yScale.max + deltaY, minPrice + 0.01, maxPrice);
+            // Prevent collapse
+            if (newXMax - newXMin < 1) { newXMax = newXMin + 1; }
+            if (newYMax - newYMin < 0.01) { newYMax = newYMin + 0.01; }
+            xScale.min = newXMin;
+            xScale.max = newXMax;
+            yScale.min = newYMin;
+            yScale.max = newYMax;
+            chart.update();
+        }
+        // Replace zoom logic with similar clamping
+        function zoomChart(chart, zoomFactor, mouseX, mouseY, data) {
+            const xScale = chart.options.scales.x;
+            const yScale = chart.options.scales.y;
+            const dates = data.map(d => new Date(d.x).getTime());
+            const prices = data.flatMap(d => [d.l, d.h]);
+            const minDate = Math.min(...dates);
+            const maxDate = Math.max(...dates);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const xRange = xScale.max - xScale.min;
+            const yRange = yScale.max - yScale.min;
+            const mouseXVal = xScale.min + (mouseX / chart.width) * xRange;
+            const mouseYVal = yScale.max - (mouseY / chart.height) * yRange;
+            let newXMin = clamp(mouseXVal - (mouseXVal - xScale.min) * zoomFactor, minDate, maxDate - 1);
+            let newXMax = clamp(mouseXVal + (xScale.max - mouseXVal) * zoomFactor, minDate + 1, maxDate);
+            let newYMin = clamp(mouseYVal - (mouseYVal - yScale.min) * zoomFactor, minPrice, maxPrice - 0.01);
+            let newYMax = clamp(mouseYVal + (yScale.max - mouseYVal) * zoomFactor, minPrice + 0.01, maxPrice);
+            if (newXMax - newXMin < 1) { newXMax = newXMin + 1; }
+            if (newYMax - newYMin < 0.01) { newYMax = newYMin + 0.01; }
+            xScale.min = newXMin;
+            xScale.max = newXMax;
+            yScale.min = newYMin;
+            yScale.max = newYMax;
+            chart.update();
+        }
+        // --- Robust Reset Zoom ---
+        function resetChartZoom() {
+            if (stockChart && currentStockData && currentStockData.length > 0) {
+                const xScale = stockChart.options.scales.x;
+                const yScale = stockChart.options.scales.y;
+                const dates = currentStockData.map(d => new Date(d.x).getTime());
+                const prices = currentStockData.flatMap(d => [d.l, d.h]);
+                xScale.min = Math.min(...dates);
+                xScale.max = Math.max(...dates);
+                yScale.min = Math.min(...prices) * 0.99;
+                yScale.max = Math.max(...prices) * 1.01;
+                stockChart.update();
+                showAlert('Chart zoom reset to full view', 'info');
+            } else {
+                showAlert('No chart data available', 'warning');
+            }
+        }
+
+        // --- 3. Add debug button to test axis min/max update ---
+        // In the chart controls, add:
+        <button class="btn btn-sm btn-outline-danger" onclick="testAxisMin()" title="Test Axis Min">Test Axis Min</button>
+        // And in JS:
+        function testAxisMin() {
+            if (stockChart && currentStockData && currentStockData.length > 0) {
+                const xScale = stockChart.options.scales.x;
+                const dates = currentStockData.map(d => new Date(d.x).getTime());
+                xScale.min = Math.min(...dates) + 7 * 24 * 60 * 60 * 1000; // skip first week
+                stockChart.update();
+                showAlert('Set x.min to skip first week', 'info');
+            }
+        }
     </script>
 </body>
 </html> 

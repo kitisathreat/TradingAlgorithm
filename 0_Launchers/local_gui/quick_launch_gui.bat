@@ -28,13 +28,14 @@ cls
 
 echo.
 echo ================================================================================
-echo                    NEURAL NETWORK TRADING SYSTEM - QUICK LAUNCH
+echo           NEURAL NETWORK TRADING SYSTEM & FINANCIAL MODELER - QUICK LAUNCH
 echo ================================================================================
 echo.
-echo  This system trains an AI to mimic your trading decisions by combining:
-echo  * Technical Analysis (RSI, MACD, Bollinger Bands)
-echo  * Sentiment Analysis (VADER analysis of your reasoning)
-echo  * Neural Network Learning (TensorFlow deep learning)
+echo  This system provides:
+echo  * Interactive trading system with neural network models
+echo  * Excel-like financial modeler with 3-part financial models
+echo  * SEC filing data extraction and sensitivity analysis
+echo  * Professional Excel export capabilities
 echo.
 echo  Using PyQt5 for better Windows compatibility
 echo  Virtual Environment Location: %VENV_PATH%
@@ -45,16 +46,16 @@ echo.
 
 :: Check for Python 3.9
 echo [1/4] Checking Python installation...
-python --version 2>nul | findstr /R "Python 3.9" >nul
+python --version 2>nul | findstr /R "Python 3" >nul
 if errorlevel 1 (
     echo.
-    echo [ERROR] Python 3.9 is required but not found
-    echo        Please install Python 3.9 from https://www.python.org/downloads/
+    echo [ERROR] Python 3 is required but not found
+    echo        Please install Python 3.9 or later from https://www.python.org/downloads/
     echo.
     pause
     exit /b 1
 ) else (
-    echo [OK] Python 3.9 found
+    echo [OK] Python 3 found
 )
 
 :: Check if virtual environment exists
@@ -77,15 +78,15 @@ if not exist "%VENV_PATH%" (
     echo [OK] Found existing virtual environment
 )
 
-:: Test PyQt5 installation
+:: Test PyQt5 and Financial Modeler dependencies
 echo.
-echo [3/4] Testing PyQt5 installation...
+echo [3/4] Testing dependencies...
 call "%VENV_ACTIVATE%"
 py -3.9 -c "from PyQt5.QtWidgets import QApplication; print('PyQt5 import successful')" 2>nul
 if errorlevel 1 (
     echo.
     echo [WARNING] PyQt5 not found in existing environment
-    echo    Reinstalling environment with PyQt5...
+    echo    Reinstalling environment with all dependencies...
     call "%~dp0run_local_gui.bat"
     if errorlevel 1 (
         echo.
@@ -100,13 +101,34 @@ if errorlevel 1 (
     echo [OK] PyQt5 import successful
 )
 
+:: Test Financial Modeler dependencies
+py -3.9 -c "import openpyxl; print('openpyxl import successful')" 2>nul
+if errorlevel 1 (
+    echo.
+    echo [WARNING] Financial Modeler dependencies not found
+    echo    Reinstalling environment with all dependencies...
+    call "%~dp0run_local_gui.bat"
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Environment setup failed
+        echo        Please check the error messages above
+        echo.
+        pause
+        exit /b 1
+    )
+    exit /b 0
+) else (
+    echo [OK] Financial Modeler dependencies found
+)
+
 :: Activate environment and launch GUI
 echo.
-echo [4/4] Launching Neural Network Trading System GUI...
+echo [4/4] Launching Neural Network Trading System & Financial Modeler...
 echo.
 echo ================================================================================
 echo  NOTES:
 echo  * The GUI will open in a new window
+echo  * Use tabs to switch between Trading System and Financial Modeler
 echo  * Close the GUI window to exit the application
 echo  * To deactivate the virtual environment after stopping, run: deactivate
 echo  * Virtual environment location: %VENV_PATH%
