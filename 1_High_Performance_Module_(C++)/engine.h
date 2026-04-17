@@ -90,10 +90,10 @@ struct SentimentData {
 
 // Structure to hold neural network insights
 struct NeuralNetworkInsights {
-    double predicted_price_change;
-    double trend_strength;
-    MarketRegime predicted_regime;
-    double confidence;
+    double predicted_price_change = 0.0;
+    double trend_strength = 0.0;
+    MarketRegime predicted_regime = MarketRegime::UNKNOWN;
+    double confidence = 0.0;
 };
 
 // Structure to hold the final trading decision
