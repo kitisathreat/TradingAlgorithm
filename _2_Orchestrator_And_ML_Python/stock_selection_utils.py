@@ -13,6 +13,27 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+
+def get_current_vix() -> float:
+    """Fetch the latest VIX reading from yfinance.
+
+    Returns 20.0 as a conservative fallback if the fetch fails.
+    """
+    try:
+        ticker = yf.Ticker("^VIX")
+        fast = getattr(ticker, "fast_info", None)
+        if fast is not None:
+            price = fast.get("last_price") or fast.get("lastPrice")
+            if price:
+                return float(price)
+        hist = ticker.history(period="5d")
+        if not hist.empty:
+            return float(hist["Close"].iloc[-1])
+    except Exception as exc:
+        logger.warning(f"Could not fetch live VIX, using fallback 20.0: {exc}")
+    return 20.0
+
+
 class StockSelectionManager:
     """Manages stock selection with enhanced features"""
     
@@ -212,7 +233,7 @@ class StockSelectionManager:
             # Check if it's already in our S&P100 list
             for stock in self.sp100_data:
                 if stock['symbol'] == ticker:
-                    return True, f"✅ {ticker} ({stock['name']}) is in S&P100", stock['name']
+                    return True, f"\u2705 {ticker} ({stock['name']}) is in S&P100", stock['name']
             
             # Try to get info from yfinance
             try:
@@ -221,34 +242,34 @@ class StockSelectionManager:
                 
                 if info and 'longName' in info and info['longName']:
                     company_name = info['longName']
-                    return True, f"✅ {ticker} ({company_name}) found", company_name
+                    return True, f"\u2705 {ticker} ({company_name}) found", company_name
                 else:
-                    return False, f"❌ {ticker} not found or invalid", None
+                    return False, f"\u274c {ticker} not found or invalid", None
                     
             except Exception as e:
                 logger.warning(f"Error validating ticker {ticker}: {e}")
-                return False, f"❌ Error validating {ticker}. Please check the symbol.", None
+                return False, f"\u274c Error validating {ticker}. Please check the symbol.", None
                 
         except Exception as e:
             logger.error(f"Error in validate_custom_ticker: {e}")
-            return False, "❌ Error validating ticker", None
+            return False, "\u274c Error validating ticker", None
     
     def get_stock_options(self) -> List[Dict]:
         """Get all stock options for dropdown including special options"""
         options = [
             {
                 "symbol": "random",
-                "name": "🎲 Random Pick",
+                "name": "\U0001f3b2 Random Pick",
                 "description": "Select a random stock from S&P100"
             },
             {
                 "symbol": "optimized",
-                "name": "🚀 Optimized Pick",
+                "name": "\U0001f680 Optimized Pick",
                 "description": "Select stock optimized for neural network training"
             },
             {
                 "symbol": "custom",
-                "name": "✏️ Custom Ticker",
+                "name": "\u270f\ufe0f Custom Ticker",
                 "description": "Enter your own stock ticker symbol"
             }
         ]
@@ -267,11 +288,11 @@ class StockSelectionManager:
     def get_stock_display_name(self, symbol: str) -> str:
         """Get display name for a stock symbol"""
         if symbol == "random":
-            return "🎲 Random Pick"
+            return "\U0001f3b2 Random Pick"
         elif symbol == "optimized":
-            return "🚀 Optimized Pick"
+            return "\U0001f680 Optimized Pick"
         elif symbol == "custom":
-            return "✏️ Custom Ticker"
+            return "\u270f\ufe0f Custom Ticker"
         else:
             # Find in S&P100 data
             for stock in self.sp100_data:
@@ -304,4 +325,4 @@ def format_market_cap(market_cap: int) -> str:
     elif market_cap >= 1_000_000:
         return f"${market_cap / 1_000_000:.1f}M"
     else:
-        return f"${market_cap:,}" 
+        return f"${market_cap:,}"

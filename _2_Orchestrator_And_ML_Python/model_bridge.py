@@ -102,10 +102,17 @@ class ModelBridge:
         features: Dict,
         sentiment_data: Optional[Dict] = None,
         sector_data: Optional[list] = None,
-        vix: float = 20.0,
+        vix: Optional[float] = None,
         account_value: float = 100000.0,
         current_position: float = 0.0
     ) -> Dict:
+        # Resolve VIX: prefer caller-supplied, else fetch live, else 20.0
+        if vix is None:
+            try:
+                from stock_selection_utils import get_current_vix
+                vix = get_current_vix()
+            except Exception:
+                vix = 20.0
         """
         Get trading decision by combining neural network predictions with C++ engine
         """
@@ -175,4 +182,4 @@ class ModelBridge:
             'cpp_engine_available': CPP_BINDINGS_AVAILABLE,
             'bridge_initialized': self.is_initialized,
             'training_stats': self.model_trainer.get_training_stats()
-        } 
+        }
