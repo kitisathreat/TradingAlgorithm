@@ -47,4 +47,16 @@ streamlit-plotly-events==0.0.6
 streamlit-option-menu==0.3.12
 streamlit-extras==0.3.5
 
-# Note: Development dependencies (pytest, pybind11) are excluded as they're not needed in production 
+# Auth + multi-user
+streamlit-authenticator>=0.3.0
+bcrypt>=4.0.0
+pyyaml>=6.0
+
+# SEC fundamentals
+openpyxl>=3.0.0
+arelle-release>=2.2.4
+rapidfuzz>=3.0.0
+
+# Testing
+pytest>=7.0.0
+pytest-mock>=3.0.0
