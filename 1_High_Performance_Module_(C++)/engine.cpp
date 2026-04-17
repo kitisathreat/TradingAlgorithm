@@ -94,16 +94,22 @@ std::tuple<double, double, double> TechnicalAnalyzer::calculate_bollinger_bands(
 
 double TechnicalAnalyzer::calculate_atr(const std::vector<PriceData>& data, int period) {
     if (data.size() < 2) return 0.0;
-    
+
+    // PriceData only stores `price` (no separate high/low), so the true range
+    // reduces to the absolute change between consecutive closes. This is a
+    // close-to-close volatility proxy; a real ATR would require high/low
+    // fields added to PriceData.
     std::vector<double> true_ranges;
-    for (int i = 1; i < data.size(); ++i) {
-        double high_low = std::abs(data[i].price - data[i-1].price);
-        double high_close = std::abs(data[i].price - data[i-1].price);
-        double low_close = std::abs(data[i-1].price - data[i-1].price);
-        true_ranges.push_back(std::max({high_low, high_close, low_close}));
+    true_ranges.reserve(data.size() - 1);
+    for (size_t i = 1; i < data.size(); ++i) {
+        true_ranges.push_back(std::abs(data[i].price - data[i-1].price));
     }
-    
-    return calculate_sma(std::vector<PriceData>(true_ranges.begin(), true_ranges.end()), period);
+
+    if (true_ranges.empty()) return 0.0;
+    size_t n = true_ranges.size();
+    size_t window = (n < static_cast<size_t>(period)) ? n : static_cast<size_t>(period);
+    double sum = std::accumulate(true_ranges.end() - window, true_ranges.end(), 0.0);
+    return sum / static_cast<double>(window);
 }
 
 TechnicalIndicators TechnicalAnalyzer::calculate_indicators(
@@ -391,16 +397,24 @@ void TradingModel::set_technical_parameters(int sma_period, int ema_period, int 
 void TradingModel::set_sentiment_weights(double social_weight, double analyst_weight, double news_weight) {
     // Normalize weights
     double total = social_weight + analyst_weight + news_weight;
-    social_weight /= total;
-    analyst_weight /= total;
-    news_weight /= total;
+    if (total > 0.0) {
+        social_weight /= total;
+        analyst_weight /= total;
+        news_weight /= total;
+    }
+}
+
+void TradingModel::set_neural_network_weight(double weight) {
+    // Clamp to [0, 1] to keep the blend valid.
+    neural_network_weight_ = std::max(0.0, std::min(1.0, weight));
 }
 
 double TradingModel::calculate_decision_confidence(
     const TechnicalIndicators& indicators,
     const SentimentData& sentiment,
     const MarketContext& context,
-    const RiskMetrics& risk) {
+    const RiskMetrics& risk,
+    const NeuralNetworkInsights& nn_insights) {
     
     double technical_score = 0.0;
     // RSI scoring
@@ -441,12 +455,25 @@ double TradingModel::calculate_decision_confidence(
         case RiskLevel::VERY_HIGH: risk_score = -0.2; break;
     }
     
+    // NN insights scoring: positive predicted change + high confidence -> bullish
+    double nn_score = 0.0;
+    if (nn_insights.confidence > 0.0) {
+        double direction = 0.0;
+        if (nn_insights.predicted_regime == MarketRegime::TRENDING_UP) direction = 1.0;
+        else if (nn_insights.predicted_regime == MarketRegime::TRENDING_DOWN) direction = -1.0;
+        nn_score = direction * nn_insights.confidence;
+        // Factor in predicted_price_change magnitude (clamped)
+        nn_score += std::max(-1.0, std::min(1.0, nn_insights.predicted_price_change));
+        nn_score *= 0.5; // keep in roughly [-1, 1]
+    }
+
     // Combine all scores with weights
     double final_score = (technical_score * technical_weight_) +
                         (sentiment_score * sentiment_weight_) +
                         (context_score * market_context_weight_) +
-                        (risk_score * risk_weight_);
-    
+                        (risk_score * risk_weight_) +
+                        (nn_score * neural_network_weight_);
+
     // Normalize to 0-1 range
     return (final_score + 1.0) / 2.0;
 }
@@ -454,14 +481,22 @@ double TradingModel::calculate_decision_confidence(
 TradeSignal TradingModel::determine_signal(
     double confidence,
     const TechnicalIndicators& indicators,
-    const MarketContext& context) {
+    const MarketContext& context,
+    const NeuralNetworkInsights& nn_insights) {
     
+    // If NN has a strong opposing opinion, cool down to HOLD rather than
+    // firing a strong signal. We only veto when NN confidence is high.
+    bool nn_bearish = nn_insights.confidence > 0.7
+        && nn_insights.predicted_regime == MarketRegime::TRENDING_DOWN;
+    bool nn_bullish = nn_insights.confidence > 0.7
+        && nn_insights.predicted_regime == MarketRegime::TRENDING_UP;
+
     // Strong signals require high confidence
     if (confidence > 0.8) {
-        if (indicators.rsi_14 < 30 && indicators.macd > indicators.macd_signal) {
+        if (indicators.rsi_14 < 30 && indicators.macd > indicators.macd_signal && !nn_bearish) {
             return TradeSignal::STRONG_BUY;
         }
-        if (indicators.rsi_14 > 70 && indicators.macd < indicators.macd_signal) {
+        if (indicators.rsi_14 > 70 && indicators.macd < indicators.macd_signal && !nn_bullish) {
             return TradeSignal::STRONG_SELL;
         }
     }
@@ -504,7 +539,8 @@ std::string TradingModel::generate_reasoning(
     const TechnicalIndicators& indicators,
     const SentimentData& sentiment,
     const MarketContext& context,
-    const RiskMetrics& risk) {
+    const RiskMetrics& risk,
+    const NeuralNetworkInsights& nn_insights) {
     
     std::string reasoning;
     
@@ -543,7 +579,20 @@ std::string TradingModel::generate_reasoning(
         case RiskLevel::HIGH: reasoning += "High risk. "; break;
         case RiskLevel::VERY_HIGH: reasoning += "Very high risk. "; break;
     }
-    
+
+    // Add NN insight if available
+    if (nn_insights.confidence > 0.0) {
+        reasoning += "NN: ";
+        switch (nn_insights.predicted_regime) {
+            case MarketRegime::TRENDING_UP: reasoning += "bullish"; break;
+            case MarketRegime::TRENDING_DOWN: reasoning += "bearish"; break;
+            case MarketRegime::RANGING: reasoning += "sideways"; break;
+            case MarketRegime::VOLATILE: reasoning += "volatile"; break;
+            case MarketRegime::UNKNOWN: reasoning += "unclear"; break;
+        }
+        reasoning += " (conf " + std::to_string(nn_insights.confidence) + "). ";
+    }
+
     return reasoning;
 }
 
@@ -554,26 +603,27 @@ TradingDecision TradingModel::get_trading_decision(
     const std::vector<double>& sector_data,
     double vix,
     double account_value,
-    double current_position_size) {
-    
+    double current_position_size,
+    const NeuralNetworkInsights& nn_insights) {
+
     // Calculate all indicators and metrics
     TechnicalIndicators indicators = technical_analyzer_->calculate_indicators(price_data);
     MarketContext context = market_analyzer_->analyze_market_context(price_data, sector_data, vix);
     RiskMetrics risk = risk_manager_->calculate_risk_metrics(price_data, current_position_size);
-    
-    // Calculate decision confidence
-    double confidence = calculate_decision_confidence(indicators, sentiment, context, risk);
-    
+
+    // Calculate decision confidence (now blends NN insights)
+    double confidence = calculate_decision_confidence(indicators, sentiment, context, risk, nn_insights);
+
     // Determine trading signal
-    TradeSignal signal = determine_signal(confidence, indicators, context);
-    
+    TradeSignal signal = determine_signal(confidence, indicators, context, nn_insights);
+
     // Calculate position size and stop levels
     double position_size = risk_manager_->calculate_position_size(risk, account_value, confidence);
     auto [stop_loss, take_profit] = risk_manager_->calculate_stop_loss_take_profit(
         price_data.back(), indicators, risk);
-    
+
     // Generate reasoning
-    std::string reasoning = generate_reasoning(signal, indicators, sentiment, context, risk);
+    std::string reasoning = generate_reasoning(signal, indicators, sentiment, context, risk, nn_insights);
     
     // Log the decision
     std::cout << "[C++ Engine] Analyzing " << symbol << std::endl;
