@@ -356,10 +356,43 @@ class ModelTrainer:
     Supports multiple neural network architectures and additive training
     """
     
-    def __init__(self, model_type="standard"):
+    def __init__(self, model_type="standard", username: str = None, user_dir: Path = None):
+        """Initialize a ModelTrainer.
+
+        Args:
+            model_type: NN architecture name.
+            username: Optional username. When supplied, all state files live
+                under ``data/users/<username>/``. Legacy callers that pass
+                nothing fall back to the repo root (old behaviour).
+            user_dir: Explicit override for the user directory (used by tests
+                with tmp_path).
+        """
         self.repo_root = Path(__file__).parent.parent.parent.parent
-        self.model_state_file = self.repo_root / "model_state.json"
-        self.training_data_file = self.repo_root / "training_data.json"
+        self.username = username
+        if user_dir is not None:
+            self._state_root = Path(user_dir)
+        elif username:
+            self._state_root = self.repo_root / "data" / "users" / username
+        else:
+            # Legacy fallback — keeps single-user installs working.
+            self._state_root = self.repo_root
+
+        # Separate directories for different artifact classes when we have a
+        # proper per-user root; otherwise everything sits at the repo root as
+        # it did before.
+        if username or user_dir is not None:
+            model_dir = self._state_root / "model"
+            training_dir = self._state_root / "training"
+            model_dir.mkdir(parents=True, exist_ok=True)
+            training_dir.mkdir(parents=True, exist_ok=True)
+            self.model_state_file = model_dir / "model_state.json"
+            self.training_data_file = training_dir / "examples.json"
+            self._metadata_file = model_dir / "metadata.json"
+        else:
+            self.model_state_file = self.repo_root / "model_state.json"
+            self.training_data_file = self.repo_root / "training_data.json"
+            self._metadata_file = None  # legacy path is computed in _save_model_metadata
+
         self.model_type = model_type
         
         # Model metadata
@@ -1345,10 +1378,17 @@ class ModelTrainer:
             logger.error(f"Error updating model metadata: {e}")
             return False
     
+    def _metadata_path(self) -> Path:
+        """Return the metadata file location, respecting per-user storage."""
+        if getattr(self, "_metadata_file", None):
+            return self._metadata_file
+        # Legacy fallback — preserves pre-refactor behaviour.
+        return Path(__file__).parent.parent / "model_metadata.json"
+
     def _load_model_metadata(self):
         """Load model metadata from file"""
         try:
-            metadata_file = Path(__file__).parent.parent / "model_metadata.json"
+            metadata_file = self._metadata_path()
             if metadata_file.exists():
                 with open(metadata_file, 'r') as f:
                     loaded_metadata = json.load(f)
@@ -1356,11 +1396,12 @@ class ModelTrainer:
                     logger.info("Model metadata loaded successfully")
         except Exception as e:
             logger.warning(f"Could not load model metadata: {e}")
-    
+
     def _save_model_metadata(self):
         """Save model metadata to file"""
         try:
-            metadata_file = Path(__file__).parent.parent / "model_metadata.json"
+            metadata_file = self._metadata_path()
+            metadata_file.parent.mkdir(parents=True, exist_ok=True)
             with open(metadata_file, 'w') as f:
                 json.dump(self.model_metadata, f, indent=2)
             logger.info("Model metadata saved successfully")
