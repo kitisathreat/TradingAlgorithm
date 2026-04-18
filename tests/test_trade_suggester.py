@@ -18,6 +18,7 @@ def _mock_trainer(decision="BUY", confidence=0.8):
 
 def _make_df(n=30):
     dates = pd.date_range(end=datetime.utcnow(), periods=n, freq="B")
+    n = len(dates)
     c = 100 + np.arange(n, dtype=float)
     return pd.DataFrame({"Open": c, "High": c+1, "Low": c-1, "Close": c,
                           "Volume": 1e6*np.ones(n)}, index=dates)

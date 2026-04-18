@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 def _make_df():
     n = 30
     dates = pd.date_range(end=datetime.utcnow(), periods=n, freq="B")
+    n = len(dates)
     c = 100 + np.cumsum(np.random.randn(n))
     return pd.DataFrame({"Open": c, "High": c+1, "Low": c-1,
                           "Close": c, "Volume": 1e6*np.ones(n)}, index=dates)
